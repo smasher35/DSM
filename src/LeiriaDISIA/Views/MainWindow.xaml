@@ -1,0 +1,175 @@
+<Window x:Class="LeiriaDISIA.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Gestão DISIA — Escolas e Intervenções | Município de Leiria"
+        WindowState="Maximized"
+        Icon="pack://application:,,,/Assets/app.ico"
+        Background="{StaticResource BrushBackground}"
+        FontFamily="Segoe UI">
+    <DockPanel>
+        <!-- Barra de Status em baixo -->
+        <Border DockPanel.Dock="Bottom" Background="{StaticResource BrushPrimary}" Padding="16,5">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="DISIA Manager" FontWeight="Bold" Foreground="White" FontSize="12" VerticalAlignment="Center" />
+                <TextBlock x:Name="TxtStatusMensagem" Grid.Column="1" Text="" Foreground="#C7D8E8" FontSize="12" VerticalAlignment="Center" Margin="20,0,0,0" />
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- (8.1) Centro de notificações: sino com contador de situações pendentes -->
+                    <Grid Margin="0,0,20,0" VerticalAlignment="Center">
+                        <Button x:Name="BtnNotificacoes" Content="🔔" FontSize="16" Padding="6,2"
+                                Background="Transparent" BorderThickness="0" Foreground="White" Cursor="Hand"
+                                Click="Notificacoes_Click" ToolTip="Notificações" />
+                        <Border x:Name="BadgeNotificacoes" Background="#EF4444" CornerRadius="8" MinWidth="16" Height="16"
+                                HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-4,-4,0" Visibility="Collapsed">
+                            <TextBlock x:Name="TxtBadgeNotificacoes" Text="0" FontSize="10" FontWeight="Bold" Foreground="White"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" Margin="3,0" />
+                        </Border>
+                        <Popup x:Name="PopupNotificacoes" PlacementTarget="{Binding ElementName=BtnNotificacoes}"
+                               Placement="Top" StaysOpen="False" AllowsTransparency="True">
+                            <Border Background="{StaticResource BrushCard}" BorderBrush="{StaticResource BrushBorder}" BorderThickness="1"
+                                    CornerRadius="8" Padding="12" MaxWidth="380" MinWidth="320">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="14" ShadowDepth="2" Opacity="0.3" />
+                                </Border.Effect>
+                                <StackPanel>
+                                    <TextBlock Text="Notificações" FontWeight="Bold" Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,8" />
+                                    <ItemsControl x:Name="ListaNotificacoes">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Background="Transparent" Padding="4,6" Cursor="Hand"
+                                                        MouseLeftButtonUp="NotificacaoItem_Click" Tag="{Binding Modulo}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <!-- Indicador de severidade: círculo de cor sólida (não emoji), para garantir
+                                                             que a cor semântica (vermelho/laranja/azul) é sempre visível de forma
+                                                             consistente, independentemente do suporte a emoji a cores da fonte. -->
+                                                        <Ellipse Width="10" Height="10" Margin="0,3,8,0" VerticalAlignment="Top"
+                                                                 Fill="{Binding CorHex, Converter={StaticResource HexColorToBrushConverter}}" />
+                                                        <TextBlock Text="{Binding Mensagem}" TextWrapping="Wrap" MaxWidth="300"
+                                                                   Foreground="{StaticResource BrushTextPrimary}" FontSize="12" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <TextBlock x:Name="TxtSemNotificacoes" Text="✅ Sem situações pendentes de momento." FontSize="12"
+                                               Foreground="{StaticResource BrushTextSecondary}" Visibility="Collapsed" />
+                                </StackPanel>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <TextBlock Text="Desenvolvido por: Paulo Penicheiro" Foreground="#C7D8E8" FontSize="11" Margin="0,0,20,0" />
+                    <TextBlock x:Name="TxtStatusRelogio" Text="" Foreground="White" FontSize="12" FontWeight="SemiBold" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="240" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+        <!-- Barra lateral -->
+        <Border Grid.Column="0" Background="{StaticResource BrushPrimary}">
+            <DockPanel LastChildFill="True">
+                <Grid DockPanel.Dock="Top" Margin="18,20,14,26">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <TextBlock Text="DISIA" FontSize="26" FontWeight="Bold" Foreground="White" />
+                        <TextBlock Text="Município de Leiria" FontSize="12" Foreground="{StaticResource BrushSidebarSubtext}" Margin="0,2,0,0" />
+                    </StackPanel>
+                    <Image Grid.Column="1" Source="pack://application:,,,/Assets/disia_logo.png"
+                           Width="90" Height="90" VerticalAlignment="Top"
+                           RenderOptions.BitmapScalingMode="HighQuality" Stretch="Uniform" />
+                </Grid>
+
+                <StackPanel Margin="10,0" DockPanel.Dock="Top">
+                    <RadioButton x:Name="NavDashboard" Style="{StaticResource NavButtonStyle}" IsChecked="True"
+                                 Checked="Nav_Checked" Tag="Dashboard" Content="🏠  Dashboard" Margin="0,2" />
+                    <RadioButton x:Name="NavAgrupamentos" Style="{StaticResource NavButtonStyle}"
+                                 Checked="Nav_Checked" Tag="Agrupamentos" Content="🏫  Agrupamentos" Margin="0,2" />
+                    <RadioButton x:Name="NavEscolas" Style="{StaticResource NavButtonStyle}"
+                                 Checked="Nav_Checked" Tag="Escolas" Content="🏛️  Escolas / JI" Margin="0,2" />
+                    <RadioButton x:Name="NavPedidos" Style="{StaticResource NavButtonStyle}"
+                                 Checked="Nav_Checked" Tag="Pedidos" Content="📝  Pedidos de Intervenção" Margin="0,2" />
+                    <RadioButton x:Name="NavIntervencoes" Style="{StaticResource NavButtonStyle}"
+                                 Checked="Nav_Checked" Tag="Intervencoes" Content="🛠️  Intervenções" Margin="0,2" />
+                    <RadioButton x:Name="NavDisia" Style="{StaticResource NavButtonStyle}"
+                                 Checked="Nav_Checked" Tag="Disia" Content="🏢  Atividades DISIA" Margin="0,2" />
+                    <RadioButton x:Name="NavEquipamentos" Style="{StaticResource NavButtonStyle}"
+                                 Checked="Nav_Checked" Tag="Equipamentos" Content="💻  Equipamento Informático" Margin="0,2" />
+                    <RadioButton x:Name="NavAbatido" Style="{StaticResource NavButtonStyle}"
+                                 Checked="Nav_Checked" Tag="Abatido" Content="🗑️  Equipamento Abatido" Margin="0,2" />
+                    <RadioButton x:Name="NavRecolhido" Style="{StaticResource NavButtonStyle}"
+                                 Checked="Nav_Checked" Tag="Recolhido" Content="📦  Equipamento Recolhido" Margin="0,2" />
+                    <RadioButton x:Name="NavComunicacoes" Style="{StaticResource NavButtonStyle}"
+                                 Checked="Nav_Checked" Tag="Comunicacoes" Content="📡  Comunicações" Margin="0,2" />
+                    <RadioButton x:Name="NavContactos" Style="{StaticResource NavButtonStyle}"
+                                 Checked="Nav_Checked" Tag="Contactos" Content="📇  Contactos" Margin="0,2" />
+                    <RadioButton x:Name="NavRelatorios" Style="{StaticResource NavButtonStyle}"
+                                 Checked="Nav_Checked" Tag="Relatorios" Content="📄  Relatórios" Margin="0,2" />
+                    <RadioButton x:Name="NavAdministracao" Style="{StaticResource NavButtonStyle}"
+                                 Checked="Nav_Checked" Tag="Administracao" Content="⚙️  Administração" Margin="0,2" />
+                </StackPanel>
+
+                <StackPanel DockPanel.Dock="Bottom" Margin="18,10,18,18">
+                    <Separator Margin="0,0,0,10" Background="{StaticResource BrushSeparator}" />
+
+                    <!-- Avatar e informações do utilizador -->
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="56" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Avatar Container com border circular -->
+                        <Border Grid.Column="0" Width="56" Height="56" CornerRadius="28"
+                                Background="{StaticResource BrushAvatarBackground}" BorderBrush="White" BorderThickness="2"
+                                ClipToBounds="True">
+                            <Grid>
+                                <!-- Background -->
+                                <Ellipse Fill="{StaticResource BrushAvatarBackground}" />
+                                <!-- Imagem -->
+                                <Image x:Name="AvatarImage" 
+                                       Stretch="UniformToFill"
+                                       RenderOptions.BitmapScalingMode="HighQuality" />
+                                <!-- Iniciais como fallback -->
+                                <TextBlock x:Name="AvatarInitials" Text="?"
+                                           FontSize="24" FontWeight="Bold" Foreground="White"
+                                           VerticalAlignment="Center" HorizontalAlignment="Center" />
+                            </Grid>
+                        </Border>
+
+                        <!-- Nome e perfil -->
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0">
+                            <TextBlock x:Name="TxtUtilizadorAtual" Text="—" FontSize="13" FontWeight="SemiBold" Foreground="White" />
+                            <TextBlock x:Name="TxtPerfilAtual" Text="—" FontSize="11" Foreground="{StaticResource BrushSidebarSubtext}" Margin="0,0,0,0" />
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Botões de ações -->
+                    <Button Content="🔑 Terminar Sessão" Click="TerminarSessao_Click" HorizontalAlignment="Stretch"
+                            Background="#E74C3C" Foreground="White" BorderBrush="Transparent" Padding="8,8" Margin="0,0,0,6"
+                            FontWeight="SemiBold" Cursor="Hand" />
+                    <Button Content="⏻ Sair da Aplicação" Click="SairAplicacao_Click" HorizontalAlignment="Stretch"
+                            Background="#C0392B" Foreground="White" BorderBrush="Transparent" Padding="8,8" Margin="0,0,0,12"
+                            FontWeight="SemiBold" Cursor="Hand" />
+                    <TextBlock x:Name="TxtVersaoApp" Text="v1.1 — 2026" FontSize="11" Foreground="{StaticResource BrushSidebarSubtext}" HorizontalAlignment="Center" Margin="0,0,0,0" />
+                </StackPanel>
+
+                <Grid />
+            </DockPanel>
+        </Border>
+
+        <!-- Conteúdo (apenas o Dashboard fica embutido; os restantes módulos abrem em janela maximizada própria) -->
+        <ContentControl x:Name="ContentArea" Grid.Column="1" Margin="24" />
+    </Grid>
+    </DockPanel>
+</Window>

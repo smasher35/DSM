@@ -1,0 +1,61 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>LeiriaDISIA</RootNamespace>
+    <AssemblyName>LeiriaDISIA</AssemblyName>
+    <Authors>DISIA - Câmara Municipal de Leiria</Authors>
+    <Product>Gestão DISIA - Escolas e Intervenções</Product>
+    <LangVersion>latest</LangVersion>
+    <InternalImplicitUsings>disable</InternalImplicitUsings>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\app.ico" />
+    <Resource Include="Assets\disia_logo.png" />
+    <Resource Include="Assets\logo_municipio.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Base de dados -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.8">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+
+    <!-- MVVM -->
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
+
+    <!-- UI moderna -->
+    <PackageReference Include="ModernWpfUI" Version="0.9.6" />
+
+    <!-- Gráficos do Dashboard -->
+    <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.0.5" />
+
+    <!-- Leitura do ficheiro_base.xlsx na 1ª importação -->
+    <PackageReference Include="ClosedXML" Version="0.104.1" />
+
+    <!-- Geração de relatórios .docx -->
+    <PackageReference Include="DocumentFormat.OpenXml" Version="3.1.0" />
+
+    <!-- Geração de relatórios .pdf (recibo/relatório de intervenção individual) -->
+    <PackageReference Include="QuestPDF" Version="2024.10.2" />
+
+    <!-- Mapa (Google Maps) na ficha da escola -->
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
+
+    <!-- IA local (embutida, sem cloud) para gerar rascunhos variados da Reflexão Crítica.
+         Backend CPU-only para não depender de GPU/drivers específicos no computador de destino;
+         se o computador tiver uma GPU NVIDIA compatível, pode trocar-se por
+         "LLamaSharp.Backend.Cuda12" para acelerar a geração — ver Services/IaLocalService.cs. -->
+    <PackageReference Include="LLamaSharp" Version="0.27.0" />
+    <PackageReference Include="LLamaSharp.Backend.Cpu" Version="0.27.0" />
+  </ItemGroup>
+
+</Project>

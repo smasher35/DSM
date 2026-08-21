@@ -1,0 +1,31 @@
+<Window x:Class="LeiriaDISIA.Views.LoginWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Iniciar Sessão — Gestão DISIA" Height="440" Width="400"
+        WindowStartupLocation="CenterScreen" ResizeMode="NoResize"
+        Icon="pack://application:,,,/Assets/app.ico"
+        Background="{StaticResource BrushPrimary}">
+    <Border Background="White" CornerRadius="16" Margin="24" Padding="30">
+        <StackPanel VerticalAlignment="Center">
+            <TextBlock Text="DISIA" FontSize="30" FontWeight="Bold" Foreground="{StaticResource BrushPrimary}"
+                       HorizontalAlignment="Center" />
+            <TextBlock Text="Município de Leiria" FontSize="12" Foreground="{StaticResource BrushTextSecondary}"
+                       HorizontalAlignment="Center" Margin="0,2,0,24" />
+
+            <TextBlock Text="Utilizador" FontWeight="SemiBold" />
+            <TextBox x:Name="TxtUtilizador" Margin="0,4,0,14" Padding="8" FontSize="14" />
+
+            <TextBlock Text="Palavra-passe" FontWeight="SemiBold" />
+            <PasswordBox x:Name="TxtPassword" Margin="0,4,0,6" Padding="8" FontSize="14" KeyDown="TxtPassword_KeyDown" />
+
+            <TextBlock x:Name="TxtErro" Foreground="{StaticResource BrushDanger}" TextWrapping="Wrap"
+                       Margin="0,4,0,10" Visibility="Collapsed" />
+
+            <Button Content="Entrar" Style="{StaticResource PrimaryButton}" Click="Entrar_Click"
+                    Padding="0,10" Margin="0,10,0,0" FontSize="15" />
+
+            <TextBlock Text="Utilizador inicial: admin / admin123" FontSize="10"
+                       Foreground="{StaticResource BrushTextSecondary}" HorizontalAlignment="Center" Margin="0,16,0,0" />
+        </StackPanel>
+    </Border>
+</Window>

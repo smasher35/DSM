@@ -1,0 +1,39 @@
+<Window x:Class="LeiriaDISIA.Views.FolhaInventarioWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Folha de Inventário de Equipamentos Informáticos" Width="460"
+        SizeToContent="Height" WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        Background="{StaticResource BrushBackground}" FontFamily="Segoe UI">
+    <StackPanel x:Name="PainelPrincipal" Margin="20">
+        <TextBlock Text="Folha de Inventário" Style="{StaticResource SectionTitleStyle}" FontSize="18" Margin="0,0,0,4" />
+        <TextBlock Text="Gera um PDF A4 (paisagem) para registo manual do equipamento informático numa escola."
+                   TextWrapping="Wrap" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,16" />
+
+        <TextBlock Text="Escola (opcional)" FontWeight="SemiBold" />
+        <ComboBox x:Name="CmbEscola" DisplayMemberPath="Nome" Margin="0,4,0,2" SelectionChanged="CmbEscola_SelectionChanged" />
+        <TextBlock Text="Sem escola escolhida, é gerada uma folha genérica em branco (útil para levar a qualquer escola)."
+                   TextWrapping="Wrap" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,10" />
+
+        <TextBlock Text="Responsável pelo Inventário (opcional)" FontWeight="SemiBold" />
+        <TextBox x:Name="TxtResponsavel" Margin="0,4,0,10" />
+
+        <TextBlock Text="Conteúdo da folha" FontWeight="SemiBold" Margin="0,0,0,4" />
+        <RadioButton x:Name="RbEmBranco" Content="Em branco — só linhas vazias para preencher no local" IsChecked="True" Margin="0,2" GroupName="Modo" />
+        <RadioButton x:Name="RbPreenchida" Content="Pré-preenchida — uma linha por equipamento já cadastrado nesta escola" Margin="0,2" GroupName="Modo" IsEnabled="False" />
+
+        <Grid Margin="0,20,0,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <TextBlock x:Name="TxtEstado" Grid.Row="0" Text="A gerar PDF, aguarde…" HorizontalAlignment="Right"
+                       FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,6" Visibility="Collapsed" />
+            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="BtnCancelar" Content="Cancelar" Click="Cancelar_Click" Margin="0,0,10,0" />
+                <Button x:Name="BtnImprimir" Content="🖨️ Imprimir" Click="Imprimir_Click" Margin="0,0,10,0"
+                        ToolTip="Gera o PDF num ficheiro temporário e envia diretamente para a impressora predefinida" />
+                <Button x:Name="BtnGerar" Content="📄 Gerar / Guardar PDF" Style="{StaticResource PrimaryButton}" Click="Gerar_Click" />
+            </StackPanel>
+        </Grid>
+    </StackPanel>
+</Window>

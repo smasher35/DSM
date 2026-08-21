@@ -1,0 +1,107 @@
+<UserControl x:Class="LeiriaDISIA.Views.EscolasView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*" />
+            <ColumnDefinition Width="400" />
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.Column="0" Margin="0,0,16,0">
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                <TextBlock Text="Escolas e Jardins de Infância" Style="{StaticResource SectionTitleStyle}" FontSize="24" Margin="0,0,20,0" />
+                <TextBlock Text="Filtrar por agrupamento:" VerticalAlignment="Center" Margin="0,0,8,0" />
+                <ComboBox x:Name="CmbFiltroAgrupamento" Width="260" DisplayMemberPath="Nome"
+                          SelectionChanged="Filtro_Changed" />
+                <TextBox x:Name="TxtPesquisa" Style="{StaticResource SearchTextBox}" Width="220" Margin="16,0,0,0" TextChanged="Filtro_TextChanged"
+                         ToolTip="Pesquisar por nome, localidade ou freguesia" />
+            </StackPanel>
+            <Border Style="{StaticResource CardStyle}">
+                <DataGrid x:Name="Grid" Height="600" CanUserSortColumns="True" SelectionChanged="Grid_SelectionChanged" RowStyle="{StaticResource DataGridRowClickableStyle}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Cód." Binding="{Binding CodEscola}" Width="Auto" />
+                        <DataGridTextColumn Header="Cód. GEPE" Binding="{Binding CodGEPE}" Width="Auto" />
+                        <DataGridTextColumn Header="Escola" Binding="{Binding Nome}" Width="*" />
+                        <DataGridTextColumn Header="Nome alternativo" Binding="{Binding NomeAlternativo}" Width="Auto" />
+                        <DataGridTextColumn Header="Localidade" Binding="{Binding Localidade}" Width="Auto" />
+                        <DataGridTextColumn Header="Freguesia" Binding="{Binding Freguesia}" Width="Auto" />
+                        <DataGridTextColumn Header="Agrupamento" Binding="{Binding Agrupamento.Nome}" Width="Auto" />
+                        <DataGridTextColumn Header="Tipo" Binding="{Binding Tipo}" Width="Auto" />
+                        <DataGridTextColumn Header="Estado" Binding="{Binding Estado}" Width="Auto" IsReadOnly="True" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+        </StackPanel>
+
+        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+            <TextBlock Text="Adicionar / Editar Escola" Style="{StaticResource SectionTitleStyle}" />
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel>
+                    <TextBlock Text="Código da Escola (CodEscola)" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtCodEscola" Margin="0,4,0,10" IsReadOnly="True" Background="#F1F5F9" />
+
+                    <TextBlock Text="Código DGRHE" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtCodDgrhe" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Código GEPE" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtCodGepe" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Nome da Escola" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtNome" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Nome alternativo / abreviado" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtNomeAlternativo" Margin="0,4,0,10"
+                             ToolTip="Ex: 'EB1 Amor' quando o nome oficial é 'Escola Básica do 1º Ciclo de Amor'" />
+
+                    <TextBlock Text="Morada" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtMorada" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Localidade" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtLocalidade" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Freguesia" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtFreguesia" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Agrupamento" FontWeight="SemiBold" />
+                    <ComboBox x:Name="CmbAgrupamento" DisplayMemberPath="Nome" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Tipo de Estabelecimento" FontWeight="SemiBold" />
+                    <ComboBox x:Name="CmbTipo" Margin="0,4,0,10" />
+
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Nº Alunos" FontWeight="SemiBold" />
+                            <TextBox x:Name="TxtNumAlunos" Margin="0,4,4,0" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="Nº Salas" FontWeight="SemiBold" />
+                            <TextBox x:Name="TxtNumSalas" Margin="4,4,0,0" />
+                        </StackPanel>
+                    </Grid>
+
+                    <CheckBox x:Name="ChkFibra" Content="Tem internet por fibra" Margin="0,4" />
+                    <CheckBox x:Name="ChkCCTV" Content="Tem CCTV instalado" Margin="0,4" />
+                    <CheckBox x:Name="ChkVPN" Content="Tem VPN configurada" Margin="0,4" />
+                    <CheckBox x:Name="ChkBiblioteca" Content="Tem biblioteca" Margin="0,4" />
+                    <TextBlock Text="Estado" FontWeight="SemiBold" />
+                    <ComboBox x:Name="CmbEstado" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Observações" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtObservacoes" AcceptsReturn="True" Height="60" TextWrapping="Wrap" Margin="0,4,0,14" />
+
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Guardar" Style="{StaticResource PrimaryButton}" Click="Guardar_Click" Margin="0,0,8,0" />
+                        <Button Content="Novo" Click="Novo_Click" Margin="0,0,8,0" />
+                        <Button Content="Eliminar" Click="Eliminar_Click" Background="#FDECEC" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

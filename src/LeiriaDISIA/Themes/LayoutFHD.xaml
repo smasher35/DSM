@@ -1,0 +1,45 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!-- ======================================================================
+         Perfil de Layout: FHD (1920 x 1080)
+         Usado pelas vistas que se adaptam à resolução do ecrã (por agora só o
+         Dashboard - ver Views/DashboardView.xaml, Services/LayoutDensityService.cs
+         e Administração → Aparência → Resolução do Ecrã).
+
+         Estes valores correspondem ao aspeto ATUAL da aplicação em ecrãs 1920x1080
+         (o que já estava "quase perfeito", segundo o pedido original) - não devem
+         ser alterados só por estarem aqui; servem de referência para comparar com
+         o perfil UHD ao lado.
+         ====================================================================== -->
+
+    <!-- Largura máxima da zona de cartões/gráficos do Dashboard. Um valor bem
+         acima da largura de um ecrã 1920x1080 significa, na prática, "sem limite"
+         - o conteúdo continua a esticar como acontece hoje. -->
+    <sys:Double x:Key="DashContentMaxWidth">3000</sys:Double>
+
+    <!-- Largura máxima de cada cartão de gráfico circular (Pizza/Polar) colocado
+         lado a lado com outro. Também sem limite em FHD. -->
+    <sys:Double x:Key="DashPieCardMaxWidth">3000</sys:Double>
+
+    <!-- Largura máxima do cartão "Pendentes - Escola vs. DISIA" (gráfico circular
+         sozinho, alinhado à esquerda). Valor igual ao que já existia fixo no XAML. -->
+    <sys:Double x:Key="DashPieCardMaxWidthSingle">520</sys:Double>
+
+    <!-- Altura dos gráficos de barras/linhas (Cartesian) -->
+    <sys:Double x:Key="DashChartHeightBar">260</sys:Double>
+    <sys:Double x:Key="DashChartHeightBarTall">280</sys:Double>
+
+    <!-- Altura dos gráficos circulares (Pizza/Polar) -->
+    <sys:Double x:Key="DashChartHeightPie">280</sys:Double>
+    <sys:Double x:Key="DashChartHeightPieSmall">240</sys:Double>
+
+    <!-- Tamanho (altura = largura) de cada gauge circular de equipamento -->
+    <sys:Double x:Key="DashGaugeSize">150</sys:Double>
+
+    <!-- Disposição da grelha de gauges de equipamento (6 gauges no total) -->
+    <sys:Int32 x:Key="DashGaugesColumns">3</sys:Int32>
+    <sys:Int32 x:Key="DashGaugesRows">2</sys:Int32>
+
+</ResourceDictionary>

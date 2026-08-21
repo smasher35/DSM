@@ -1,0 +1,49 @@
+
+
+
+
+Analisar o ficheiro_base.xlsx anexado que vai servir de base para converter numa aplicação Visual e local em C#, com visual bem moderno e apelativo, e funcional, cujo objetivo é registar todas as operações realizadas nas escolas primárias e jardins escola do concelho de Leiria bem como registar as atividades desenvolvidas na DISIA (divisão de sistemas de informação e aplicações).
+
+a escolas estão agregadas a um agrupamento, devem ser adicionados mais campos que permitam caracteriazr as escolas (deixo ao seu critério) MAS OS CAMPOS DO ABA sER DEVEM SER ADICIONADOS (CodESCOLA,CodDGRHE,CodGEPE,Escola,Morada,coordenadas GPS, Localidade,Freguesia,CodAgrupamento,NomeDoAgrupament) a importação das escolas e agrupamentos é feita a partir do ficheiro anexado (listas escolas_agrupamento.xlsx)
+
+
+TER CUIDADO AO POPULAR A BASE DE DADOS PARA NÃO REPETIR ESCOLAS QUE ESTEJAM NA ABA lista de escolas, POIS OS NOMES PODEM ESTAR LIGEIRAMENTGE DIFERENTES), POR EXEMPO NA LISTA DE ESCOLAS ESXTÁ "EB1 AMOR" e no ABA GEPE está "Escola Básica do 1.º Ciclo de Amor" mas é exatamente a mesma escola, só que mais abrevidada da primeira forma
+
+a app deve ter uma módulo para inserir os pedidos de intervenção, com data escola e agrupamento, razão do pedido, alguns dados da escola (GEPE poderá ser importante, com um botão direto paraq a inserção da intervenção, e que caso seja dada como concluída no módulo das intervenções, depois altere o estado do pedido, ou apague, como achar mais conveniente.
+
+a app tem DE TER UM MÓDULO PARAQ permitir a inserção de intervenções por escola, que automaticamente estará ligada a  um agrupamento (como categorias temos para já 5 categorias principais Redes, Hardware, Software, VPN e audio-visuais), poderão ser adicionadas sub categorias, a inserção tem de ser sempre agregada a um mÊS, SERÁ SEMPRE O MÊS CORRENTE, E DEVE FICAR SEMPRE ORGANIZADA POR MESES, AS ABAS DO FICHEIRO_BASE DE Janeiro A DEZEMBRO CONTROLAM A INSERÇÃO DAS INTERVENÇÕES QUE DEPOIS DEVEM FICAR SUMARIZAdas tal como demonstra a aba totais, poderão ser adicionadas mais caracteristicas se assim achar necessário, as intervenções deverão ter um estado e uma cor associada, por exemplo fechadas, pendentes, e caso estejam pendentes podermos dizer a razão, estado em espera (quando a sua resolução dependa de aquisição de equipamento que não tenha) ter um campo que permita a rapida visualização do tempo que o pedido esta em aberto, a verde se ainda estiver dentro de uma semana, a amarelo de 1 semana a 3 semans e Vermelho superior a 3 semanas, assim consegue-se visulamente ter a percepção de quais os pedidos que devem ser intervencionados primeiro, poderá ser interessante dar a possibilidade de imprimir um relatório da intervenção em PDF
+
+a app deve ter um módulo para gerir o equipamento informático, embora esses dados ainda não estejam disponíveis, mas pode ficar já programado e que permita toda a variedade de equipamentos informáticos, com os seus respetivos campos, terá de ter dois obrigatórios (número de série e número de inventário) depois os restantes serão os transversais,acrescentar os campos nrcessários, por exemplo se for um computador, poder seleccionar o processador, o tipo e quantidade de memória, o tipo e tamanho dos disco duro, o mesmo para os moitores, ( alema da amrca e modelo, as poelgada, tipo etc) para cada tipo de equipamento ter os campos com pelo menos as características principais
+
+deverá ter um módulo para gerir o equipamento abatido, ligado à tabela dos equipamentos
+
+a app deve ter no ecrã principal (abrir maximizado) um dashboard agregador da informação principal da escolas, está uma aba com o nome DASHBOARD no ficheirobase.xlsx, quero que a app mostre um dashboard visual com gráficos e info gráficos com look profissional do mesmo género do existente na aba DASHBAORD, a aba dO ficheiro_base.XLSX que alimenta o dashboard chama-se "pedidos de Intervenção", também poderá por exemplo ter o total de agrupamentos, o total de escolas, o agrupamento mais intervencionado de sempre(todos os anos) a escola mais intervencionada de sempre (todos os anos)
+
+a app tem de permitir adicionar agrupamentos e escolas, bem como editar e apagar e gerar relatórios das mesmas, e também tem de permitir adicionar  uma escola a um agrupamento
+
+a app tem de estar preparada para vários anos civis, e a filosofia tal como está representado no ficheiro_base.xlsx, é a inserção de intervenções por mês, tanto que o ficheiro_base.xlsx tem uma aba para mês e uma aba com os totais mensais e anuis por agrupamentos, é  importante para os relatórios de atividades mensais ter agregada todas as intervenções mensais, analisar bem o ficheiro_base.xlsx para ver a melhor forma de implementação
+
+A app deve ter um módulo para gerir as intervenções (a aba Ser. DISIA no ficheiro_base.xlsx representa o que se faz nesse âmbito, PODERÁ CRIRAR CCATEGORIAS PARA SER MAIS FÁCIL, ETC), e que também permita gerar relatórios, quer mensais quer anuais
+
+a app deve ter um módulo para gerir contactos 
+
+todos os móduloes devem ter navegabilidade entre módulos, ou pelo menos para voltar ao dashboard ou ecrã principal
+
+a app deverá ter a possibilidade  de gerar um relatório mensal de atividades tal como o do ficheiro anexado (relatorio_atividades_disia_jun_26.pdf) baseado nas intervenções mensais b como nas atividades realizadas no âmbito da DISIA e os seguintes relatorios A aplicação produzirá automaticamente:
+
+
+✅ Relatório por Escola
+
+✅ Relatório por Agrupamento
+
+✅ Relatório por Categoria
+
+✅ Relatório por Técnico
+
+✅ Relatório Equipamentos
+
+✅ Relatório Inventário
+
+adicionar um menu de configurações que indique a localização da base de dados, capacidade de realiar back up e restore, e um botão que permita apagar toda a base de dados, na janela de gestão de agrupamentos, adicionar uma sub vista , pode ser uma lista, com as respetivas escolas de cada agrupamento seleccionado, e nessa lista permitir aceder aos detalhes de cada escola para poder editar,
+
+gestão de logins e perfis de utilização, sendo que o administrador tem acesso a tudo, e o perfil geral não tem acesso ao menu das configurações

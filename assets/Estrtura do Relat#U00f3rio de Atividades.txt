@@ -1,0 +1,43 @@
+Estrtura do Relatório de Atividades
+
+1- Capa moderna e tecnológica que tem de conter os seguintes dados: (preenchidos no formulário do relatório
+	1.1 - logo Municipio de Leiria
+	1.2 - Nome: Paulo Miguel Nunes Penicheiro
+	1.3 - Divisão: DISIA – Divisão de Sistemas de Informação e Aplicações
+	1.4 - Telefone: Telefone: 966 589 120
+	1.5 - Email: paulo@cm-leiria.pt
+2 - Sumário e Indice na mesma página
+	2.1 - Texto para o sumário: "Relatório de atividades desempenhadas no mês de julho de 2026, por Paulo Penicheiro, ao serviço da DISIA- Divisão de
+		Sistemas de Informação e Aplicações. (em que o mês tem de ser preenchido pela aplicação, com o mês corrente)"
+	2.2 - indice já preenchido 
+3 - Secção Intervenções Escolares
+	3.1- Texto introdutório: No âmbito das minhas funções profissionais, asseguro o suporte informático a todas as escolas e jardins de infância do concelho de Leiria, abrangendo um total de 99 edifícios escolares distribuídos por 8 		Agrupamentos de Escolas.
+		As intervenções realizadas incidem maioritariamente na resolução de anomalias e na manutenção dos sistemas informáticos, incluindo a formatação e reinstalação de equipamentos, reposição de software, substituição e 			reparação de componentes de hardware, configuração de equipamentos de rede e de ligações VPN para acesso das assistentes operacionais à rede do Município. Adicionalmente, sou responsável pela instalação, configuração e 		substituição de equipamentos audiovisuais, garantindo o seu correto funcionamento e suporte técnico.(em que o número de edificios e o número de agrupamentos é preenchdio pela aplicação
+	3.2 -  tabela com o total de intervenções por Agrupamento (caso não haja aparecer a 0)
+	3.3 -  Gráfico em Pie representative do total de intervenções por Agrupamento descrito no ponto 3.1
+	3.4 -  Gráfico com os tipos de intervenção por agrupamento (adicionar a seguinte nota por baixo do gráfico (Nota: Uma ida a cada escola é considerada apenas com uma intervenção, mas, pode englobar várias áreas de intervenção
+		numa só visita, daí o total por tipo e categoria de intervenção poder ser superior ao total de intervenções.)
+	3.5 - Gráfico de barras com o total por tipo de intervenção (vpn, hardware, software, redes, audio-visuais) do mês corrente
+4- Seção: Gestão da Plataforma SIGMA
+	4.1 Texto introdutório: No âmbito das minhas funções, tenho a responsabilidade pela gestão da plataforma SIGA (Sistema Integrado de Gestão e Aprendizagem), utilizada pelas escolas do 1.º Ciclo e Jardins de Infância do concelho de 		Leiria.
+		Esta plataforma constitui uma ferramenta fundamental para a gestão e articulação de processos educativos, assegurando a comunicação e a interação entre os diversos intervenientes da comunidade educativa, nomeadamente o 		Município de Leiria, as Juntas de Freguesia, fornecedores, parceiros, IPSS, encarregados de educação, agrupamentos de escolas, escolas e jardins de infância, de acordo com as respetivas áreas de atuação e competências.
+		No exercício desta responsabilidade, asseguro o suporte técnico e funcional da plataforma, contribuindo para o correto funcionamento dos serviços e para a eficiência dos processos de comunicação e gestão entre todas as 		entidades envolvidas.
+	4.2 - Atividades na Plataforma SIGA EDUBOX
+		4.2.1 - Gestão dos tickets do processo educativo, corrigindo os tickets que se encontram no workflow errado, definindo
+			os workflows e corrigindo as tipificações dos pedidos (3 tickets) envio para as respetivas Juntas de Freguesia
+			 Correção dos estados tickets (2 tickets), exemplo alterar de estado “fechado” para “Em processo”, geralmente
+			pedidos realizados pelos serviços de educação - Alteração de passwords (2) ( o número de tipificações de pedidos, estado dos tickets, e número de passwords alteradas, devemserpreenchidos no formulário do relatório 			de atividades, e têmde ser adicionados pois ainda não se encontram codificados)
+		4.2.2 - imagem dos pedidos existentes na Plataforma
+		4.2.3 - imagem dos workflows da Plataforma
+		4.2.4 - aparece uma imagem com o dashboard antigo que tinha no excel, talvez compor os dados mais impotants do dashboard atual e apresentar alguns dados visuais, deixo ao seu critério para criar esta parte, pois uma 
+			representação visual tem sempre mais impacto
+5 - SECÇÃO: ATIVIDADES DISIA
+	5.1 - criar esta secção com as atividades disia da aplicação do mês corrente, com um visual muito professional, deixo ao seu critério a forma de apresentar, taçvez agrupadas por categora, com data, descrição, local etc, e com 	somatórios tal como no relatório desta secção
+6 - secção: REFLEXÃO CRÍTICA
+	6.1 - BALANÇO GERAL DO MÊS:  (baseado no que foi feito durante o mês corrente, intervenções escolares mais atividades DISIA, elaborar umtexto através de IA que reflita todas estas atividades, bem escrito, detalhadoe com Elevado 		rigor técnico
+	6.2 - PRINCIPAIS DESAFIOS E CONSTRANGIMENTOS: (baseado no que foi feito durante o mês corrente, elaborar umtexto através de IA que reflita todos os desafios e constrangimentos, bem escrito, detalhadoe com Elevado 		rigor 		técnico
+	6.3 - PROPOSTAS DE MELHORIA PARA OS PRÓXIMOS MESES: (baseado no que foi feito durante o mês corrente, intervenções escolares mais atividades DISIA, elaborar umtexto através de IA que SUGIRA MELHORIAS PARAOS PRÓXIMOS MESES, bem 	escrito, detalhadoe com Elevado rigor técnico
+	6.4 - NOTA FINAL: (baseado no que foi feito durante o mês corrente, intervenções escolares mais atividades DISIA, elaborar um texto através de IA COM UMA NOTA FINAL DO REALIZADO NO MÊS CORRENTE, bem escrito, detalhadoe com 			Elevado rigor técnico
+
+
+

@@ -1,0 +1,51 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!-- ======================================================================
+         Perfil de Layout: UHD / QHD (2560 x 1440)
+         Ver comentário completo em Themes/LayoutFHD.xaml.
+
+         PONTO DE PARTIDA - estes números não foram (nem podiam ser) validados
+         visualmente aqui; foram escolhidos com base na lógica descrita na
+         conversa (limitar a largura em vez de esticar os cartões, e aproveitar
+         a largura extra na grelha de gauges). Ajuste-os à vontade depois de ver
+         o resultado no monitor de 27" e voltamos a afinar.
+         ====================================================================== -->
+
+    <!-- Em vez de deixar o conteúdo esticar até aos ~2300px disponíveis (o que
+         estica cada cartão e cada gráfico muito mais do que o necessário e cria
+         o "espaço negativo" reportado), limita-se a zona de cartões/gráficos a
+         2000px e centra-se na página. Sobra uma margem lateral igual dos dois
+         lados, que é uma escolha de design normal em dashboards largos - e não
+         um cartão esticado sem necessidade. -->
+    <sys:Double x:Key="DashContentMaxWidth">2000</sys:Double>
+
+    <!-- Os gráficos circulares (Pizza/Polar) não ganham nada em ficar mais
+         largos - só criam espaço vazio à volta do círculo. Limita-se cada
+         cartão destes a 760px (mesmo dentro de uma coluna mais larga) e
+         centra-se o conteúdo dentro do cartão. -->
+    <sys:Double x:Key="DashPieCardMaxWidth">760</sys:Double>
+
+    <!-- Cartão "Pendentes - Escola vs. DISIA": ligeiramente maior que em FHD,
+         acompanhando o aumento de DashChartHeightPieSmall abaixo. -->
+    <sys:Double x:Key="DashPieCardMaxWidthSingle">580</sys:Double>
+
+    <!-- Os gráficos de barras/linhas aproveitam bem a largura extra (rótulos
+         menos apertados), por isso sobe-se um pouco a altura para acompanhar. -->
+    <sys:Double x:Key="DashChartHeightBar">300</sys:Double>
+    <sys:Double x:Key="DashChartHeightBarTall">320</sys:Double>
+
+    <sys:Double x:Key="DashChartHeightPie">300</sys:Double>
+    <sys:Double x:Key="DashChartHeightPieSmall">260</sys:Double>
+
+    <!-- Gauges um pouco maiores -->
+    <sys:Double x:Key="DashGaugeSize">170</sys:Double>
+
+    <!-- Com mais largura disponível (mesmo com o limite de 2000px acima), os
+         6 gauges cabem confortavelmente numa única linha em vez de 3x2 -
+         reduz a altura total do cartão e o espaço vazio por baixo de cada gauge. -->
+    <sys:Int32 x:Key="DashGaugesColumns">6</sys:Int32>
+    <sys:Int32 x:Key="DashGaugesRows">1</sys:Int32>
+
+</ResourceDictionary>

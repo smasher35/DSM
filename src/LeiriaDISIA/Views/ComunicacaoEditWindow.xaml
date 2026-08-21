@@ -1,0 +1,76 @@
+<Window x:Class="LeiriaDISIA.Views.ComunicacaoEditWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Ligação de Comunicações" Height="480" Width="800" WindowStartupLocation="CenterOwner"
+        Background="{StaticResource BrushBackground}" MinHeight="440" MinWidth="740">
+    <ScrollViewer Margin="24" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <TextBlock x:Name="TxtTitulo" Grid.Row="0" Text="Nova Ligação de Comunicações" Style="{StaticResource SectionTitleStyle}"
+                       FontSize="18" Margin="0,0,0,16" />
+
+            <!-- Conteúdo principal em 2 colunas (modo paisagem) -->
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="28" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Coluna 1 -->
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Escola" FontWeight="SemiBold" />
+                    <ComboBox x:Name="CmbEscola" DisplayMemberPath="Nome" Margin="0,4,0,12" Padding="6,5" />
+
+                    <TextBlock Text="Tipo de Ligação" FontWeight="SemiBold" />
+                    <ComboBox x:Name="CmbTipoLigacao" IsEditable="True" Margin="0,4,0,12" Padding="6,5" />
+
+                    <TextBlock x:Name="TxtVelocidadeLabel" Text="Velocidade de Fibra" FontWeight="SemiBold" />
+                    <ComboBox x:Name="CmbVelocidadeFibra" IsEditable="True" Margin="0,4,0,12" Padding="6,5" />
+
+                    <TextBlock Text="Operadora" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtOperadora" Margin="0,4,0,0" Padding="6,5" />
+                </StackPanel>
+
+                <!-- Coluna 2 -->
+                <StackPanel Grid.Column="2">
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Nº Contrato" FontWeight="SemiBold" />
+                            <TextBox x:Name="TxtNumeroContrato" Margin="0,4,0,0" Padding="6,5" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Data de Instalação" FontWeight="SemiBold" />
+                            <DatePicker x:Name="DpDataInstalacao" Margin="0,4,0,0" Padding="6,5" />
+                        </StackPanel>
+                    </Grid>
+
+                    <CheckBox x:Name="ChkIntegrado" Content="Já integrado na rede/gestão da DISIA" Margin="0,0,0,12" />
+
+                    <TextBlock Text="Estado" FontWeight="SemiBold" />
+                    <ComboBox x:Name="CmbEstado" IsEditable="True" Margin="0,4,0,12" Padding="6,5" />
+
+                    <TextBlock Text="Observações" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtObservacoes" AcceptsReturn="True" Height="80" TextWrapping="Wrap"
+                             VerticalScrollBarVisibility="Auto" Margin="0,4,0,0" Padding="6,5" />
+                </StackPanel>
+            </Grid>
+
+            <!-- Rodapé com ações -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+                <Button Content="Cancelar" Click="Cancelar_Click" Margin="0,0,8,0" Padding="16,8" Height="37" />
+                <Button Content="Guardar" Style="{StaticResource PrimaryButton}" Click="Guardar_Click" Padding="16,8,16,8" Margin="0,0,8,0" Width="80" Height="37" />
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</Window>

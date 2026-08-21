@@ -1,0 +1,69 @@
+<UserControl x:Class="LeiriaDISIA.Views.ConfiguracoesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel MaxWidth="640" HorizontalAlignment="Left">
+        <TextBlock Text="Configurações" Style="{StaticResource SectionTitleStyle}" FontSize="24" />
+
+        <!-- Aparência / Tema -->
+        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,18">
+            <StackPanel>
+                <TextBlock Text="Aparência" Style="{StaticResource SectionTitleStyle}" FontSize="16" />
+                <TextBlock Text="Tema da Aplicação" FontWeight="SemiBold" Margin="0,0,0,8" />
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                    <RadioButton x:Name="RbTemaClaro" Content="☀️ Claro" GroupName="Tema" Checked="TemaClaro_Checked" 
+                                 Margin="0,0,20,0" VerticalAlignment="Center" />
+                    <RadioButton x:Name="RbTemaEscuro" Content="🌙 Escuro" GroupName="Tema" Checked="TemaEscuro_Checked"
+                                 VerticalAlignment="Center" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Localização da base de dados -->
+        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,18">
+            <StackPanel>
+                <TextBlock Text="Localização da Base de Dados" Style="{StaticResource SectionTitleStyle}" FontSize="16" />
+                <TextBox x:Name="TxtCaminhoDb" IsReadOnly="True" Margin="0,0,0,10" Padding="6" />
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="Abrir localização no Explorador" Click="AbrirLocalizacao_Click" Margin="0,0,8,0" />
+                    <Button Content="Copiar caminho" Click="CopiarCaminho_Click" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Backup -->
+        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,18">
+            <StackPanel>
+                <TextBlock Text="Cópia de Segurança (Backup)" Style="{StaticResource SectionTitleStyle}" FontSize="16" />
+                <TextBlock TextWrapping="Wrap" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,10"
+                           Text="Cria uma cópia integral do ficheiro de base de dados atual, num local à sua escolha. Recomenda-se fazer um backup regularmente." />
+                <Button Content="Fazer Backup Agora" Style="{StaticResource PrimaryButton}" Click="Backup_Click" Padding="16,10" HorizontalAlignment="Left" />
+            </StackPanel>
+        </Border>
+
+        <!-- Restauro -->
+        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,18">
+            <StackPanel>
+                <TextBlock Text="Restaurar Backup" Style="{StaticResource SectionTitleStyle}" FontSize="16" />
+                <TextBlock TextWrapping="Wrap" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,10"
+                           Text="Substitui todos os dados atuais pelos de um ficheiro de backup previamente guardado. Esta ação não pode ser desfeita." />
+                <Button Content="Restaurar a partir de um ficheiro..." Click="Restaurar_Click" Padding="16,10" HorizontalAlignment="Left"
+                        Background="#FEF3C7" Foreground="Black" />
+            </StackPanel>
+        </Border>
+
+        <!-- Configuração de Email (SMTP) -->
+        <!-- Nota: a configuração de Email (SMTP) foi movida para a janela de Administração,
+             separador "📧 Email (SMTP)", que é o local realmente acessível a partir do menu. -->
+
+        <!-- Apagar tudo -->
+        <Border Style="{StaticResource CardStyle}" BorderBrush="{StaticResource BrushDanger}" BorderThickness="1.5">
+            <StackPanel>
+                <TextBlock Text="Zona de Perigo" Style="{StaticResource SectionTitleStyle}" FontSize="16" Foreground="{StaticResource BrushDanger}" />
+                <TextBlock TextWrapping="Wrap" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,10"
+                           Text="Apaga permanentemente TODOS os dados da aplicação: agrupamentos, escolas, pedidos, intervenções, atividades da DISIA, equipamentos, abates e contactos. Recomenda-se fazer um backup antes de continuar." />
+                <Button Content="Apagar Toda a Base de Dados" Click="ApagarTudo_Click" Padding="16,10" HorizontalAlignment="Left"
+                        Background="{StaticResource BrushDanger}" Foreground="White" FontWeight="Bold" />
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

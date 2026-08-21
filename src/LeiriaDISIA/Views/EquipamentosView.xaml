@@ -1,0 +1,81 @@
+<UserControl x:Class="LeiriaDISIA.Views.EquipamentosView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*" />
+            <ColumnDefinition Width="380" />
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.Column="0" Margin="0,0,16,0">
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                <TextBlock Text="Equipamento Informático" Style="{StaticResource SectionTitleStyle}" FontSize="24" Margin="0,0,20,0" />
+                <TextBox x:Name="TxtPesquisa" Style="{StaticResource SearchTextBox}" Width="260" TextChanged="Filtro_Changed"
+                         ToolTip="Pesquisar por nº de série, inventário, tipo, marca ou escola" />
+            </StackPanel>
+            <Border Style="{StaticResource CardStyle}">
+                <DataGrid x:Name="Grid" Height="600" CanUserSortColumns="True" SelectionChanged="Grid_SelectionChanged" RowStyle="{StaticResource DataGridRowClickableStyle}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Nº Série" Binding="{Binding NumeroSerie}" Width="Auto" />
+                        <DataGridTextColumn Header="Nº Inventário" Binding="{Binding NumeroInventario}" Width="Auto" />
+                        <DataGridTextColumn Header="Tipo" Binding="{Binding Tipo}" Width="Auto" />
+                        <DataGridTextColumn Header="Marca/Modelo" Binding="{Binding Marca}" Width="Auto" />
+                        <DataGridTextColumn Header="Localização" Binding="{Binding Escola.Nome}" Width="*" />
+                        <DataGridTextColumn Header="Estado" Binding="{Binding Estado}" Width="Auto" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+        </StackPanel>
+
+        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+            <TextBlock Text="Adicionar / Editar Equipamento" Style="{StaticResource SectionTitleStyle}" />
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel>
+                    <TextBlock Text="Número de Série *" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtNumeroSerie" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Número de Inventário *" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtNumeroInventario" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Tipo de Equipamento" FontWeight="SemiBold" />
+                    <ComboBox x:Name="CmbTipo" IsEditable="True" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Marca" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtMarca" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Modelo" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtModelo" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Data de Aquisição" FontWeight="SemiBold" />
+                    <DatePicker x:Name="DpAquisicao" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Valor de Aquisição (€)" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtValor" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Fornecedor" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtFornecedor" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Escola (se aplicável)" FontWeight="SemiBold" />
+                    <ComboBox x:Name="CmbEscola" DisplayMemberPath="Nome" Margin="0,4,0,10" />
+
+                    <TextBlock Text="OU Local não escolar" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtLocalNaoEscolar" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Estado" FontWeight="SemiBold" />
+                    <ComboBox x:Name="CmbEstado" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Observações" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtObservacoes" AcceptsReturn="True" Height="60" TextWrapping="Wrap" Margin="0,4,0,14" />
+
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Guardar" Style="{StaticResource PrimaryButton}" Click="Guardar_Click" Margin="0,0,8,0" />
+                        <Button Content="Novo" Click="Novo_Click" Margin="0,0,8,0" />
+                        <Button Content="Eliminar" Click="Eliminar_Click" Background="#FDECEC" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

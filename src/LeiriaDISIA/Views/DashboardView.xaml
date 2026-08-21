@@ -1,0 +1,371 @@
+<UserControl x:Class="LeiriaDISIA.Views.DashboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Cabeçalho: título. Exatamente como na disposição FHD original (a escolha de
+             resolução — FHD/UHD — é feita em Administração → Aparência, não aqui). -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,18">
+            <TextBlock Text="Dashboard" Style="{StaticResource SectionTitleStyle}" FontSize="26" />
+            <TextBlock x:Name="TxtAno" Text="" FontSize="16" Foreground="{StaticResource BrushTextSecondary}"
+                       VerticalAlignment="Bottom" Margin="10,0,0,4" />
+        </StackPanel>
+
+        <!-- ================================================================
+             DISPOSIÇÃO FHD (1920x1080) — validada, NÃO ALTERADA.
+             Estrutura, margens, colunas e estilos exatamente como antes; foram
+             apenas acrescentados x:Name aos Border/StackPanel de cada cartão
+             para permitir "emprestar" o mesmo conteúdo (os mesmos controlos,
+             com os mesmos nomes usados em DashboardView.xaml.cs) à disposição
+             UHD, sem duplicar nenhum dado nem nenhuma lógica.
+             ================================================================ -->
+        <ScrollViewer x:Name="ScrollFhd" Grid.Row="1" VerticalScrollBarVisibility="Auto" Visibility="Visible">
+            <StackPanel>
+                <!-- Painel com todos os KPIs (cartões de números) do Dashboard FHD, agrupado num só
+                     contentor nomeado para poder ser capturado como uma única imagem para o
+                     Relatório Mensal (ver DashboardView.CapturarSeccoes) — mantendo exatamente a
+                     mesma disposição em grelha que já tinha, sem lhe tocar. -->
+                <StackPanel x:Name="PainelKpisFhd">
+                <!-- KPIs: linha 1 - totais de intervenções + atividades em curso -->
+                <UniformGrid Columns="4" Rows="1" Margin="0,0,0,10">
+                    <Border x:Name="CardFhd_TotalGlobal" Style="{StaticResource CardStyle}" Margin="0,0,10,0">
+                        <StackPanel x:Name="ContentTotalGlobal">
+                            <TextBlock x:Name="KpiTotalGlobal" Text="0" Style="{StaticResource KpiValueStyle}" Foreground="{StaticResource BrushPrimary}" />
+                            <TextBlock Text="Intervenções (total histórico)" Style="{StaticResource KpiLabelStyle}" />
+                        </StackPanel>
+                    </Border>
+                    <Border x:Name="CardFhd_TotalAno" Style="{StaticResource CardStyle}" Margin="0,0,10,0">
+                        <StackPanel x:Name="ContentTotalAno">
+                            <TextBlock x:Name="KpiTotalAno" Text="0" Style="{StaticResource KpiValueStyle}" Foreground="{StaticResource BrushAccent}" />
+                            <TextBlock Text="Intervenções (ano corrente)" Style="{StaticResource KpiLabelStyle}" />
+                        </StackPanel>
+                    </Border>
+                    <Border x:Name="CardFhd_TotalMes" Style="{StaticResource CardStyle}" Margin="0,0,10,0">
+                        <StackPanel x:Name="ContentTotalMes">
+                            <TextBlock x:Name="KpiTotalMes" Text="0" Style="{StaticResource KpiValueStyle}" Foreground="{StaticResource BrushPurple}" />
+                            <TextBlock Text="Intervenções (mês corrente)" Style="{StaticResource KpiLabelStyle}" />
+                        </StackPanel>
+                    </Border>
+                    <Border x:Name="CardFhd_AtividadesNaoConcluidas" Style="{StaticResource CardStyle}">
+                        <StackPanel x:Name="ContentAtividadesNaoConcluidas">
+                            <TextBlock x:Name="KpiAtividadesNaoConcluidas" Text="0" Style="{StaticResource KpiValueStyle}" Foreground="{StaticResource BrushWarning}" />
+                            <TextBlock Text="Atividades iniciadas mas não concluídas" Style="{StaticResource KpiLabelStyle}" />
+                            <TextBlock Text="(pendente + em progresso + em espera)" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" />
+                        </StackPanel>
+                    </Border>
+                </UniformGrid>
+
+                <!-- KPIs: linha 2 - pedidos não concluídos + destaques -->
+                <UniformGrid Columns="3" Rows="1" Margin="0,0,0,10">
+                    <Border x:Name="CardFhd_Pendentes" Style="{StaticResource CardStyle}" Margin="0,0,10,0">
+                        <StackPanel x:Name="ContentPendentes">
+                            <TextBlock x:Name="KpiPendentes" Text="0" Style="{StaticResource KpiValueStyle}" Foreground="{StaticResource BrushDanger}" />
+                            <TextBlock Text="Pedidos não concluídos" Style="{StaticResource KpiLabelStyle}" />
+                            <TextBlock Text="(pendente + em espera + em andamento)" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" />
+                        </StackPanel>
+                    </Border>
+                    <Border x:Name="CardFhd_TopEscola" Style="{StaticResource CardStyle}" Margin="0,0,10,0">
+                        <StackPanel x:Name="ContentTopEscola">
+                            <TextBlock x:Name="KpiTopEscolaValor" Text="0" Style="{StaticResource KpiValueStyle}" Foreground="{StaticResource BrushPurple}" />
+                            <TextBlock Text="Escola mais intervencionada (sempre)" Style="{StaticResource KpiLabelStyle}" />
+                            <TextBlock x:Name="KpiTopEscola" Text="—" FontSize="11" FontWeight="SemiBold"
+                                       TextWrapping="Wrap" Foreground="{StaticResource BrushTextSecondary}" />
+                        </StackPanel>
+                    </Border>
+                    <Border x:Name="CardFhd_TopAgrupamento" Style="{StaticResource CardStyle}">
+                        <StackPanel x:Name="ContentTopAgrupamento">
+                            <TextBlock x:Name="KpiTopAgrupamentoValor" Text="0" Style="{StaticResource KpiValueStyle}" Foreground="{StaticResource BrushPurple}" />
+                            <TextBlock Text="Agrupamento mais intervencionado (sempre)" Style="{StaticResource KpiLabelStyle}" />
+                            <TextBlock x:Name="KpiTopAgrupamento" Text="—" FontSize="11" FontWeight="SemiBold"
+                                       TextWrapping="Wrap" Foreground="{StaticResource BrushTextSecondary}" />
+                        </StackPanel>
+                    </Border>
+                </UniformGrid>
+
+                <!-- Agrupamentos, Escolas e Edifícios -->
+                <UniformGrid Columns="5" Rows="1" Margin="0,0,0,10">
+                    <Border x:Name="CardFhd_Agrupamentos" Style="{StaticResource CardStyle}" Margin="0,0,10,0">
+                        <StackPanel x:Name="ContentAgrupamentos">
+                            <TextBlock x:Name="KpiAgrupamentos" Text="0" Style="{StaticResource KpiValueStyle}" />
+                            <TextBlock Text="Agrupamentos" Style="{StaticResource KpiLabelStyle}" />
+                        </StackPanel>
+                    </Border>
+                    <Border x:Name="CardFhd_Escolas" Style="{StaticResource CardStyle}" Margin="0,0,10,0">
+                        <StackPanel x:Name="ContentEscolas">
+                            <TextBlock x:Name="KpiEscolas" Text="0" Style="{StaticResource KpiValueStyle}" />
+                            <TextBlock Text="Escolas / JI ativas" Style="{StaticResource KpiLabelStyle}" />
+                        </StackPanel>
+                    </Border>
+                    <Border x:Name="CardFhd_Edificios" Style="{StaticResource CardStyle}" Margin="0,0,10,0">
+                        <StackPanel x:Name="ContentEdificios">
+                            <TextBlock x:Name="KpiEdificios" Text="0" Style="{StaticResource KpiValueStyle}" />
+                            <TextBlock Text="Total de Edifícios" Style="{StaticResource KpiLabelStyle}" />
+                            <TextBlock Text="(exclui JI integrados)" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" />
+                        </StackPanel>
+                    </Border>
+                    <Border x:Name="CardFhd_JiIntegrados" Style="{StaticResource CardStyle}" Margin="0,0,10,0">
+                        <StackPanel x:Name="ContentJiIntegrados">
+                            <TextBlock x:Name="KpiJiIntegrados" Text="0" Style="{StaticResource KpiValueStyle}" Foreground="{StaticResource BrushAccent}" />
+                            <TextBlock Text="JI Integrados" Style="{StaticResource KpiLabelStyle}" />
+                            <TextBlock Text="(partilham edifício com EB1)" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" />
+                        </StackPanel>
+                    </Border>
+                    <Border x:Name="CardFhd_JiIsolados" Style="{StaticResource CardStyle}">
+                        <StackPanel x:Name="ContentJiIsolados">
+                            <TextBlock x:Name="KpiJiIsolados" Text="0" Style="{StaticResource KpiValueStyle}" Foreground="{StaticResource BrushWarning}" />
+                            <TextBlock Text="JI Isolados" Style="{StaticResource KpiLabelStyle}" />
+                            <TextBlock Text="(edifício próprio)" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" />
+                        </StackPanel>
+                    </Border>
+                </UniformGrid>
+
+                <!-- KPIs de Equipamento -->
+                <UniformGrid Columns="4" Rows="1" Margin="0,0,0,20">
+                    <Border x:Name="CardFhd_TotalComputadores" Style="{StaticResource CardStyle}" Margin="0,0,10,0">
+                        <StackPanel x:Name="ContentTotalComputadores">
+                            <TextBlock x:Name="KpiTotalComputadores" Text="0" Style="{StaticResource KpiValueStyle}" />
+                            <TextBlock Text="Total de Computadores" Style="{StaticResource KpiLabelStyle}" />
+                            <TextBlock Text="(secretária, portátil e servidor)" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" />
+                        </StackPanel>
+                    </Border>
+                    <Border x:Name="CardFhd_ComputadoresRecolhidos" Style="{StaticResource CardStyle}" Margin="0,0,10,0">
+                        <StackPanel x:Name="ContentComputadoresRecolhidos">
+                            <TextBlock x:Name="KpiComputadoresRecolhidos" Text="0" Style="{StaticResource KpiValueStyle}" Foreground="{StaticResource BrushWarning}" />
+                            <TextBlock Text="Computadores Recolhidos" Style="{StaticResource KpiLabelStyle}" />
+                            <TextBlock Text="(atualmente fora da escola)" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" />
+                        </StackPanel>
+                    </Border>
+                    <Border x:Name="CardFhd_ComputadoresAguardamEntrega" Style="{StaticResource CardStyle}" Margin="0,0,10,0">
+                        <StackPanel x:Name="ContentComputadoresAguardamEntrega">
+                            <TextBlock x:Name="KpiComputadoresAguardamEntrega" Text="0" Style="{StaticResource KpiValueStyle}" Foreground="{StaticResource BrushAccent}" />
+                            <TextBlock Text="Computadores a Aguardar Entrega" Style="{StaticResource KpiLabelStyle}" />
+                            <TextBlock Text="(já reparados/prontos, por entregar)" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" />
+                        </StackPanel>
+                    </Border>
+                    <Border x:Name="CardFhd_EquipamentoObsoleto" Style="{StaticResource CardStyle}">
+                        <StackPanel x:Name="ContentEquipamentoObsoleto">
+                            <TextBlock x:Name="KpiEquipamentoObsoleto" Text="0" Style="{StaticResource KpiValueStyle}" Foreground="{StaticResource BrushDanger}" />
+                            <TextBlock Text="Equipamento Obsoleto" Style="{StaticResource KpiLabelStyle}" />
+                            <TextBlock Text="(ver Administração → Obsolescência)" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" />
+                        </StackPanel>
+                    </Border>
+                </UniformGrid>
+                </StackPanel>
+                <!-- Fim de PainelKpisFhd -->
+
+                <!-- Gráficos -->
+
+                <!-- Distribuição do Parque de Equipamento: gauges com a % de cada tipo face ao total
+                     geral de equipamento (100% = TotalEquipamentoGeral). -->
+                <Border x:Name="CardFhd_Gauges" Style="{StaticResource CardStyle}" Margin="0,0,0,16">
+                    <StackPanel x:Name="ContentGauges">
+                        <TextBlock Text="Distribuição do Parque de Equipamento" Style="{StaticResource SectionTitleStyle}" FontSize="16" />
+                        <TextBlock x:Name="TxtTotalEquipamentoGeral" TextWrapping="Wrap" FontSize="11"
+                                   Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,10"
+                                   Text="% de cada tipo face ao total de equipamento registado" />
+                        <UniformGrid Columns="3" Rows="2">
+                            <Border Margin="0,0,10,10">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Text="Total Computadores" Style="{StaticResource KpiLabelStyle}" HorizontalAlignment="Center" />
+                                    <lvc:PieChart x:Name="GaugeTotalComputadores" Height="150" Width="150"
+                                                  InitialRotation="-225" MaxAngle="270" MinValue="0" MaxValue="100" />
+                                    <TextBlock x:Name="TxtGaugeTotalComputadores" Text="0 / 0" FontSize="11"
+                                               HorizontalAlignment="Center" Foreground="{StaticResource BrushTextSecondary}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Margin="0,0,10,10">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Text="Computadores de Secretária" Style="{StaticResource KpiLabelStyle}" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" />
+                                    <lvc:PieChart x:Name="GaugeComputadoresSecretaria" Height="150" Width="150"
+                                                  InitialRotation="-225" MaxAngle="270" MinValue="0" MaxValue="100" />
+                                    <TextBlock x:Name="TxtGaugeComputadoresSecretaria" Text="0 / 0" FontSize="11"
+                                               HorizontalAlignment="Center" Foreground="{StaticResource BrushTextSecondary}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Margin="0,0,0,10">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Text="Portáteis" Style="{StaticResource KpiLabelStyle}" HorizontalAlignment="Center" />
+                                    <lvc:PieChart x:Name="GaugePortateis" Height="150" Width="150"
+                                                  InitialRotation="-225" MaxAngle="270" MinValue="0" MaxValue="100" />
+                                    <TextBlock x:Name="TxtGaugePortateis" Text="0 / 0" FontSize="11"
+                                               HorizontalAlignment="Center" Foreground="{StaticResource BrushTextSecondary}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Margin="0,10,10,0">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Text="Switches" Style="{StaticResource KpiLabelStyle}" HorizontalAlignment="Center" />
+                                    <lvc:PieChart x:Name="GaugeSwitches" Height="150" Width="150"
+                                                  InitialRotation="-225" MaxAngle="270" MinValue="0" MaxValue="100" />
+                                    <TextBlock x:Name="TxtGaugeSwitches" Text="0 / 0" FontSize="11"
+                                               HorizontalAlignment="Center" Foreground="{StaticResource BrushTextSecondary}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Margin="0,10,10,0">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Text="Access Points" Style="{StaticResource KpiLabelStyle}" HorizontalAlignment="Center" />
+                                    <lvc:PieChart x:Name="GaugeAccessPoints" Height="150" Width="150"
+                                                  InitialRotation="-225" MaxAngle="270" MinValue="0" MaxValue="100" />
+                                    <TextBlock x:Name="TxtGaugeAccessPoints" Text="0 / 0" FontSize="11"
+                                               HorizontalAlignment="Center" Foreground="{StaticResource BrushTextSecondary}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Margin="0,10,0,0">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Text="Impressoras" Style="{StaticResource KpiLabelStyle}" HorizontalAlignment="Center" />
+                                    <lvc:PieChart x:Name="GaugeImpressoras" Height="150" Width="150"
+                                                  InitialRotation="-225" MaxAngle="270" MinValue="0" MaxValue="100" />
+                                    <TextBlock x:Name="TxtGaugeImpressoras" Text="0 / 0" FontSize="11"
+                                               HorizontalAlignment="Center" Foreground="{StaticResource BrushTextSecondary}" />
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
+                    </StackPanel>
+                </Border>
+
+                <Border x:Name="CardFhd_ChartPorMes" Style="{StaticResource CardStyle}" Margin="0,0,0,16">
+                    <StackPanel x:Name="ContentChartPorMes">
+                        <TextBlock Text="Intervenções por Mês (ano corrente)" Style="{StaticResource SectionTitleStyle}" FontSize="16" />
+                        <lvc:CartesianChart x:Name="ChartPorMes" Height="260" />
+                    </StackPanel>
+                </Border>
+
+                <!-- (2.4) Intervenções por categoria: anual (esquerda) e mês corrente (direita) lado a lado -->
+                <UniformGrid Columns="2" Rows="1" Margin="0,0,0,16">
+                    <Border x:Name="CardFhd_ChartPorCategoria" Style="{StaticResource CardStyle}" Margin="0,0,10,0">
+                        <StackPanel x:Name="ContentChartPorCategoria">
+                            <TextBlock Text="Intervenções por Categoria (total) - Ano" Style="{StaticResource SectionTitleStyle}" FontSize="16" />
+                            <lvc:PieChart x:Name="ChartPorCategoria" Height="280" LegendPosition="Right" />
+                        </StackPanel>
+                    </Border>
+                    <Border x:Name="CardFhd_ChartPorCategoriaMes" Style="{StaticResource CardStyle}">
+                        <StackPanel x:Name="ContentChartPorCategoriaMes">
+                            <TextBlock Text="Intervenções por Categoria (total) - Mês Corrente" Style="{StaticResource SectionTitleStyle}" FontSize="16" />
+                            <lvc:PolarChart x:Name="ChartPorCategoriaMes" Height="280" />
+                        </StackPanel>
+                    </Border>
+                </UniformGrid>
+
+                <!-- Intervenções por agrupamento: ano corrente (esquerda) e mês corrente (direita) -->
+                <UniformGrid Columns="2" Rows="1" Margin="0,0,0,16">
+                    <Border x:Name="CardFhd_ChartAgrupamentoAno" Style="{StaticResource CardStyle}" Margin="0,0,10,0">
+                        <StackPanel x:Name="ContentChartAgrupamentoAno">
+                            <TextBlock Text="Intervenções por Agrupamento (ano corrente)" Style="{StaticResource SectionTitleStyle}" FontSize="16" />
+                            <lvc:CartesianChart x:Name="ChartAgrupamentoAno" Height="260" />
+                            <TextBlock x:Name="TxtLegendaAgrupamentoAno" TextWrapping="Wrap" FontSize="10"
+                                       Foreground="{StaticResource BrushTextSecondary}" Margin="0,6,0,0" />
+                        </StackPanel>
+                    </Border>
+                    <Border x:Name="CardFhd_ChartAgrupamentoMes" Style="{StaticResource CardStyle}">
+                        <StackPanel x:Name="ContentChartAgrupamentoMes">
+                            <TextBlock Text="Intervenções por Agrupamento (mês corrente)" Style="{StaticResource SectionTitleStyle}" FontSize="16" />
+                            <lvc:CartesianChart x:Name="ChartAgrupamentoMes" Height="260" />
+                            <TextBlock x:Name="TxtLegendaAgrupamentoMes" TextWrapping="Wrap" FontSize="10"
+                                       Foreground="{StaticResource BrushTextSecondary}" Margin="0,6,0,0" />
+                        </StackPanel>
+                    </Border>
+                </UniformGrid>
+
+                <!-- (2.5) Intervenções por categoria, por agrupamento: total anual (esquerda) e mês corrente (direita) -->
+                <UniformGrid Columns="2" Rows="1" Margin="0,0,0,16">
+                    <Border x:Name="CardFhd_ChartCategoriaAgrupamentoAno" Style="{StaticResource CardStyle}" Margin="0,0,10,0">
+                        <StackPanel x:Name="ContentChartCategoriaAgrupamentoAno">
+                            <TextBlock Text="Intervenções por Categoria, por Agrupamento - Total Anual" Style="{StaticResource SectionTitleStyle}" FontSize="16" />
+                            <lvc:CartesianChart x:Name="ChartCategoriaAgrupamentoAno" Height="280" LegendPosition="Bottom" />
+                            <TextBlock x:Name="TxtLegendaCategoriaAgrupamentoAno" TextWrapping="Wrap" FontSize="10"
+                                       Foreground="{StaticResource BrushTextSecondary}" Margin="0,6,0,0" />
+                        </StackPanel>
+                    </Border>
+                    <Border x:Name="CardFhd_ChartCategoriaAgrupamentoMes" Style="{StaticResource CardStyle}">
+                        <StackPanel x:Name="ContentChartCategoriaAgrupamentoMes">
+                            <TextBlock Text="Intervenções por Categoria, por Agrupamento - Mês Corrente" Style="{StaticResource SectionTitleStyle}" FontSize="16" />
+                            <lvc:CartesianChart x:Name="ChartCategoriaAgrupamentoMes" Height="280" LegendPosition="Bottom" />
+                            <TextBlock x:Name="TxtLegendaCategoriaAgrupamentoMes" TextWrapping="Wrap" FontSize="10"
+                                       Foreground="{StaticResource BrushTextSecondary}" Margin="0,6,0,0" />
+                        </StackPanel>
+                    </Border>
+                </UniformGrid>
+
+                <Border x:Name="CardFhd_ChartPendentes" Style="{StaticResource CardStyle}">
+                    <StackPanel x:Name="ContentChartPendentes" MaxWidth="520" HorizontalAlignment="Left">
+                        <TextBlock Text="Pendentes — Escola vs. DISIA" Style="{StaticResource SectionTitleStyle}" FontSize="16" />
+                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,6"
+                                   Text="Escola: pedidos de intervenção ainda por atender. DISIA: equipamento recolhido ainda não entregue e atividades da DISIA com estado 'Pendente'." />
+                        <lvc:PieChart x:Name="ChartPendentes" Height="240" LegendPosition="Right" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- ================================================================
+             DISPOSIÇÃO UHD (2560x1440) — nova, compacta.
+             Não contém nenhum controlo novo com dados: todos os "cartões"
+             abaixo são invólucros (Border) vazios em XAML. Em tempo de
+             execução (DashboardView.xaml.cs), o MESMO conteúdo (StackPanel
+             com os MESMOS controlos x:Name, os mesmos dados, a mesma lógica)
+             é "emprestado" da disposição FHD para dentro destes invólucros
+             mais compactos, e devolvido quando se volta a FHD. Nenhum dado,
+             nenhuma cor, nenhuma fonte, nenhum nome de controlo é duplicado
+             ou alterado — apenas a organização/tamanho dos invólucros.
+             ================================================================ -->
+        <ScrollViewer x:Name="ScrollUhd" Grid.Row="1" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+            <StackPanel>
+
+                <!-- Linha 1: os 16 cartões KPI, 8 por linha (2 linhas) -->
+                <UniformGrid x:Name="GridUhdKpis" Columns="8" Rows="2" Margin="0,0,0,8">
+                    <Border x:Name="CardUhd_TotalGlobal" Style="{StaticResource CardStyleCompacto}" Margin="4" />
+                    <Border x:Name="CardUhd_TotalAno" Style="{StaticResource CardStyleCompacto}" Margin="4" />
+                    <Border x:Name="CardUhd_TotalMes" Style="{StaticResource CardStyleCompacto}" Margin="4" />
+                    <Border x:Name="CardUhd_AtividadesNaoConcluidas" Style="{StaticResource CardStyleCompacto}" Margin="4" />
+                    <Border x:Name="CardUhd_Pendentes" Style="{StaticResource CardStyleCompacto}" Margin="4" />
+                    <Border x:Name="CardUhd_TopEscola" Style="{StaticResource CardStyleCompacto}" Margin="4" />
+                    <Border x:Name="CardUhd_TopAgrupamento" Style="{StaticResource CardStyleCompacto}" Margin="4" />
+                    <Border x:Name="CardUhd_Agrupamentos" Style="{StaticResource CardStyleCompacto}" Margin="4" />
+                    <Border x:Name="CardUhd_Escolas" Style="{StaticResource CardStyleCompacto}" Margin="4" />
+                    <Border x:Name="CardUhd_Edificios" Style="{StaticResource CardStyleCompacto}" Margin="4" />
+                    <Border x:Name="CardUhd_JiIntegrados" Style="{StaticResource CardStyleCompacto}" Margin="4" />
+                    <Border x:Name="CardUhd_JiIsolados" Style="{StaticResource CardStyleCompacto}" Margin="4" />
+                    <Border x:Name="CardUhd_TotalComputadores" Style="{StaticResource CardStyleCompacto}" Margin="4" />
+                    <Border x:Name="CardUhd_ComputadoresRecolhidos" Style="{StaticResource CardStyleCompacto}" Margin="4" />
+                    <Border x:Name="CardUhd_ComputadoresAguardamEntrega" Style="{StaticResource CardStyleCompacto}" Margin="4" />
+                    <Border x:Name="CardUhd_EquipamentoObsoleto" Style="{StaticResource CardStyleCompacto}" Margin="4" />
+                </UniformGrid>
+
+                <!-- Linha 2: gauges do parque de equipamento (mais estreito e por isso mais
+                     compacto/próximo) + evolução mensal (mais largo, é o gráfico "principal") -->
+                <Grid Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="0.42*" />
+                        <ColumnDefinition Width="0.58*" />
+                    </Grid.ColumnDefinitions>
+                    <Border x:Name="CardUhd_Gauges" Grid.Column="0" Style="{StaticResource CardStyleCompacto}" Margin="0,0,4,0" />
+                    <Border x:Name="CardUhd_ChartPorMes" Grid.Column="1" Style="{StaticResource CardStyleCompacto}" Margin="4,0,0,0" />
+                </Grid>
+
+                <!-- Linha 3: os 3 gráficos "circulares" (pizza / polar / donut) lado a lado -->
+                <UniformGrid Columns="3" Rows="1" Margin="0,0,0,8">
+                    <Border x:Name="CardUhd_ChartPorCategoria" Style="{StaticResource CardStyleCompacto}" Margin="0,0,4,0" />
+                    <Border x:Name="CardUhd_ChartPorCategoriaMes" Style="{StaticResource CardStyleCompacto}" Margin="4,0,4,0" />
+                    <Border x:Name="CardUhd_ChartPendentes" Style="{StaticResource CardStyleCompacto}" Margin="4,0,0,0" />
+                </UniformGrid>
+
+                <!-- Linha 4: Intervenções por Agrupamento — ano e mês corrente -->
+                <UniformGrid Columns="2" Rows="1" Margin="0,0,0,8">
+                    <Border x:Name="CardUhd_ChartAgrupamentoAno" Style="{StaticResource CardStyleCompacto}" Margin="0,0,4,0" />
+                    <Border x:Name="CardUhd_ChartAgrupamentoMes" Style="{StaticResource CardStyleCompacto}" Margin="4,0,0,0" />
+                </UniformGrid>
+
+                <!-- Linha 5: Intervenções por Categoria, por Agrupamento — total anual e mês corrente -->
+                <UniformGrid Columns="2" Rows="1">
+                    <Border x:Name="CardUhd_ChartCategoriaAgrupamentoAno" Style="{StaticResource CardStyleCompacto}" Margin="0,0,4,0" />
+                    <Border x:Name="CardUhd_ChartCategoriaAgrupamentoMes" Style="{StaticResource CardStyleCompacto}" Margin="4,0,0,0" />
+                </UniformGrid>
+
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

@@ -1,0 +1,68 @@
+<Application x:Class="LeiriaDISIA.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.modernwpf.com/2019"
+             xmlns:conv="clr-namespace:LeiriaDISIA.Converters"
+             ShutdownMode="OnExplicitShutdown">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- O ModernWpfUI vem primeiro; o NOSSO tema tem de vir por último, porque em
+                     ResourceDictionary.MergedDictionaries, quando há a mesma chave/TargetType em
+                     mais do que um dicionário, o ÚLTIMO da lista é que prevalece. Com a ordem
+                     antiga, os estilos por omissão do ModernWpfUI para TextBox/ComboBox/etc.
+                     estavam a sobrepor-se aos nossos, o que reduzia o contraste dos campos. -->
+                <ui:ThemeResources RequestedTheme="Light">
+                    <!-- Forma oficialmente documentada pelo ModernWpfUI para sobrepor as cores
+                         internas dos controlos (ver discussão dos autores em
+                         github.com/Kinnara/ModernWpf/discussions/458): os templates do TextBox,
+                         PasswordBox e ComboBox NÃO leem as propriedades Background/BorderBrush
+                         do controlo - leem diretamente estas chaves, dentro do dicionário de
+                         tema "Light". Sobrepor um Style TargetType="TextBox" comum (como se
+                         tentou antes) não tem qualquer efeito nestes controlos por esse motivo. -->
+                    <ui:ThemeResources.ThemeDictionaries>
+                        <ResourceDictionary x:Key="Light" ui:ThemeDictionary.Key="Light">
+                            <SolidColorBrush x:Key="TextControlBackground" Color="#FFFFFF" />
+                            <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#FFFFFF" />
+                            <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="#FFFFFF" />
+                            <SolidColorBrush x:Key="TextControlBackgroundDisabled" Color="#F1F5F9" />
+                            <SolidColorBrush x:Key="TextControlBorderBrush" Color="#94A3B8" />
+                            <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="#64748B" />
+                            <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="#1F4E79" />
+                            <SolidColorBrush x:Key="TextControlBorderBrushDisabled" Color="#E2E8F0" />
+                            <SolidColorBrush x:Key="ComboBoxBackground" Color="#FFFFFF" />
+                            <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="#FFFFFF" />
+                            <SolidColorBrush x:Key="ComboBoxBackgroundPressed" Color="#FFFFFF" />
+                            <SolidColorBrush x:Key="ComboBoxBackgroundDisabled" Color="#F1F5F9" />
+                            <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="#94A3B8" />
+                            <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="#64748B" />
+                            <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="#1F4E79" />
+                            <SolidColorBrush x:Key="ComboBoxBorderBrushDisabled" Color="#E2E8F0" />
+                        </ResourceDictionary>
+                    </ui:ThemeResources.ThemeDictionaries>
+                </ui:ThemeResources>
+                <ui:XamlControlsResources />
+                <ResourceDictionary Source="Themes/ModernTheme.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <conv:HexColorToBrushConverter x:Key="HexColorToBrushConverter" />
+            <conv:BooleanToColorConverter x:Key="BooleanToColorConverter" />
+            <conv:BooleanToStatusConverter x:Key="BooleanToStatusConverter" />
+            <conv:EstadoPedidoNomeExibicaoConverter x:Key="EstadoPedidoNomeExibicaoConverter" />
+            <conv:EstadoIntervencaoNomeExibicaoConverter x:Key="EstadoIntervencaoNomeExibicaoConverter" />
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+
+            <!-- (v0.13.6) Estilo único e reutilizável para centrar o valor das células de
+                 DataGrid, usado em vários módulos (Agrupamentos, Escolas, Pedidos, Intervenções,
+                 Atividades DISIA, Equipamento Informático, Equipamento Abatido, Equipamento
+                 Recolhido, Contatos), em vez de repetir o mesmo Style inline em cada
+                 DataGridTextColumn.ElementStyle. Fica aqui (Application.Resources), e não dentro
+                 de ModernTheme.xaml/DarkTheme.xaml, porque o ThemeService substitui esses dois
+                 dicionários por inteiro ao trocar de tema (ver Services/ThemeService.cs), e este
+                 estilo não depende de cor nem de tema, só de alinhamento. -->
+            <Style x:Key="CenteredCellTextStyle" TargetType="TextBlock">
+                <Setter Property="HorizontalAlignment" Value="Center" />
+                <Setter Property="TextAlignment" Value="Center" />
+            </Style>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

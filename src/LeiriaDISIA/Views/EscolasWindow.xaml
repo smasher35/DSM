@@ -1,0 +1,54 @@
+<Window x:Class="LeiriaDISIA.Views.EscolasWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Escolas e Jardins de Infância — Gestão DISIA" WindowState="Maximized"
+        Background="{StaticResource BrushBackground}" FontFamily="Segoe UI">
+    <DockPanel Margin="24">
+        <Border DockPanel.Dock="Top" Style="{StaticResource CardStyle}" Padding="14" Margin="0,0,0,16">
+            <StackPanel Orientation="Horizontal">
+                <Button Content="🏠 Menu Principal" Style="{StaticResource MenuPrincipalButton}" Click="MenuPrincipal_Click" Margin="0,0,10,0" />
+                <Button Content="➕ Inserir Escola" Style="{StaticResource PrimaryButton}" Click="Inserir_Click" Margin="0,0,10,0" />
+                <Button Content="📄 Relatório do Módulo" Style="{StaticResource ReportButton}" Click="Relatorio_Click" Margin="0,0,30,0" />
+                <TextBlock Text="Filtrar por agrupamento:" VerticalAlignment="Center" Margin="0,0,8,0" />
+                <ComboBox x:Name="CmbFiltroAgrupamento" Width="240" DisplayMemberPath="Nome" SelectionChanged="Filtro_Changed" Margin="0,0,16,0" VerticalAlignment="Center" />
+                <TextBox x:Name="TxtPesquisa" Style="{StaticResource SearchTextBox}" Width="220" TextChanged="Filtro_TextChanged"
+                         ToolTip="Pesquisar por nome, localidade ou freguesia" />
+                <TextBlock Text="Escolas e Jardins de Infância" FontSize="22" FontWeight="Bold"
+                           Foreground="{StaticResource BrushPrimary}" VerticalAlignment="Center" Margin="30,0,0,0" />
+            </StackPanel>
+        </Border>
+
+        <!-- Grid com linhas "*" (DataGrid) + Auto (dica), em vez de StackPanel, para a lista de
+             escolas ocupar sempre todo o espaço livre até ao fundo da janela (mesmo padrão do
+             módulo Atividades DISIA — ver Views/DisiaWindow.xaml). -->
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Border Grid.Row="0" Style="{StaticResource CardStyle}">
+                <DataGrid x:Name="Grid" CanUserSortColumns="True" MouseDoubleClick="Grid_MouseDoubleClick" CanUserResizeColumns="True" CanUserReorderColumns="True" RowStyle="{StaticResource DataGridRowClickableStyle}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Cód." Binding="{Binding CodEscola}" Width="Auto" ElementStyle="{StaticResource CenteredCellTextStyle}" />
+                        <DataGridTextColumn Header="Escola" Binding="{Binding Nome}" Width="1*" />
+                        <DataGridTextColumn Header="Cód. GEPE" Binding="{Binding CodGEPE}" Width="Auto" ElementStyle="{StaticResource CenteredCellTextStyle}" />
+                        <DataGridTextColumn Header="Localidade" Binding="{Binding Localidade}" Width="1*" />
+                        <DataGridTextColumn Header="Tipo" Binding="{Binding Tipo}" Width="Auto" />
+                        <DataGridTextColumn Header="Agrupamento" Binding="{Binding Agrupamento.Nome}" Width="1.2*" />
+                        <DataGridTemplateColumn Header="Estado" Width="Auto" CanUserSort="False">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource BadgePillStyle}" HorizontalAlignment="Center" Background="{Binding CorEstado, Converter={StaticResource HexColorToBrushConverter}}">
+                                        <TextBlock Text="{Binding Estado}" Style="{StaticResource BadgeTextStyle}" />
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+            <TextBlock Grid.Row="1" Text="💡 Duplo-clique numa escola para ver/editar os seus detalhes."
+                       FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,8,0,0" />
+        </Grid>
+    </DockPanel>
+</Window>

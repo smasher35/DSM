@@ -1,0 +1,339 @@
+<Window x:Class="LeiriaDISIA.Views.EquipamentoEditWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Equipamento Informático" Height="773" Width="1607" WindowStartupLocation="CenterOwner"
+        Background="{StaticResource BrushBackground}" MinHeight="640" MinWidth="1280">
+    <ScrollViewer Margin="24" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MinWidth="700" />
+                <ColumnDefinition Width="24" />
+                <ColumnDefinition Width="520" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Coluna esquerda: formulário (título + campos) -->
+            <Grid Grid.Row="0" Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+            <TextBlock x:Name="TxtTitulo" Grid.Row="0" Text="Novo Equipamento" Style="{StaticResource SectionTitleStyle}"
+                       FontSize="18" Margin="0,0,0,16" />
+
+            <!-- Conteúdo principal em 3 colunas (modo paisagem) -->
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="24" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="24" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Coluna 1: Identificação -->
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Identificação" FontWeight="Bold" Foreground="{StaticResource BrushTextSecondary}"
+                               FontSize="11" Margin="0,0,0,10" />
+
+                    <TextBlock Text="Número de Série *" FontWeight="SemiBold" />
+                    <Grid Margin="0,4,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="8" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="TxtNumeroSerie" Grid.Column="0" Padding="6,5" />
+                        <Button Grid.Column="2" Content="🎲 Gerar" Click="GerarNumeroSerie_Click" Padding="10,5"
+                                ToolTip="Gerar um número de série padrão, para usar quando o equipamento não tem um número de série visível/legível" />
+                    </Grid>
+
+                    <TextBlock Text="Número de Inventário" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtNumeroInventario" Margin="0,4,0,10" Padding="6,5" />
+
+                    <TextBlock Text="Tipo de Equipamento" FontWeight="SemiBold" />
+                    <ComboBox x:Name="CmbTipo" IsEditable="True" Margin="0,4,0,10" Padding="6,5"
+                              SelectionChanged="CmbTipo_SelectionChanged" LostFocus="CmbTipo_LostFocus" />
+
+                    <TextBlock Text="Marca" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtMarca" Margin="0,4,0,10" Padding="6,5" />
+
+                    <TextBlock Text="Modelo" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtModelo" Margin="0,4,0,0" Padding="6,5" />
+                </StackPanel>
+
+                <!-- Coluna 2: Características específicas (consoante o Tipo escolhido) -->
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="Características Específicas" FontWeight="Bold" Foreground="{StaticResource BrushTextSecondary}"
+                               FontSize="11" Margin="0,0,0,10" />
+
+                    <!-- Grupo: Computadores (PC / Portátil / Servidor) -->
+                    <Border x:Name="GrupoComputador" Background="#F1F5F9" CornerRadius="8" Padding="12" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="Características do Computador" FontWeight="Bold" Margin="0,0,0,8" />
+                            <TextBlock Text="Processador" FontWeight="SemiBold" />
+                            <ComboBox x:Name="CmbProcessador" IsEditable="True" Margin="0,4,0,10" ToolTip="Ex: Intel Core i5-12400" />
+
+                            <TextBlock Text="Família / Versão do Processador" FontWeight="SemiBold" />
+                            <TextBox x:Name="TxtFamiliaProcessador" Margin="0,4,0,10" ToolTip="Ex: 12ª Geração, Ryzen 5 5600G" />
+
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Tipo de Memória" FontWeight="SemiBold" />
+                                    <ComboBox x:Name="CmbTipoMemoria" IsEditable="True" Margin="0,4,4,0" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="Memória (GB)" FontWeight="SemiBold" />
+                                    <!-- Dados Fixos v2: caixa dependente de "Tipo de Memória" — as opções mudam
+                                         consoante o tipo escolhido à esquerda (ex.: DDR4 → 4/8/16/32 GB). Continua a
+                                         gravar um número simples em Equipamento.QuantidadeMemoriaGB, tal como antes. -->
+                                    <ComboBox x:Name="CmbMemoriaGB" IsEditable="True" Margin="4,4,0,0" />
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Tipo de Disco" FontWeight="SemiBold" />
+                                    <ComboBox x:Name="CmbTipoDisco" IsEditable="True" Margin="0,4,4,0" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="Tamanho do Disco (GB)" FontWeight="SemiBold" />
+                                    <!-- Dados Fixos v2: caixa dependente de "Tipo de Disco", pelo mesmo mecanismo da
+                                         Memória acima. Continua a gravar em Equipamento.TamanhoDiscoGB, como antes. -->
+                                    <ComboBox x:Name="CmbTamanhoDisco" IsEditable="True" Margin="4,4,0,0" />
+                                </StackPanel>
+                            </Grid>
+
+                            <TextBlock Text="Sistema Operativo" FontWeight="SemiBold" />
+                            <ComboBox x:Name="CmbSistemaOperativo" IsEditable="True" Margin="0,4,0,0" ToolTip="Ex: Windows 11 Pro" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Grupo: Monitor -->
+                    <Border x:Name="GrupoMonitor" Background="#F1F5F9" CornerRadius="8" Padding="12" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="Características do Monitor" FontWeight="Bold" Margin="0,0,0,8" />
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Polegadas" FontWeight="SemiBold" />
+                                    <!-- Dados Fixos v2: lista sugerida vem da característica embutida "Polegadas" do grupo Monitor. -->
+                                    <ComboBox x:Name="CmbPolegadas" IsEditable="True" Margin="0,4,4,0" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="Tipo de Painel" FontWeight="SemiBold" />
+                                    <ComboBox x:Name="CmbTipoPainel" IsEditable="True" Margin="4,4,0,0" />
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Text="Resolução" FontWeight="SemiBold" />
+                            <!-- Dados Fixos v2: lista sugerida vem da característica embutida "Resolução" do grupo Monitor. -->
+                            <ComboBox x:Name="CmbResolucaoMonitor" IsEditable="True" Margin="0,4,0,0" ToolTip="Ex: 1920x1080" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Grupo: Impressora / Multifunções -->
+                    <Border x:Name="GrupoImpressora" Background="#F1F5F9" CornerRadius="8" Padding="12" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="Características da Impressora" FontWeight="Bold" Margin="0,0,0,8" />
+                            <TextBlock Text="Tipo" FontWeight="SemiBold" />
+                            <ComboBox x:Name="CmbTipoImpressora" IsEditable="True" Margin="0,4,0,10" />
+                            <CheckBox x:Name="ChkImpressaoCor" Content="Impressão a cor" Margin="0,0,0,10" />
+                            <TextBlock Text="Ligação" FontWeight="SemiBold" />
+                            <ComboBox x:Name="CmbLigacaoImpressora" IsEditable="True" Margin="0,4,0,0" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Grupo: Rede (Switch/Router/AP) -->
+                    <Border x:Name="GrupoRede" Background="#F1F5F9" CornerRadius="8" Padding="12" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="Características do Equipamento de Rede" FontWeight="Bold" Margin="0,0,0,8" TextWrapping="Wrap" />
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Nº de Portas" FontWeight="SemiBold" />
+                                    <!-- Dados Fixos v2: lista sugerida vem da característica embutida "Nº de Portas" do grupo Rede. -->
+                                    <ComboBox x:Name="CmbNumeroPortas" IsEditable="True" Margin="0,4,4,0" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="Velocidade" FontWeight="SemiBold" />
+                                    <!-- Dados Fixos v2: lista sugerida vem da característica embutida "Velocidade" do grupo Rede. -->
+                                    <ComboBox x:Name="CmbVelocidadeRede" IsEditable="True" Margin="4,4,0,0" ToolTip="Ex: 1 Gbps" />
+                                </StackPanel>
+                            </Grid>
+                            <CheckBox x:Name="ChkGerivel" Content="Equipamento gerível" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Grupo: Câmara CCTV -->
+                    <Border x:Name="GrupoCamera" Background="#F1F5F9" CornerRadius="8" Padding="12" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="Características da Câmara" FontWeight="Bold" Margin="0,0,0,8" />
+                            <TextBlock Text="Resolução" FontWeight="SemiBold" />
+                            <!-- Dados Fixos v2: lista sugerida vem da característica embutida "Resolução" do grupo Câmara. -->
+                            <ComboBox x:Name="CmbResolucaoCamera" IsEditable="True" Margin="0,4,0,10" ToolTip="Ex: 4MP, 1080p" />
+                            <TextBlock Text="Tipo" FontWeight="SemiBold" />
+                            <ComboBox x:Name="CmbTipoCamera" IsEditable="True" Margin="0,4,0,10" />
+                            <CheckBox x:Name="ChkVisaoNoturna" Content="Visão noturna" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Grupo: Projetor / Quadro Interativo -->
+                    <Border x:Name="GrupoProjetor" Background="#F1F5F9" CornerRadius="8" Padding="12" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="Características do Projetor" FontWeight="Bold" Margin="0,0,0,8" />
+                            <TextBlock Text="Luminosidade (Lumens)" FontWeight="SemiBold" />
+                            <!-- Dados Fixos v2: lista sugerida vem da característica embutida "Luminosidade (Lumens)" do grupo Projetor. -->
+                            <ComboBox x:Name="CmbLuminosidade" IsEditable="True" Margin="0,4,0,10" />
+                            <TextBlock Text="Resolução" FontWeight="SemiBold" />
+                            <!-- Dados Fixos v2: lista sugerida vem da característica embutida "Resolução" do grupo Projetor. -->
+                            <ComboBox x:Name="CmbResolucaoProjetor" IsEditable="True" Margin="0,4,0,0" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Grupo genérico (outros tipos) -->
+                    <Border x:Name="GrupoGenerico" Background="#F1F5F9" CornerRadius="8" Padding="12" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="Especificações Adicionais" FontWeight="Bold" Margin="0,0,0,8" />
+                            <TextBox x:Name="TxtEspecificacoesAdicionais" AcceptsReturn="True" Height="90" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- (1.3) Características adicionais definidas pelo administrador em Dados
+                         Fixos → Tipos de Equipamento → "Gerir Características deste Grupo...",
+                         para o grupo de características do Tipo escolhido. Só aparece quando
+                         existir pelo menos uma característica ativa definida para esse grupo. -->
+                    <Border x:Name="GrupoCaracteristicasAdicionais" Background="#F1F5F9" CornerRadius="8" Padding="12"
+                            Margin="0,12,0,0" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="Características Adicionais" FontWeight="Bold" Margin="0,0,0,4" />
+                            <TextBlock TextWrapping="Wrap" FontSize="11" FontStyle="Italic"
+                                       Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"
+                                       Text="Definidas em Administração → Dados Fixos, para o grupo de características deste Tipo de Equipamento." />
+                            <StackPanel x:Name="PainelCaracteristicasAdicionais" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Índice de Obsolescência — calculado em tempo real a partir dos campos preenchidos -->
+                    <Border Background="#F1F5F9" CornerRadius="8" Padding="12" Margin="0,12,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Índice de Obsolescência" FontWeight="Bold" Margin="0,0,0,8" />
+                            <ProgressBar x:Name="PbObsolescencia" Minimum="0" Maximum="100" Value="0"
+                                         Height="14" Margin="0,0,0,8" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border x:Name="BadgeObsolescencia" Grid.Column="0" CornerRadius="4" Padding="8,3"
+                                        Background="#94A3B8">
+                                    <TextBlock x:Name="TxtObsolescenciaClassif" Text="Sem dados" Foreground="White"
+                                               FontWeight="Bold" FontSize="12" />
+                                </Border>
+                                <TextBlock x:Name="TxtObsolescenciaScore" Grid.Column="2" VerticalAlignment="Center"
+                                           FontSize="12" Foreground="{StaticResource BrushTextSecondary}" />
+                            </Grid>
+                            <TextBlock x:Name="TxtObsolescenciaDetalhe" FontSize="11" TextWrapping="Wrap"
+                                       Foreground="{StaticResource BrushTextSecondary}" Margin="0,8,0,0" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Coluna 3: Aquisição, Localização e Estado -->
+                <StackPanel Grid.Column="4">
+                    <TextBlock Text="Aquisição, Localização e Estado" FontWeight="Bold" Foreground="{StaticResource BrushTextSecondary}"
+                               FontSize="11" Margin="0,0,0,10" />
+
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Data de Aquisição" FontWeight="SemiBold" />
+                            <DatePicker x:Name="DpAquisicao" Margin="0,4,0,0" Padding="6,5" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Valor de Aquisição (€)" FontWeight="SemiBold" />
+                            <TextBox x:Name="TxtValor" Margin="0,4,0,0" Padding="6,5" />
+                        </StackPanel>
+                    </Grid>
+
+                    <TextBlock Text="Fornecedor" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtFornecedor" Margin="0,4,0,10" Padding="6,5" />
+
+                    <TextBlock Text="Procurar Escola" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtPesquisaEscola" Style="{StaticResource SearchTextBox}" Margin="0,4,0,4"
+                             TextChanged="TxtPesquisaEscola_TextChanged" />
+                    <TextBlock Text="Filtra por nome, código GEPE ou localidade." FontSize="11"
+                               Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4" TextWrapping="Wrap" />
+                    <TextBlock Text="Escola (se aplicável)" FontWeight="SemiBold" />
+                    <ComboBox x:Name="CmbEscola" DisplayMemberPath="Nome" Margin="0,4,0,10" Padding="6,5" />
+
+                    <TextBlock Text="OU Local não escolar" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtLocalNaoEscolar" Margin="0,4,0,10" Padding="6,5" />
+
+                    <TextBlock Text="Estado" FontWeight="SemiBold" />
+                    <ComboBox x:Name="CmbEstado" Margin="0,4,0,10" Padding="6,5" />
+
+                    <TextBlock Text="Nº de Vezes Intervencionado" FontWeight="SemiBold" ToolTip="Campo calculado — não editável. Conta todas as intervenções (no local ou por recolha) já registadas para este equipamento." />
+                    <TextBox x:Name="TxtVezesIntervencionado" Text="0" Margin="0,4,0,10" Padding="6,5" IsReadOnly="True" IsTabStop="False"
+                             Background="{StaticResource BrushDangerBackgroundLight}" Foreground="{StaticResource BrushDangerTextDark}"
+                             BorderBrush="{StaticResource BrushDanger}" BorderThickness="1.4" FontWeight="Bold"
+                             SelectionTextBrush="{StaticResource BrushDangerBackgroundLight}" IsEnabled="False" />
+
+                    <TextBlock Text="Observações" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtObservacoes" AcceptsReturn="True" Height="90" TextWrapping="Wrap"
+                             VerticalScrollBarVisibility="Auto" Margin="0,4,0,0" Padding="6,5" />
+                </StackPanel>
+            </Grid>
+
+            </Grid>
+
+            <!-- Rodapé com ações — ocupa toda a largura da janela (incluindo a coluna do
+                 histórico), para ficar coerente com as restantes janelas de edição da aplicação. -->
+            <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal"
+                        HorizontalAlignment="Right" Margin="0,20,0,0">
+                <Button Content="Cancelar" Click="Cancelar_Click" Margin="0,0,8,0" Padding="16,8" />
+                <Button Content="Guardar" Style="{StaticResource PrimaryButton}" Click="Guardar_Click" Padding="16,8" />
+            </StackPanel>
+
+            <!-- Coluna direita: Histórico de Intervenções (só visível ao editar um equipamento já
+                 existente), posicionado ao lado do formulário para facilitar a consulta (modo paisagem) -->
+            <StackPanel x:Name="PainelHistorico" Grid.Row="0" Grid.Column="2">
+                <TextBlock Text="Histórico de Intervenções" FontWeight="Bold" Foreground="{StaticResource BrushTextSecondary}"
+                           FontSize="11" Margin="0,0,0,8" />
+                <TextBlock Text="Todas as intervenções já registadas para este equipamento (no local ou por recolha)."
+                           FontSize="11" TextWrapping="Wrap" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,10" />
+                <DataGrid x:Name="GridHistoricoIntervencoes" AutoGenerateColumns="False" IsReadOnly="True"
+                          MaxHeight="620" HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False"
+                          GridLinesVisibility="Horizontal" AlternatingRowBackground="#F8FAFC">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Data" Binding="{Binding Data, StringFormat=dd-MM-yyyy}" Width="Auto" />
+                        <DataGridTextColumn Header="Descrição" Binding="{Binding Descricao}" Width="*" />
+                        <DataGridTextColumn Header="Estado" Binding="{Binding Estado}" Width="Auto" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</Window>

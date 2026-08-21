@@ -1,0 +1,60 @@
+<Window x:Class="LeiriaDISIA.Views.CaracteristicaOpcoesWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Valores da Característica" Height="560" Width="700" WindowStartupLocation="CenterOwner"
+        Background="{StaticResource BrushBackground}">
+    <Grid Margin="20">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="20" />
+            <ColumnDefinition Width="300" />
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.Column="0">
+            <TextBlock x:Name="TxtTitulo" Text="Valores da Característica" Style="{StaticResource SectionTitleStyle}" FontSize="18" />
+            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource BrushTextSecondary}" FontSize="11" Margin="0,0,0,8"
+                       Text="Estes valores aparecem como sugestões numa caixa de seleção, ao preencher esta característica em Inserir/Editar Equipamento — mas continua a ser possível escrever um valor diferente, não incluído na lista. Sem nenhum valor ativo aqui definido, o campo mantém-se uma caixa de texto livre." />
+            <Border Style="{StaticResource CardStyle}">
+                <DataGrid x:Name="Grid" Height="400" AutoGenerateColumns="False" IsReadOnly="True"
+                          SelectionChanged="Grid_SelectionChanged" RowStyle="{StaticResource DataGridRowClickableStyle}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Valor" Binding="{Binding Valor}" Width="*" />
+                        <DataGridTextColumn Header="Ordem" Binding="{Binding Ordem}" Width="Auto" />
+                        <DataGridCheckBoxColumn Header="Ativo" Binding="{Binding Ativo}" Width="Auto" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+        </StackPanel>
+
+        <StackPanel Grid.Column="2">
+            <TextBlock Text="Adicionar / Editar Valor" Style="{StaticResource SectionTitleStyle}" FontSize="16" />
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel>
+                    <TextBlock Text="Valor" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtValor" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Ordem de apresentação" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtOrdem" Margin="0,4,0,10" />
+
+                    <CheckBox x:Name="ChkAtivo" Content="Ativo (aparece na lista)" IsChecked="True" Margin="0,4,0,16" />
+
+                    <!-- Dados Fixos v2: ao escolher este valor em Inserir/Editar Equipamento, abre uma
+                         segunda caixa de seleção dependente com as opções da característica-filha
+                         escolhida aqui (ex.: a opção "DDR4" abre "Memória (GB)"). Só aparecem aqui as
+                         características já configuradas como "É subtipo de" desta característica. -->
+                    <TextBlock Text="Abre a característica (opcional)" FontWeight="SemiBold"
+                               ToolTip="Deixe em 'Nenhuma' para um valor simples. Escolha uma característica-filha (configurada em 'É subtipo de' desta característica) para este valor abrir uma segunda caixa de seleção dependente — ex.: 'DDR4' abre 'Memória (GB)'." />
+                    <ComboBox x:Name="CmbCaracteristicaFilha" Margin="0,4,0,16"
+                              DisplayMemberPath="Nome" SelectedValuePath="Id" />
+
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Guardar" Style="{StaticResource PrimaryButton}" Click="Guardar_Click" Margin="0,0,8,0" />
+                        <Button Content="Novo" Click="Novo_Click" Margin="0,0,8,0" />
+                        <Button Content="Eliminar" Click="Eliminar_Click" Background="#FDECEC" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+            <Button Content="Fechar" Click="Fechar_Click" Margin="0,16,0,0" HorizontalAlignment="Right" />
+        </StackPanel>
+    </Grid>
+</Window>

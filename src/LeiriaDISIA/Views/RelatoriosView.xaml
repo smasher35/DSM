@@ -1,0 +1,53 @@
+<UserControl x:Class="LeiriaDISIA.Views.RelatoriosView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel MaxWidth="600" HorizontalAlignment="Left">
+        <TextBlock Text="Relatórios" Style="{StaticResource SectionTitleStyle}" FontSize="24" />
+        <TextBlock Text="Gera o relatório mensal de atividades (intervenções nas escolas + atividades da DISIA), no mesmo formato do relatório modelo, em ficheiro Word (.docx)."
+                   TextWrapping="Wrap" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,20" />
+
+        <Border Style="{StaticResource CardStyle}">
+            <StackPanel>
+                <TextBlock Text="Ano" FontWeight="SemiBold" />
+                <ComboBox x:Name="CmbAno" Margin="0,4,0,10" />
+
+                <TextBlock Text="Mês" FontWeight="SemiBold" />
+                <ComboBox x:Name="CmbMes" Margin="0,4,0,10" />
+
+                <TextBlock Text="Autor" FontWeight="SemiBold" />
+                <TextBox x:Name="TxtAutor" Text="Paulo Miguel Nunes Penicheiro" Margin="0,4,0,10" />
+
+                <TextBlock Text="Divisão" FontWeight="SemiBold" />
+                <TextBox x:Name="TxtDivisao" Text="DISIA – Divisão de Sistemas de Informação e Aplicações" Margin="0,4,0,10" />
+
+                <TextBlock Text="Telefone" FontWeight="SemiBold" />
+                <TextBox x:Name="TxtTelefone" Margin="0,4,0,10" />
+
+                <TextBlock Text="Email" FontWeight="SemiBold" />
+                <TextBox x:Name="TxtEmail" Margin="0,4,0,16" />
+
+                <Button Content="Gerar Relatório Mensal (.docx)" Style="{StaticResource ReportButton}"
+                        Click="GerarMensal_Click" Padding="16,10" />
+            </StackPanel>
+        </Border>
+
+        <TextBlock Text="Relatório Anual" Style="{StaticResource SectionTitleStyle}" Margin="0,24,0,0" />
+        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,16">
+            <StackPanel>
+                <TextBlock Text="Gera um resumo anual, agregando os totais de todos os meses do ano selecionado." 
+                           TextWrapping="Wrap" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,10" />
+                <Button Content="Gerar Relatório Anual (.docx)" Style="{StaticResource ReportButton}" Click="GerarAnual_Click" Padding="16,10" />
+            </StackPanel>
+        </Border>
+
+        <TextBlock Text="Lista Total de Escolas" Style="{StaticResource SectionTitleStyle}" Margin="0,24,0,0" />
+        <TextBlock Text="Gera um relatório PDF profissional com a lista completa de escolas e jardins de infância, ordenados por agrupamento, incluindo tipo, localidade, freguesia e indicadores de infra-estrutura."
+                   TextWrapping="Wrap" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,10" />
+        <Border Style="{StaticResource CardStyle}">
+            <StackPanel>
+                <Button Content="📋 Gerar Lista Total de Escolas (.pdf)" Style="{StaticResource PrimaryButton}"
+                        Click="GerarListaEscolas_Click" Padding="16,10" HorizontalAlignment="Left" />
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

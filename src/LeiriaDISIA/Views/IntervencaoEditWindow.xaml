@@ -1,0 +1,179 @@
+<Window x:Class="LeiriaDISIA.Views.IntervencaoEditWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Intervenção" Height="818" Width="1528" MinHeight="640" MinWidth="1100"
+        WindowStartupLocation="CenterOwner" ResizeMode="CanResize"
+        Background="{StaticResource BrushBackground}">
+    <Grid Margin="20,16,20,16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock x:Name="TxtTitulo" Grid.Row="0" Text="Registar Intervenção" Style="{StaticResource SectionTitleStyle}" FontSize="18" Margin="0,0,0,10" />
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="360" />
+                <ColumnDefinition Width="14" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="14" />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+
+            <!-- ===================== COLUNA 1 — Dados gerais ===================== -->
+            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <TextBlock Text="Procurar Escola" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtPesquisaEscola" Style="{StaticResource SearchTextBox}" Margin="0,4,0,4" TextChanged="TxtPesquisaEscola_TextChanged" />
+                    <TextBlock Text="Escreva para filtrar a lista abaixo (nome, código GEPE, localidade)." FontSize="11"
+                               Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,6" TextWrapping="Wrap" />
+
+                    <TextBlock Text="Escola" FontWeight="SemiBold" />
+                    <ComboBox x:Name="CmbEscola" DisplayMemberPath="Nome" Margin="0,4,0,8" SelectionChanged="CmbEscola_SelectionChanged" />
+
+                    <TextBlock x:Name="TxtEscolaInfo" FontWeight="SemiBold" Margin="0,0,0,12" TextWrapping="Wrap"
+                               Foreground="{StaticResource BrushTextSecondary}" FontSize="12" />
+
+                    <TextBlock Text="Data da Intervenção" FontWeight="SemiBold" />
+                    <DatePicker x:Name="DpData" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Descrição / Tipo de Intervenção" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtDescricao" AcceptsReturn="True" Height="60" TextWrapping="Wrap" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Categorias envolvidas" FontWeight="SemiBold" />
+                    <ItemsControl x:Name="ListaCategorias" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Estado da Intervenção" FontWeight="SemiBold" />
+                    <ComboBox x:Name="CmbEstado" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Motivo (se pendente / em espera)" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtMotivoPendente" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Notas gerais de material (opcional)" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtMaterial" Margin="0,4,0,10" TextWrapping="Wrap" AcceptsReturn="True" Height="40" />
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- ===================== COLUNA 2 — Equipamento envolvido ===================== -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- Equipamento intervencionado no local -->
+                <Border Grid.Row="0" Style="{StaticResource CardStyle}" Margin="0,0,0,8">
+                    <DockPanel>
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <Button DockPanel.Dock="Right" Content="+ Adicionar" Padding="10,4" Click="AdicionarIntervencionado_Click" />
+                            <TextBlock Text="Equipamento reparado no local" FontWeight="Bold" VerticalAlignment="Center" />
+                        </DockPanel>
+                        <DataGrid x:Name="GridIntervencionados" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                                  HeadersVisibility="Column" RowHeight="26">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Nº Série" Binding="{Binding NumeroSerie}" Width="Auto" />
+                                <DataGridTextColumn Header="Nº Inventário" Binding="{Binding NumeroInventario}" Width="Auto" />
+                                <DataGridTextColumn Header="Descrição" Binding="{Binding Descricao}" Width="*" />
+                                <DataGridTemplateColumn Width="Auto">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="✕" Padding="4,0" Click="RemoverIntervencionado_Click" ToolTip="Remover da lista" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                </Border>
+
+                <!-- Equipamento a recolher -->
+                <Border Grid.Row="1" Style="{StaticResource CardStyle}" Margin="0,0,0,8">
+                    <DockPanel>
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <Button DockPanel.Dock="Right" Content="+ Adicionar" Padding="10,4" Click="AdicionarRecolhido_Click" />
+                            <TextBlock Text="Equipamento a recolher (vai para a DISIA)" FontWeight="Bold" VerticalAlignment="Center" />
+                        </DockPanel>
+                        <DataGrid x:Name="GridRecolhidos" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                                  HeadersVisibility="Column" RowHeight="26">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Nº Série" Binding="{Binding NumeroSerie}" Width="Auto" />
+                                <DataGridTextColumn Header="Nº Inventário" Binding="{Binding NumeroInventario}" Width="Auto" />
+                                <DataGridTextColumn Header="Descrição" Binding="{Binding Descricao}" Width="*" />
+                                <DataGridTemplateColumn Width="Auto">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="✕" Padding="4,0" Click="RemoverRecolhido_Click" ToolTip="Remover da lista" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                </Border>
+
+                <!-- Equipamento a abater -->
+                <Border Grid.Row="2" Style="{StaticResource CardStyle}">
+                    <DockPanel>
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <Button DockPanel.Dock="Right" Content="+ Adicionar" Padding="10,4" Click="AdicionarAbatido_Click" />
+                            <TextBlock Text="Equipamento a abater" FontWeight="Bold" VerticalAlignment="Center" />
+                        </DockPanel>
+                        <DataGrid x:Name="GridAbatidos" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                                  HeadersVisibility="Column" RowHeight="26">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Nº Série" Binding="{Binding NumeroSerie}" Width="Auto" />
+                                <DataGridTextColumn Header="Nº Inventário" Binding="{Binding NumeroInventario}" Width="Auto" />
+                                <DataGridTextColumn Header="Descrição" Binding="{Binding Descricao}" Width="*" />
+                                <DataGridTemplateColumn Width="Auto">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="✕" Padding="4,0" Click="RemoverAbatido_Click" ToolTip="Remover da lista" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                </Border>
+            </Grid>
+
+            <!-- ===================== COLUNA 3 — Equipamento recolhido da escola ===================== -->
+            <Border Grid.Column="4" Style="{StaticResource CardStyle}" Height="694" VerticalAlignment="Bottom">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="Equipamento atualmente recolhido desta escola" FontWeight="Bold" Margin="0,0,0,4" TextWrapping="Wrap" />
+                    <TextBlock DockPanel.Dock="Top" Text="Depois de reparado, use o botão Devolver para o entregar de volta à escola."
+                               FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,8" TextWrapping="Wrap" />
+                    <ItemsControl x:Name="ListaRecolhidosEscola" DockPanel.Dock="Top">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource BrushBackground}" CornerRadius="6" Padding="8" Margin="0,0,0,6">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding TituloLinha}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding SubtituloLinha}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" />
+                                        <Border Background="{Binding CorFundo}" CornerRadius="4" Padding="6,2" HorizontalAlignment="Left" Margin="0,4,0,4">
+                                            <TextBlock Text="{Binding Estado}" FontSize="11" Foreground="White" FontWeight="SemiBold" />
+                                        </Border>
+                                        <Button Content="Devolver à Escola" Click="DevolverRecolhido_Click" Tag="{Binding Id}"
+                                                IsEnabled="{Binding PodeDevolver}" HorizontalAlignment="Left" Padding="8,4"
+                                                ToolTip="Só é possível devolver depois de a Atividade DISIA de reparação ser fechada." />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock x:Name="TxtSemRecolhidos" DockPanel.Dock="Top" Text="Sem equipamento recolhido para esta escola."
+                               Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" Visibility="Collapsed" />
+                </DockPanel>
+            </Border>
+        </Grid>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button x:Name="BtnImprimirPdf" Content="🖨️ Imprimir Relatório (PDF)" Click="ImprimirPdf_Click" Padding="12,6" IsEnabled="False" Margin="0,0,8,0" />
+            <Button Content="Cancelar" Click="Cancelar_Click" Margin="0,0,8,0" Padding="16,6" />
+            <Button Content="Guardar Intervenção" Style="{StaticResource PrimaryButton}" Click="Guardar_Click" Padding="16,6" />
+        </StackPanel>
+    </Grid>
+</Window>

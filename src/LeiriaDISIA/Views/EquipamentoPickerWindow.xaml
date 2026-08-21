@@ -1,0 +1,42 @@
+<Window x:Class="LeiriaDISIA.Views.EquipamentoPickerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Selecionar Equipamento" Height="480" Width="850" WindowStartupLocation="CenterOwner"
+        Background="{StaticResource BrushBackground}">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Selecionar Equipamento" Style="{StaticResource SectionTitleStyle}" FontSize="16" Margin="0,0,0,8" />
+
+        <StackPanel Grid.Row="1" Margin="0,0,0,8">
+            <TextBlock Text="Pesquisar por Nº de Série ou Nº de Inventário" FontWeight="SemiBold" />
+            <TextBox x:Name="TxtPesquisa" Style="{StaticResource SearchTextBox}" Margin="0,4,0,0" TextChanged="TxtPesquisa_TextChanged" />
+            <CheckBox x:Name="ChkTodasEscolas" Content="Mostrar equipamento de todas as escolas" Margin="0,8,0,0"
+                      Checked="ChkTodasEscolas_Changed" Unchecked="ChkTodasEscolas_Changed" Visibility="Collapsed" />
+            <TextBlock x:Name="TxtSemEquipamentoEscola" TextWrapping="Wrap" Margin="0,8,0,0" Visibility="Collapsed"
+                       Foreground="{StaticResource BrushTextSecondary}" FontSize="11"
+                       Text="Esta escola não tem equipamento informático associado." />
+        </StackPanel>
+
+        <DataGrid x:Name="Grid" Grid.Row="2" AutoGenerateColumns="False" IsReadOnly="True"
+                  SelectionMode="Single" MouseDoubleClick="Grid_MouseDoubleClick" CanUserAddRows="False" RowStyle="{StaticResource DataGridRowClickableStyle}">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Nº Série" Binding="{Binding NumeroSerie}" Width="Auto" />
+                <DataGridTextColumn Header="Nº Inventário" Binding="{Binding NumeroInventario}" Width="Auto" />
+                <DataGridTextColumn Header="Tipo" Binding="{Binding Tipo}" Width="Auto" />
+                <DataGridTextColumn Header="Marca / Modelo" Binding="{Binding MarcaModelo}" Width="Auto" />
+                <DataGridTextColumn Header="Escola" Binding="{Binding Escola.Nome}" Width="*" />
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button Content="Cancelar" Click="Cancelar_Click" Margin="0,0,8,0" Padding="14,6" />
+            <Button Content="Selecionar" Style="{StaticResource PrimaryButton}" Click="Selecionar_Click" Padding="14,6" />
+        </StackPanel>
+    </Grid>
+</Window>

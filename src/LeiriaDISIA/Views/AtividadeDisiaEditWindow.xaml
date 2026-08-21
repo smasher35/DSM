@@ -1,0 +1,158 @@
+<Window x:Class="LeiriaDISIA.Views.AtividadeDisiaEditWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Atividade DISIA" Height="680" Width="1510" MinHeight="560" MinWidth="860"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource BrushBackground}">
+    <!-- Layout em duas linhas: conteúdo central com scroll (cresce/encolhe livremente) + área de
+         ações fixa no rodapé (Grid.Row="1", Height="Auto"), que permanece sempre ancorada ao fundo
+         da janela, mesmo depois de redimensionar — ver 1.2.2 do pedido. -->
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ScrollViewer Grid.Row="0" Margin="24,20,34,16" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock x:Name="TxtTitulo" Text="Nova Atividade DISIA" Style="{StaticResource SectionTitleStyle}"
+                           FontSize="18" Margin="0,0,0,16" />
+
+                <!-- Layout em modo paisagem: duas colunas lado a lado para se ver tudo sem scroll -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="24" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Coluna esquerda: identificação da atividade -->
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Data" FontWeight="SemiBold" />
+                        <DatePicker x:Name="DpData" Margin="0,4,0,10" />
+
+                        <TextBlock Text="Descrição" FontWeight="SemiBold" />
+                        <TextBox x:Name="TxtDescricao" AcceptsReturn="True" Height="160" TextWrapping="Wrap" Margin="0,4,0,10" />
+
+                        <TextBlock Text="Categoria" FontWeight="SemiBold" />
+                        <ComboBox x:Name="CmbCategoria" DisplayMemberPath="Nome" Margin="0,4,0,10" />
+
+                        <TextBlock Text="Local" FontWeight="SemiBold" />
+                        <TextBox x:Name="TxtLocal" Margin="0,4,0,10" />
+
+                        <TextBlock Text="Divisão / Serviço envolvido" FontWeight="SemiBold" />
+                        <TextBox x:Name="TxtDivisao" Margin="0,4,0,0" Height="80" />
+                    </StackPanel>
+
+                    <!-- Coluna direita: suporte prestado, estado e equipamento associado -->
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Num Suporte  - Serviço Prestado" FontWeight="SemiBold" />
+                        <TextBox x:Name="TxtSuporte" Margin="0,4,0,10" />
+
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="10" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Quantidade (nº de vezes)" FontWeight="SemiBold" />
+                                <TextBox x:Name="TxtQuantidade" Text="1" Margin="0,4,0,0" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Estado" FontWeight="SemiBold" />
+                                <ComboBox x:Name="CmbEstado" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Área de equipamentos associados a esta atividade (1.2.3). Fica sempre
+                             visível — nunca é removida nem colapsada — para nunca deixar espaço em
+                             branco pouco cuidado: mostra a lista de equipamentos quando existem, ou
+                             um estado vazio apelativo quando não existem, dentro da mesma área. -->
+                        <StackPanel x:Name="PainelEquipamentoRecolhido" Margin="0,0,0,10">
+                            <TextBlock Text="Equipamento recolhido associado" FontWeight="SemiBold" Margin="0,0,0,4" />
+                            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,6"
+                                       Text="Enquanto esta atividade não for fechada, pode alterar o estado de cada equipamento para 'Em Reparação' no módulo de Equipamentos. Ao fechar esta atividade, o equipamento passa automaticamente a 'Aguarda Entrega' e abre-se uma nova Intervenção para o devolver à escola. Use o botão 'Editar Equipamento' para registar diretamente aqui alterações de hardware (ex: troca de disco, memória adicionada) — o resumo é acrescentado às Observações abaixo." />
+
+                            <!-- Cartão que agrega a lista e o estado vazio: mesma área, mesmo
+                                 tamanho, quer existam ou não equipamentos — evita o "salto" visual
+                                 de a secção aparecer/desaparecer por completo. -->
+                            <Border MinHeight="120" MaxHeight="240" CornerRadius="8"
+                                    BorderBrush="{StaticResource BrushBorder}" BorderThickness="1" Background="#F8FAFC">
+                                <Grid>
+                                    <!-- Lista de equipamentos: só visível quando existem itens
+                                         (DataTrigger MVVM-friendly, sem lógica de negócio no
+                                         code-behind — a decisão vem apenas do próprio ItemsControl). -->
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="8">
+                                        <ItemsControl x:Name="ListaEquipamentoRecolhido">
+                                            <ItemsControl.Style>
+                                                <Style TargetType="ItemsControl">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource Self}, Path=HasItems}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ItemsControl.Style>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="#F1F5F9" CornerRadius="6" Padding="8" Margin="0,0,0,6">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <StackPanel Grid.Column="0">
+                                                                <TextBlock Text="{Binding TituloLinha}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                                                <TextBlock Text="{Binding SubtituloLinha}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" />
+                                                            </StackPanel>
+                                                            <Button Grid.Column="1" Content="✏️ Editar Equipamento" Tag="{Binding EquipamentoId}"
+                                                                    Click="EditarEquipamentoRecolhido_Click" Padding="8,4" VerticalAlignment="Center" Margin="10,0,0,0"
+                                                                    ToolTip="Abre o registo deste equipamento para atualizar hardware (ex: disco, memória) ou outros dados" />
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+
+                                    <!-- Estado vazio: só visível quando a lista acima não tem itens. -->
+                                    <StackPanel x:Name="PainelEquipamentoVazio" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="260">
+                                        <StackPanel.Style>
+                                            <Style TargetType="StackPanel">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasItems, ElementName=ListaEquipamentoRecolhido}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </StackPanel.Style>
+                                        <TextBlock Text="🖥️" FontSize="26" HorizontalAlignment="Center" Opacity="0.4" Margin="0,0,0,8" />
+                                        <TextBlock Text="Não existem equipamentos associados a esta intervenção."
+                                                   TextWrapping="Wrap" TextAlignment="Center" FontSize="11.5"
+                                                   Foreground="{StaticResource BrushTextSecondary}" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+
+                        <TextBlock Text="Observações" FontWeight="SemiBold" />
+                        <TextBox x:Name="TxtObservacoes" AcceptsReturn="True" Height="120" TextWrapping="Wrap" Margin="0,4,0,0" />
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Área de ações fixa no rodapé: "Gravar" como ação principal, "Cancelar" como ação
+             secundária, sempre alinhados à direita com espaçamento consistente. -->
+        <Border Grid.Row="1" Background="{StaticResource BrushCard}"
+                BorderBrush="{StaticResource BrushBorder}" BorderThickness="0,1,0,0" Padding="24,14">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Cancelar" Click="Cancelar_Click" Padding="16,8" Margin="0,0,10,0" />
+                <Button Content="Guardar" Style="{StaticResource PrimaryButton}" Click="Guardar_Click" Padding="18,8" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

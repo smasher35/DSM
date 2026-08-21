@@ -1,0 +1,63 @@
+<Window x:Class="LeiriaDISIA.Views.EstadosCorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Estados" Height="560" Width="801" WindowStartupLocation="CenterOwner"
+        Background="{StaticResource BrushBackground}">
+    <Grid Margin="20">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="20" />
+            <ColumnDefinition Width="280" />
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.Column="0">
+            <TextBlock x:Name="TxtTitulo" Text="Cores dos Estados" Style="{StaticResource SectionTitleStyle}" FontSize="18" />
+            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource BrushTextSecondary}" FontSize="11" Margin="0,0,0,8"
+                       Text="Esta janela só altera a cor de cada estado. Para renomear o texto apresentado, use Administração → Dados Fixos → Listas de Valores." />
+            <Border Style="{StaticResource CardStyle}">
+                <DataGrid x:Name="Grid" Height="380" SelectionChanged="Grid_SelectionChanged" RowStyle="{StaticResource DataGridRowClickableStyle}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Nome Apresentado" Binding="{Binding NomeExibicao}" Width="*" />
+                        <DataGridTemplateColumn Header="Cor" Width="Auto">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border Background="{Binding Cor, Converter={StaticResource HexColorToBrushConverter}}"
+                                            Width="24" Height="18" CornerRadius="4" BorderBrush="#00000022" BorderThickness="1" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="Código" Binding="{Binding Cor}" Width="Auto" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+        </StackPanel>
+
+        <StackPanel Grid.Column="2">
+            <TextBlock Text="Alterar Cor" Style="{StaticResource SectionTitleStyle}" FontSize="16" />
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel>
+                    <TextBlock Text="Nome Apresentado (apenas leitura)" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtNomeExibicao" Margin="0,4,0,10" IsReadOnly="True" Background="#F3F4F6" Focusable="False" />
+
+                    <TextBlock Text="Cor (formato #RRGGBB)" FontWeight="SemiBold" />
+                    <Grid Margin="0,4,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="8" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="8" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="TxtCor" Grid.Column="0" />
+                        <Border Grid.Column="2" Width="28" Height="28" CornerRadius="4" BorderBrush="#00000033" BorderThickness="1"
+                                Background="{Binding ElementName=TxtCor, Path=Text, Converter={StaticResource HexColorToBrushConverter}}" />
+                        <Button Grid.Column="4" Content="🎨 Escolher Cor..." Click="EscolherCor_Click" Padding="8,4" />
+                    </Grid>
+
+                    <Button Content="Guardar Alterações" Style="{StaticResource PrimaryButton}" Click="Guardar_Click" HorizontalAlignment="Left" />
+                </StackPanel>
+            </Border>
+            <Button Content="Fechar" Click="Fechar_Click" Margin="0,16,0,0" HorizontalAlignment="Right" />
+        </StackPanel>
+    </Grid>
+</Window>

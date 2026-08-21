@@ -1,0 +1,61 @@
+<Window x:Class="LeiriaDISIA.Views.CaracteristicasEquipamentoWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Características Específicas" Height="560" Width="700" WindowStartupLocation="CenterOwner"
+        Background="{StaticResource BrushBackground}">
+    <Grid Margin="20">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="20" />
+            <ColumnDefinition Width="300" />
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.Column="0">
+            <TextBlock x:Name="TxtTitulo" Text="Características Específicas" Style="{StaticResource SectionTitleStyle}" FontSize="18" />
+            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource BrushTextSecondary}" FontSize="11" Margin="0,0,0,8"
+                       Text="Estas características aparecem em Inserir/Editar Equipamento, na secção &quot;Características Adicionais&quot;, sempre que o Tipo de Equipamento escolhido pertencer a este grupo. O valor por omissão (opcional) é apenas uma sugestão pré-preenchida — pode ser alterado ou apagado em cada equipamento." />
+            <Border Style="{StaticResource CardStyle}">
+                <DataGrid x:Name="Grid" Height="400" AutoGenerateColumns="False" IsReadOnly="True"
+                          SelectionChanged="Grid_SelectionChanged" RowStyle="{StaticResource DataGridRowClickableStyle}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Nome" Binding="{Binding Nome}" Width="*" />
+                        <DataGridTextColumn Header="Valor por Omissão" Binding="{Binding ValorPorOmissao}" Width="*" />
+                        <DataGridTextColumn Header="Ordem" Binding="{Binding Ordem}" Width="Auto" />
+                        <DataGridCheckBoxColumn Header="Ativo" Binding="{Binding Ativo}" Width="Auto" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+        </StackPanel>
+
+        <StackPanel Grid.Column="2">
+            <TextBlock Text="Adicionar / Editar Característica" Style="{StaticResource SectionTitleStyle}" FontSize="16" />
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel>
+                    <TextBlock Text="Nome" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtNome" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Valor por Omissão (opcional)" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtValorPorOmissao" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Ordem de apresentação" FontWeight="SemiBold" />
+                    <TextBox x:Name="TxtOrdem" Margin="0,4,0,10" />
+
+                    <CheckBox x:Name="ChkAtivo" Content="Ativo (aparece no formulário)" IsChecked="True" Margin="0,4,0,16" />
+
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Guardar" Style="{StaticResource PrimaryButton}" Click="Guardar_Click" Margin="0,0,8,0" />
+                        <Button Content="Novo" Click="Novo_Click" Margin="0,0,8,0" />
+                        <Button Content="Eliminar" Click="Eliminar_Click" Background="#FDECEC" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- (1.4) Lista de valores sugeridos (opcional) para a característica selecionada à
+                 esquerda — só faz sentido depois de a característica já existir/estar selecionada. -->
+            <Button x:Name="BtnGerirValores" Content="📋 Gerir Valores desta Característica..." Click="GerirValores_Click"
+                    HorizontalAlignment="Left" Margin="0,16,0,0" IsEnabled="False" />
+
+            <Button Content="Fechar" Click="Fechar_Click" Margin="0,16,0,0" HorizontalAlignment="Right" />
+        </StackPanel>
+    </Grid>
+</Window>
