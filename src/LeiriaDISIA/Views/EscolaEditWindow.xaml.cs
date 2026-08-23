@@ -436,13 +436,33 @@ public partial class EscolaEditWindow : Window
     {
         if (_escolaExistente == null) return;
 
-        // A morada usada é sempre a gravada na base de dados (não a que possa estar a meio de
-        // edição na caixa de texto e ainda não guardada) — evita geocodificar um valor que o
-        // utilizador pode ainda vir a descartar sem gravar.
-        if (string.IsNullOrWhiteSpace(_escolaExistente.Morada))
+        // Coordenadas GPS exatas (fornecidas diretamente pelo utilizador — ex.: coladas do Google
+        // Maps) são uma fonte muito mais fiável do que geocodificar a partir do texto da morada,
+        // que pode ser ambíguo (o mesmo nome de rua existe, por vezes, em vários concelhos —
+        // ver o comentário completo em EscolaGeocodingService.RecalcularAPartirDeCoordenadasAsync).
+        // Por isso: se já houver coordenadas válidas nas caixas (mesmo que ainda não gravadas),
+        // usa-se sempre esse caminho primeiro, e só se recorre à morada quando não há coordenadas
+        // nenhumas para usar. Lê-se das CAIXAS DE TEXTO (não da Escola gravada) porque é
+        // precisamente aqui — colar/escrever coordenadas antes de calcular — que o utilizador as
+        // fornece; a morada, pelo contrário, continua a ler-se sempre da versão já gravada (ver
+        // comentário mais abaixo), para não geocodificar um valor ainda por confirmar.
+        var latTexto = TxtLatitude.Text?.Trim().Replace(',', '.');
+        var lonTexto = TxtLongitude.Text?.Trim().Replace(',', '.');
+        // Inicializadas a 0 (em vez de "out var") só para satisfazer a análise de atribuição
+        // definitiva do compilador: ele não consegue provar, mais abaixo, que "temCoordenadas"
+        // true implica que ambos os TryParse correram (essa informação perde-se ao guardar o
+        // resultado do "&&" numa variável à parte) — o valor 0 nunca chega a ser usado, porque só
+        // se lê latCoordenada/lonCoordenada quando temCoordenadas é true.
+        double latCoordenada = 0, lonCoordenada = 0;
+        var temCoordenadas =
+            double.TryParse(latTexto, NumberStyles.Float, CultureInfo.InvariantCulture, out latCoordenada) &&
+            double.TryParse(lonTexto, NumberStyles.Float, CultureInfo.InvariantCulture, out lonCoordenada);
+
+        if (!temCoordenadas && string.IsNullOrWhiteSpace(_escolaExistente.Morada))
         {
             MessageBox.Show(
-                "Esta escola ainda não tem morada guardada. Preencha a morada, grave a escola, e só depois recalcule a distância.",
+                "Esta escola ainda não tem morada nem coordenadas preenchidas. Preencha a morada (ou a Latitude/Longitude), " +
+                "grave a escola, e só depois recalcule a distância.",
                 "Morada em falta", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -453,11 +473,24 @@ public partial class EscolaEditWindow : Window
         try
         {
             var servico = new LeiriaDISIA.Services.Rotas.EscolaGeocodingService(App.Db);
-            var (sucesso, erro) = await servico.RecalcularAsync(_escolaExistente);
 
-            if (!sucesso)
+            (bool Sucesso, string? Erro) resultado;
+            if (temCoordenadas)
             {
-                MessageBox.Show(erro ?? "Não foi possível calcular a distância.", "Erro ao calcular distância",
+                var coordenada = new LeiriaDISIA.Services.Rotas.CoordenadaGeografica(latCoordenada, lonCoordenada);
+                resultado = await servico.RecalcularAPartirDeCoordenadasAsync(_escolaExistente, coordenada);
+            }
+            else
+            {
+                // A morada usada é sempre a gravada na base de dados (não a que possa estar a meio
+                // de edição na caixa de texto e ainda não guardada) — evita geocodificar um valor
+                // que o utilizador pode ainda vir a descartar sem gravar.
+                resultado = await servico.RecalcularAsync(_escolaExistente);
+            }
+
+            if (!resultado.Sucesso)
+            {
+                MessageBox.Show(resultado.Erro ?? "Não foi possível calcular a distância.", "Erro ao calcular distância",
                     MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
@@ -466,6 +499,13 @@ public partial class EscolaEditWindow : Window
 
             TxtLatitude.Text = _escolaExistente.Latitude?.ToString("F6", CultureInfo.InvariantCulture);
             TxtLongitude.Text = _escolaExistente.Longitude?.ToString("F6", CultureInfo.InvariantCulture);
+            // Só relevante no fluxo por coordenadas (RecalcularAPartirDeCoordenadasAsync pode ter
+            // preenchido a morada/código postal/localidade por geocodificação inversa); no fluxo
+            // por morada, estes três já estavam corretos (é a fonte que geocodificou), por isso
+            // atualizá-los aqui não muda nada visualmente nesse caso.
+            TxtMorada.Text = _escolaExistente.Morada;
+            TxtCodigoPostal.Text = _escolaExistente.CodigoPostal;
+            TxtLocalidade.Text = _escolaExistente.Localidade;
             AtualizarPainelDistancia(_escolaExistente);
         }
         catch (Exception ex)

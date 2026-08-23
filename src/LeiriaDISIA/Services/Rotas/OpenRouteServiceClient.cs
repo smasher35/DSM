@@ -75,6 +75,55 @@ public class OpenRouteServiceClient : IGeocodingService, IRoutingService
         }
     }
 
+    public async Task<ResultadoEnderecoInverso> GeocodificarInversoAsync(CoordenadaGeografica coordenada, CancellationToken ct = default)
+    {
+        if (!ConfiguracaoRotas.Configurado)
+            return ResultadoEnderecoInverso.Falha(MensagemChaveEmFalta);
+
+        try
+        {
+            using var pedido = new HttpRequestMessage(HttpMethod.Get,
+                $"{BaseUrl}/geocode/reverse?point.lat={coordenada.Latitude.ToString(System.Globalization.CultureInfo.InvariantCulture)}" +
+                $"&point.lon={coordenada.Longitude.ToString(System.Globalization.CultureInfo.InvariantCulture)}" +
+                "&boundary.country=PT&size=1");
+            pedido.Headers.TryAddWithoutValidation("Authorization", ConfiguracaoRotas.ChaveApi);
+
+            using var resposta = await Http.SendAsync(pedido, ct);
+
+            if (!resposta.IsSuccessStatusCode)
+                return ResultadoEnderecoInverso.Falha(await MensagemErroHttp(resposta, ct));
+
+            var dados = await resposta.Content.ReadFromJsonAsync<GeocodeResponse>(JsonOpcoes, ct);
+            var propriedades = dados?.Features?.FirstOrDefault()?.Properties;
+
+            // Sem resultado nenhum (coordenada em zona isolada, sem morada mapeada) não é um erro —
+            // a coordenada em si continua válida, só não há morada para atribuir automaticamente; o
+            // chamador decide se avança sem preencher a morada (ver EscolaGeocodingService).
+            if (propriedades == null)
+                return ResultadoEnderecoInverso.Ok(morada: null, codigoPostal: null, localidade: null);
+
+            // "Rua + nº porta" quando ambos existem; cai para só um dos dois (ou para o "label"
+            // genérico do Pelias) quando faltar alguma parte — mais fiável do que montar sempre
+            // "rua, nº" e arriscar uma vírgula a mais quando o nº não existe.
+            var morada = (propriedades.Street, propriedades.HouseNumber) switch
+            {
+                (not null and not "", not null and not "") => $"{propriedades.Street} {propriedades.HouseNumber}",
+                (not null and not "", _) => propriedades.Street,
+                _ => propriedades.Label
+            };
+
+            return ResultadoEnderecoInverso.Ok(morada, propriedades.PostalCode, propriedades.Locality);
+        }
+        catch (TaskCanceledException) when (!ct.IsCancellationRequested)
+        {
+            return ResultadoEnderecoInverso.Falha("O serviço de geocodificação demorou demasiado tempo a responder. Tente novamente.");
+        }
+        catch (HttpRequestException ex)
+        {
+            return ResultadoEnderecoInverso.Falha($"Sem ligação ao serviço de geocodificação: {ex.Message}");
+        }
+    }
+
     public async Task<ResultadoDistancia> CalcularDistanciaAsync(CoordenadaGeografica origem, CoordenadaGeografica destino, CancellationToken ct = default)
     {
         if (!ConfiguracaoRotas.Configurado)
@@ -280,8 +329,29 @@ public class OpenRouteServiceClient : IGeocodingService, IRoutingService
     // ---- DTOs mínimos de resposta da API (só os campos de que a aplicação precisa) ----
 
     private class GeocodeResponse { [JsonPropertyName("features")] public List<GeocodeFeature>? Features { get; set; } }
-    private class GeocodeFeature { [JsonPropertyName("geometry")] public GeocodeGeometry? Geometry { get; set; } }
+    private class GeocodeFeature
+    {
+        [JsonPropertyName("geometry")] public GeocodeGeometry? Geometry { get; set; }
+        [JsonPropertyName("properties")] public GeocodeProperties? Properties { get; set; }
+    }
     private class GeocodeGeometry { [JsonPropertyName("coordinates")] public double[]? Coordinates { get; set; } }
+
+    /// <summary>Campos de endereço devolvidos pelo Pelias (o motor de geocodificação usado pelo
+    /// OpenRouteService) — só usados na geocodificação inversa (ver
+    /// <see cref="GeocodificarInversoAsync"/>); a geocodificação normal (morada → coordenadas) só
+    /// precisa de <see cref="GeocodeGeometry"/>.</summary>
+    private class GeocodeProperties
+    {
+        [JsonPropertyName("street")] public string? Street { get; set; }
+        [JsonPropertyName("housenumber")] public string? HouseNumber { get; set; }
+        [JsonPropertyName("postalcode")] public string? PostalCode { get; set; }
+        [JsonPropertyName("locality")] public string? Locality { get; set; }
+
+        /// <summary>Descrição completa e legível (ex.: "Rua X, 2400-000 Leiria, Portugal") — usada
+        /// como último recurso quando não há "street" (ex.: coordenada em zona rural, sem rua
+        /// mapeada, mas com um nome de lugar).</summary>
+        [JsonPropertyName("label")] public string? Label { get; set; }
+    }
 
     private class DirectionsResponse { [JsonPropertyName("routes")] public List<DirectionsRoute>? Routes { get; set; } }
     private class DirectionsRoute { [JsonPropertyName("summary")] public DirectionsSummary? Summary { get; set; } }

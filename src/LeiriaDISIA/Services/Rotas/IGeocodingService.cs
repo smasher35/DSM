@@ -8,6 +8,18 @@ public record ResultadoGeocodificacao(bool Sucesso, CoordenadaGeografica? Coorde
     public static ResultadoGeocodificacao Falha(string mensagem) => new(false, null, mensagem);
 }
 
+/// <summary>Resultado de uma geocodificação inversa (coordenadas → morada) — ver
+/// <see cref="IGeocodingService.GeocodificarInversoAsync"/>. Qualquer dos três campos de endereço
+/// pode vir vazio (ex.: coordenadas em zona rural sem morada mapeada) sem que isso signifique
+/// falha — só <see cref="Sucesso"/> = false representa uma falha real (sem rede, sem resultado
+/// nenhum, etc.).</summary>
+public record ResultadoEnderecoInverso(bool Sucesso, string? Morada, string? CodigoPostal, string? Localidade, string? MensagemErro)
+{
+    public static ResultadoEnderecoInverso Ok(string? morada, string? codigoPostal, string? localidade) =>
+        new(true, morada, codigoPostal, localidade, null);
+    public static ResultadoEnderecoInverso Falha(string mensagem) => new(false, null, null, null, mensagem);
+}
+
 public record ResultadoDistancia(bool Sucesso, double? DistanciaKm, int? DuracaoMinutos, string? MensagemErro)
 {
     public static ResultadoDistancia Ok(double distanciaKm, int duracaoMinutos) => new(true, distanciaKm, duracaoMinutos, null);
@@ -45,6 +57,15 @@ public record ResultadoOtimizacaoRota(
 public interface IGeocodingService
 {
     Task<ResultadoGeocodificacao> GeocodificarAsync(string moradaCompleta, CancellationToken ct = default);
+
+    /// <summary>Geocodificação inversa: a partir de coordenadas GPS exatas (a fonte da verdade,
+    /// quando o utilizador as fornece diretamente, em vez de escrever a morada por extenso — ver
+    /// Services/Rotas/EscolaGeocodingService.RecalcularAPartirDeCoordenadasAsync), tenta obter a
+    /// morada/código postal/localidade correspondentes, para preencher esses campos
+    /// automaticamente. Zonas rurais/isoladas podem não ter morada mapeada — nesse caso o
+    /// resultado vem com os campos de endereço vazios, mas <see cref="ResultadoEnderecoInverso.Sucesso"/>
+    /// continua true (a coordenada em si é válida; só não há morada para lhe atribuir).</summary>
+    Task<ResultadoEnderecoInverso> GeocodificarInversoAsync(CoordenadaGeografica coordenada, CancellationToken ct = default);
 }
 
 /// <summary>
