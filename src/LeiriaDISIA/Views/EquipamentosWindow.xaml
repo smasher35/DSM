@@ -175,7 +175,7 @@
                 <DataGrid x:Name="Grid" CanUserSortColumns="True" AutoGenerateColumns="False" MouseDoubleClick="Grid_MouseDoubleClick" RowStyle="{StaticResource DataGridRowClickableStyle}">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Nº Série" Binding="{Binding NumeroSerie}" Width="Auto" />
-                        <DataGridTextColumn Header="Nº Inventário" Binding="{Binding NumeroInventario}" Width="Auto" ElementStyle="{StaticResource CenteredCellTextStyle}" />
+                        <DataGridTextColumn Header="Nº Inventário" Binding="{Binding NumeroInventario}" Width="Auto" />
                         <DataGridTextColumn Header="Tipo" Binding="{Binding Tipo}" Width="Auto" />
                         <DataGridTextColumn Header="Marca/Modelo" Binding="{Binding Marca}" Width="Auto" />
                         <DataGridTextColumn Header="Localização" Binding="{Binding Escola.Nome}" Width="*" />

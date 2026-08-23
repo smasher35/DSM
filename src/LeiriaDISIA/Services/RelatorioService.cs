@@ -813,37 +813,11 @@ public partial class RelatorioService
         "#0F766E", "#BE185D", "#0369A1", "#A16207", "#4F46E5"
     };
 
-    /// <summary>Cor determinística para uma categoria de intervenção: usa a cor própria
-    /// configurada em "Dados Fixos → Categorias de Intervenção" (<see
-    /// cref="Models.CategoriaIntervencao.CorHex"/>, via <paramref name="coresPorCategoria"/>)
-    /// quando disponível; caso contrário, cai para uma cor de reserva estável derivada do nome da
-    /// categoria (mesmo hash ⇒ mesma cor sempre). Extraído como método único e partilhado por
-    /// todos os gráficos do relatório mensal que representam categorias de intervenção, para que
-    /// a MESMA categoria mantenha sempre a MESMA cor em todos eles (ex.: "Tipos de Intervenção
-    /// por Agrupamento" e "Total de Intervenções por Categoria"), mesmo sem cor configurada e
-    /// independentemente da ordem em que a categoria aparece em cada gráfico — ver requisito
-    /// 10.1 (correspondência Categoria → Cor reutilizada, nunca atribuída independentemente).</summary>
-    private static string CorDaCategoria(string categoria, IReadOnlyDictionary<string, string>? coresPorCategoria)
-    {
-        if (coresPorCategoria != null && coresPorCategoria.TryGetValue(categoria, out var corConfigurada)
-            && !string.IsNullOrWhiteSpace(corConfigurada))
-            return corConfigurada;
-
-        var indice = Math.Abs(categoria.GetHashCode()) % PaletaCategorias.Length;
-        return PaletaCategorias[indice];
-    }
-
     /// <summary>Desenha um gráfico de barras verticais diretamente no PDF (vetorial, sem gerar
     /// imagens), com uma cor diferente por barra a partir de <see cref="PaletaGraficos"/> — usado
     /// por todos os relatórios "Resumo" para dar uma leitura visual profissional e imediata dos
-    /// dados, complementando a tabela detalhada que normalmente se segue. Quando <paramref
-    /// name="coresPorCategoria"/> é indicado (rótulos que são categorias de intervenção), a cor de
-    /// cada barra passa a vir de <see cref="CorDaCategoria"/> em vez da posição na paleta genérica,
-    /// para que este gráfico use exatamente a mesma correspondência Categoria → Cor de outros
-    /// gráficos do mesmo relatório (ver requisito 10.1); os restantes chamadores (sem este
-    /// parâmetro) mantêm o comportamento anterior, inalterado.</summary>
-    private static void GraficoBarras(ColumnDescriptor col, string titulo, IReadOnlyList<(string Rotulo, int Valor)> dados,
-        IReadOnlyDictionary<string, string>? coresPorCategoria = null)
+    /// dados, complementando a tabela detalhada que normalmente se segue.</summary>
+    private static void GraficoBarras(ColumnDescriptor col, string titulo, IReadOnlyList<(string Rotulo, int Valor)> dados)
     {
         if (dados.Count == 0) return;
 
@@ -856,7 +830,7 @@ public partial class RelatorioService
             for (var i = 0; i < dados.Count; i++)
             {
                 var (rotulo, valor) = dados[i];
-                var cor = coresPorCategoria != null ? CorDaCategoria(rotulo, coresPorCategoria) : PaletaGraficos[i % PaletaGraficos.Length];
+                var cor = PaletaGraficos[i % PaletaGraficos.Length];
                 var alturaBarra = Math.Max(2, alturaMaxima * valor / (float)maiorValor);
 
                 row.RelativeItem().PaddingHorizontal(4).Column(barCol =>
@@ -980,21 +954,18 @@ public partial class RelatorioService
         });
     }
 
-    /// <summary>Desenha um gráfico de barras agrupadas: para cada Agrupamento de Escolas (eixo
-    /// X), uma barra por categoria/tipo de intervenção, lado a lado — usado para cruzar duas
-    /// dimensões (Tipo de Intervenção × Agrupamento) de forma visualmente comparável, agrupando
-    /// sempre pelo Agrupamento (requisito 10.2), para que nunca pareça que todas as categorias
-    /// pertencem a um único Agrupamento. Cada categoria mantém a MESMA cor em todos os grupos e
-    /// em qualquer outro gráfico do relatório que use a mesma <paramref name="coresPorCategoria"/>
-    /// (ver <see cref="CorDaCategoria"/>): a cor própria da categoria, configurada em "Dados
-    /// Fixos → Categorias de Intervenção" (<see cref="Models.CategoriaIntervencao.CorHex"/>) ou,
-    /// na sua ausência, uma cor de reserva estável derivada do nome da categoria — nunca atribuída
-    /// independentemente por gráfico (requisito 10.1). Só entram na barra de cada Agrupamento as
-    /// categorias com valor superior a zero nesse Agrupamento, para que o exemplo do requisito
-    /// 10.2 (um Agrupamento sem determinada categoria) fique visualmente correto. Quando existem
-    /// muitos Agrupamentos, estes são repartidos por várias linhas (em vez de espremidos numa só),
-    /// com legendas e tamanhos de letra ajustados, para o gráfico continuar legível (requisito
-    /// 10.3); a legenda comum de categoria → cor aparece uma só vez, no fim.</summary>
+    /// <summary>Desenha um gráfico de barras agrupadas: para cada categoria/tipo de intervenção
+    /// (eixo X), uma barra por série (agrupamento de escolas), lado a lado — usado para cruzar
+    /// duas dimensões (Tipo de Intervenção × Agrupamento) de forma visualmente comparável. O
+    /// foco visual é a CATEGORIA, não o agrupamento: todas as barras de uma mesma categoria
+    /// partilham a mesma cor (a cor própria da categoria, configurada em "Dados Fixos →
+    /// Categorias de Intervenção" — ver <see cref="Models.CategoriaIntervencao.CorHex"/> — ou,
+    /// na sua ausência, uma cor de reserva estável derivada do nome da categoria), pelo que a
+    /// mesma categoria mantém sempre a mesma cor, mesmo quando existem vários agrupamentos ou a
+    /// ordem das categorias muda de mês para mês. Os diferentes agrupamentos dentro de cada grupo
+    /// de barras distinguem-se pela legenda por baixo de cada categoria. As barras crescem de
+    /// baixo para cima (0 na base), tal como num gráfico de barras convencional. O bloco inteiro
+    /// (barras + legenda) é mantido junto na mesma página através de <c>ShowEntire()</c>.</summary>
     private static void GraficoBarrasAgrupadas(ColumnDescriptor col, string titulo,
         IReadOnlyList<string> series, IReadOnlyList<(string Categoria, IReadOnlyList<int> Valores)> dados,
         IReadOnlyDictionary<string, string>? coresPorCategoria = null)
@@ -1005,87 +976,72 @@ public partial class RelatorioService
         const float alturaRotuloValor = 10;
         var maiorValor = Math.Max(1, dados.SelectMany(d => d.Valores).DefaultIfEmpty(0).Max());
 
-        // Transpõe Categoria → [Valor por Agrupamento] (formato em que os dados chegam, mais
-        // natural para quem os calcula) para Agrupamento → [(Categoria, Valor) só com valor > 0]
-        // (formato em que o gráfico é desenhado), para que o eixo principal seja o Agrupamento —
-        // ver requisito 10.2.
-        var porAgrupamento = new List<(string Agrupamento, List<(string Categoria, int Valor)> Barras)>();
-        for (var s = 0; s < series.Count; s++)
+        // Cor por categoria: usa a cor própria configurada para a categoria (CorHex) quando
+        // disponível; caso contrário, cai para a paleta de reserva com base num hash estável do
+        // nome, para que a mesma categoria continue sempre com a mesma cor mesmo sem cor
+        // configurada e independentemente da ordem em que aparece no gráfico.
+        string CorDaCategoria(string categoria)
         {
-            var barras = dados
-                .Select(d => (Categoria: d.Categoria, Valor: s < d.Valores.Count ? d.Valores[s] : 0))
-                .Where(b => b.Valor > 0)
-                .ToList();
-            if (barras.Count > 0)
-                porAgrupamento.Add((series[s], barras));
-        }
-        if (porAgrupamento.Count == 0) return;
+            if (coresPorCategoria != null && coresPorCategoria.TryGetValue(categoria, out var corConfigurada)
+                && !string.IsNullOrWhiteSpace(corConfigurada))
+                return corConfigurada;
 
-        // 10.3 — com muitos Agrupamentos, cada grupo ficaria demasiado estreito numa só linha;
-        // a partir de um certo número, reparte-os por várias linhas (mantendo a legenda comum no
-        // fim), e reduz ligeiramente o tamanho de letra dos rótulos para não sobrepor texto.
-        const int maxGruposPorLinha = 6;
-        var muitosGrupos = porAgrupamento.Count > maxGruposPorLinha;
-        var fonteRotuloGrupo = muitosGrupos ? 6f : 7f;
-        var fonteRotuloValor = muitosGrupos ? 5.2f : 5.8f;
+            var indice = Math.Abs(categoria.GetHashCode()) % PaletaCategorias.Length;
+            return PaletaCategorias[indice];
+        }
 
         col.Item().PaddingTop(6).PaddingBottom(4).Text(titulo).FontSize(11).Bold().FontColor(Colors.Blue.Darken2);
 
         col.Item().ShowEntire().Column(bloco =>
         {
-            var linhas = porAgrupamento
-                .Select((grupo, indice) => (grupo, indice))
-                .GroupBy(x => x.indice / maxGruposPorLinha)
-                .Select(g => g.Select(x => x.grupo).ToList())
-                .ToList();
-
-            // ---- Barras: cada Agrupamento com uma barra por categoria presente nesse
-            // Agrupamento, a crescer de baixo para cima; cada categoria mantém sempre a mesma cor
-            // em todos os Agrupamentos (ver CorDaCategoria) ----
-            foreach (var linha in linhas)
+            // ---- Barras: cada categoria com uma barra por série (agrupamento), a crescer de
+            // baixo para cima; todas as barras do mesmo grupo usam a cor da categoria ----
+            bloco.Item().PaddingBottom(8).Border(1).BorderColor(Colors.Grey.Lighten2).Padding(10).Row(row =>
             {
-                bloco.Item().PaddingBottom(8).Border(1).BorderColor(Colors.Grey.Lighten2).Padding(10).Row(row =>
+                foreach (var (categoria, valores) in dados)
                 {
-                    foreach (var (agrupamento, barras) in linha)
+                    var cor = CorDaCategoria(categoria);
+
+                    row.RelativeItem().PaddingHorizontal(3).Column(grupoCol =>
                     {
-                        row.RelativeItem().PaddingHorizontal(3).Column(grupoCol =>
+                        grupoCol.Item().Height(alturaMaxima + alturaRotuloValor).Row(barrasRow =>
                         {
-                            grupoCol.Item().Height(alturaMaxima + alturaRotuloValor).Row(barrasRow =>
+                            for (var s = 0; s < valores.Count; s++)
                             {
-                                foreach (var (categoria, valor) in barras)
+                                var valor = valores[s];
+                                var altura = valor > 0 ? Math.Max(2, alturaMaxima * valor / (float)maiorValor) : 0;
+
+                                barrasRow.RelativeItem().PaddingHorizontal(1).Column(barCol =>
                                 {
-                                    var cor = CorDaCategoria(categoria, coresPorCategoria);
-                                    var altura = Math.Max(2, alturaMaxima * valor / (float)maiorValor);
-
-                                    barrasRow.RelativeItem().PaddingHorizontal(1).Column(barCol =>
-                                    {
+                                    if (valor > 0)
                                         barCol.Item().Height(alturaRotuloValor).AlignCenter()
-                                            .Text(valor.ToString()).FontSize(fonteRotuloValor).Bold().FontColor(Colors.Grey.Darken3);
-                                        barCol.Item().Height(alturaMaxima - altura);
+                                            .Text(valor.ToString()).FontSize(5.8f).Bold().FontColor(Colors.Grey.Darken3);
+                                    barCol.Item().Height(alturaMaxima - altura);
+                                    if (valor > 0)
                                         barCol.Item().Height(altura).Background(cor);
-                                    });
-                                }
-                            });
-                            // Identificação inequívoca do Agrupamento a que pertence este grupo de barras.
-                            grupoCol.Item().PaddingTop(3).AlignCenter().Text(agrupamento).FontSize(fonteRotuloGrupo).Bold().FontColor(Colors.Grey.Darken2);
+                                });
+                            }
                         });
-                    }
-                });
-            }
+                        grupoCol.Item().PaddingTop(3).AlignCenter().Text(categoria).FontSize(7).Bold().FontColor(Colors.Grey.Darken2);
+                    });
+                }
+            });
 
-            // ---- Legenda comum: correspondência Categoria → Cor (a mesma em todos os
-            // Agrupamentos e reutilizável por outros gráficos do relatório com os mesmos dados —
-            // ver requisito 10.1), permitindo identificar inequivocamente o tipo de intervenção
-            // em qualquer Agrupamento sem repetir a legenda por grupo. ----
+            // ---- Legenda: correspondência categoria → cor (o foco do gráfico), seguida da
+            // lista de agrupamentos representados nas barras de cada grupo (sem cor própria,
+            // já que a cor identifica a categoria e não o agrupamento) ----
             bloco.Item().AlignCenter().Row(legendaRow =>
             {
                 foreach (var (categoria, _) in dados)
                 {
-                    var cor = CorDaCategoria(categoria, coresPorCategoria);
+                    var cor = CorDaCategoria(categoria);
                     legendaRow.AutoItem().PaddingRight(4).PaddingTop(1).Height(9).Width(9).Background(cor);
                     legendaRow.AutoItem().PaddingRight(10).Text(categoria).FontSize(6.5f).FontColor(Colors.Grey.Darken2);
                 }
             });
+            bloco.Item().PaddingTop(3).AlignCenter()
+                .Text($"Agrupamentos (ordem das barras em cada grupo): {string.Join(", ", series)}")
+                .FontSize(6.5f).Italic().FontColor(Colors.Grey.Darken1);
         });
     }
 

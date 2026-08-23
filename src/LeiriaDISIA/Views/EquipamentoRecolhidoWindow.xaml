@@ -75,10 +75,10 @@
                           MouseDoubleClick="Grid_MouseDoubleClick" RowStyle="{StaticResource DataGridRowClickableStyle}">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Nº Série" Binding="{Binding Equipamento.NumeroSerie}" Width="Auto" />
-                        <DataGridTextColumn Header="Cód. GEPE" Binding="{Binding Equipamento.Escola.CodGEPE}" Width="Auto" ElementStyle="{StaticResource CenteredCellTextStyle}" />
+                        <DataGridTextColumn Header="Cód. GEPE" Binding="{Binding Equipamento.Escola.CodGEPE}" Width="Auto" />
                         <DataGridTextColumn Header="Tipo" Binding="{Binding Equipamento.Tipo}" Width="Auto" />
                         <DataGridTextColumn Header="Escola" Binding="{Binding Equipamento.Escola.Nome}" Width="*" />
-                        <DataGridTextColumn Header="Data Recolha" Binding="{Binding DataRecolha, StringFormat=dd-MM-yyyy}" Width="Auto" ElementStyle="{StaticResource CenteredCellTextStyle}" />
+                        <DataGridTextColumn Header="Data Recolha" Binding="{Binding DataRecolha, StringFormat=dd-MM-yyyy}" Width="Auto" />
                         <DataGridTemplateColumn Header="Estado" Width="Auto" CanUserSort="False">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
@@ -88,7 +88,7 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTextColumn Header="Data Entrega" Binding="{Binding DataEntrega, StringFormat=dd-MM-yyyy}" Width="Auto" ElementStyle="{StaticResource CenteredCellTextStyle}" />
+                        <DataGridTextColumn Header="Data Entrega" Binding="{Binding DataEntrega, StringFormat=dd-MM-yyyy}" Width="Auto" />
                         <DataGridTemplateColumn Header="Tempo" Width="Auto" SortMemberPath="DiasEmRecolha">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>

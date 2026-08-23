@@ -39,10 +39,10 @@ public partial class AdministracaoWindow : Window
         else
             RadioTemaClaro.IsChecked = true;
 
-        if (Services.DashboardResolucaoService.UhdAtivo)
-            RadioResolucaoUhd.IsChecked = true;
+        if (Services.JanelaCompactaService.Ativo)
+            RadioTamanhoCompacto.IsChecked = true;
         else
-            RadioResolucaoFhd.IsChecked = true;
+            RadioTamanhoNormal.IsChecked = true;
 
         TxtVersaoApp.Text = Services.AppSettingsService.VersaoApp;
 
@@ -92,11 +92,11 @@ public partial class AdministracaoWindow : Window
     private void RadioTemaEscuro_Checked(object sender, RoutedEventArgs e) =>
         Services.ThemeService.Aplicar(Services.TemaAplicacao.Escuro);
 
-    private void RadioResolucaoFhd_Checked(object sender, RoutedEventArgs e) =>
-        Services.DashboardResolucaoService.Aplicar(uhd: false);
+    private void RadioTamanhoNormal_Checked(object sender, RoutedEventArgs e) =>
+        Services.JanelaCompactaService.Aplicar(ativo: false);
 
-    private void RadioResolucaoUhd_Checked(object sender, RoutedEventArgs e) =>
-        Services.DashboardResolucaoService.Aplicar(uhd: true);
+    private void RadioTamanhoCompacto_Checked(object sender, RoutedEventArgs e) =>
+        Services.JanelaCompactaService.Aplicar(ativo: true);
 
     private void GuardarVersao_Click(object sender, RoutedEventArgs e)
     {

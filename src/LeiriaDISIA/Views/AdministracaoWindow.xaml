@@ -384,15 +384,15 @@
                         </StackPanel>
                     </Border>
 
-                    <TextBlock Text="Resolução" Style="{StaticResource SectionTitleStyle}" FontSize="18" />
+                    <TextBlock Text="Tamanho das Janelas" Style="{StaticResource SectionTitleStyle}" FontSize="18" />
                     <TextBlock TextWrapping="Wrap" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,16"
-                               Text="Escolha a disposição do módulo Dashboard. FHD é a disposição original (1920×1080). UHD reorganiza os mesmos cartões e gráficos — sem remover nem alterar nenhuma informação — de forma mais compacta, para aproveitar melhor ecrãs maiores (2560×1440). A alteração é aplicada de imediato (mesmo que o Dashboard esteja aberto) e é recordada da próxima vez que abrir a aplicação." />
+                               Text="Normal usa sempre o tamanho original das janelas de edição (Escola, Equipamento, Intervenção, Atividade DISIA), pensado para um monitor normal. Modo Compacto adapta automaticamente essas janelas à área de trabalho disponível — útil em portáteis com ecrãs pequenos (ex.: 13&quot;), onde o tamanho original pode não caber e deixar botões como &quot;Guardar&quot; ou fechar a janela inacessíveis. Em monitores onde o tamanho original já cabe, o Modo Compacto não muda nada. Só tem efeito nas próximas janelas a abrir — não nas que já estiverem abertas." />
                     <Border Style="{StaticResource CardStyle}" Margin="0,0,0,20">
                         <StackPanel>
-                            <RadioButton x:Name="RadioResolucaoFhd" Content="🖥️ FHD (1920×1080) — disposição original" GroupName="ResolucaoDashboard"
-                                         FontSize="15" Margin="0,0,0,14" Checked="RadioResolucaoFhd_Checked" />
-                            <RadioButton x:Name="RadioResolucaoUhd" Content="🖥️ UHD (2560×1440) — disposição compacta" GroupName="ResolucaoDashboard"
-                                         FontSize="15" Checked="RadioResolucaoUhd_Checked" />
+                            <RadioButton x:Name="RadioTamanhoNormal" Content="🖥️ Normal — monitor de tamanho normal" GroupName="TamanhoJanelas"
+                                         FontSize="15" Margin="0,0,0,14" Checked="RadioTamanhoNormal_Checked" />
+                            <RadioButton x:Name="RadioTamanhoCompacto" Content="💻 Modo Compacto — portátil / ecrã pequeno" GroupName="TamanhoJanelas"
+                                         FontSize="15" Checked="RadioTamanhoCompacto_Checked" />
                         </StackPanel>
                     </Border>
 

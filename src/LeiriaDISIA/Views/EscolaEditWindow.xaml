@@ -237,7 +237,7 @@
                                         <TextBlock FontSize="11" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap">
                                             <Run Text="{Binding Marca}" /> <Run Text="{Binding Modelo}" />
                                         </TextBlock>
-                                        <TextBlock Text="{Binding NumeroInventario, StringFormat='Nº Inventário: {0}'}" FontSize="10.5"
+                                        <TextBlock Text="{Binding NumeroSerie, StringFormat='Nº Série: {0}'}" FontSize="10.5"
                                                    Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" />
                                         <TextBlock Text="{Binding Estado}" FontSize="10.5" FontStyle="Italic" TextWrapping="Wrap" />
                                     </StackPanel>

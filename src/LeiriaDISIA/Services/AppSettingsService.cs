@@ -129,6 +129,21 @@ public static class AppSettingsService
         set { _settings.DashboardResolucaoUhd = value; Save(); }
     }
 
+    // ---- Modo Compacto (janelas de edição, para ecrãs pequenos/portáteis) ----
+
+    /// <summary>Quando ativo, as janelas de edição maiores (Escola, Equipamento, Intervenção,
+    /// Atividade DISIA) ajustam automaticamente o seu tamanho à área de trabalho disponível em
+    /// vez de usarem sempre o tamanho fixo definido no XAML — pensado para portáteis com ecrãs
+    /// pequenos (ex.: 13" a 125% de escala), onde o tamanho fixo original não cabe no ecrã e
+    /// impede o acesso aos botões de "Guardar"/"Cancelar" ou ao fecho da janela. Em ecrãs normais
+    /// ou grandes não tem qualquer efeito visível. A preferência é gravada e reaplicada
+    /// automaticamente ao reabrir a aplicação.</summary>
+    public static bool ModoCompactoAtivo
+    {
+        get => _settings.ModoCompactoAtivo;
+        set { _settings.ModoCompactoAtivo = value; Save(); }
+    }
+
     /// <summary>
     /// Mensagem da última falha ao gravar as configurações em disco (ex: permissões, disco cheio),
     /// ou null se a última gravação foi bem sucedida. Permite à interface avisar o utilizador em
@@ -194,5 +209,8 @@ public static class AppSettingsService
 
         // Dashboard: resolução de visualização
         public bool DashboardResolucaoUhd { get; set; } = false;
+
+        // Modo Compacto: janelas de edição adaptadas a ecrãs pequenos/portáteis
+        public bool ModoCompactoAtivo { get; set; } = false;
     }
 }

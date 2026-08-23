@@ -75,8 +75,21 @@
 
         <!-- Barra lateral -->
         <Border Grid.Column="0" Background="{StaticResource BrushPrimary}">
-            <DockPanel LastChildFill="True">
-                <Grid DockPanel.Dock="Top" Margin="18,20,14,26">
+            <!-- Grid de 3 linhas (Auto/*/Auto) em vez do antigo DockPanel: garante que a linha de
+                 baixo (avatar + "Terminar Sessão" + "Sair da Aplicação") tem sempre o espaço de que
+                 precisa, e é a lista de navegação do meio (a única com tamanho variável, conforme o
+                 número de módulos) que encolhe e ganha scroll se não couber - em vez de, como
+                 acontecia antes, todo o conteúdo poder ultrapassar a altura do ecrã sem aviso,
+                 cortando exatamente os botões de baixo em ecrãs mais pequenos/portáteis (13" a
+                 125% de escala, por exemplo). -->
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" Margin="18,20,14,26">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
@@ -90,7 +103,8 @@
                            RenderOptions.BitmapScalingMode="HighQuality" Stretch="Uniform" />
                 </Grid>
 
-                <StackPanel Margin="10,0" DockPanel.Dock="Top">
+                <ScrollViewer Grid.Row="1" Background="Transparent" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Margin="10,0">
                     <RadioButton x:Name="NavDashboard" Style="{StaticResource NavButtonStyle}" IsChecked="True"
                                  Checked="Nav_Checked" Tag="Dashboard" Content="🏠  Dashboard" Margin="0,2" />
                     <RadioButton x:Name="NavAgrupamentos" Style="{StaticResource NavButtonStyle}"
@@ -118,8 +132,9 @@
                     <RadioButton x:Name="NavAdministracao" Style="{StaticResource NavButtonStyle}"
                                  Checked="Nav_Checked" Tag="Administracao" Content="⚙️  Administração" Margin="0,2" />
                 </StackPanel>
+                </ScrollViewer>
 
-                <StackPanel DockPanel.Dock="Bottom" Margin="18,10,18,18">
+                <StackPanel Grid.Row="2" Margin="18,10,18,18">
                     <Separator Margin="0,0,0,10" Background="{StaticResource BrushSeparator}" />
 
                     <!-- Avatar e informações do utilizador -->
@@ -163,9 +178,7 @@
                             FontWeight="SemiBold" Cursor="Hand" />
                     <TextBlock x:Name="TxtVersaoApp" Text="v1.1 — 2026" FontSize="11" Foreground="{StaticResource BrushSidebarSubtext}" HorizontalAlignment="Center" Margin="0,0,0,0" />
                 </StackPanel>
-
-                <Grid />
-            </DockPanel>
+            </Grid>
         </Border>
 
         <!-- Conteúdo (apenas o Dashboard fica embutido; os restantes módulos abrem em janela maximizada própria) -->

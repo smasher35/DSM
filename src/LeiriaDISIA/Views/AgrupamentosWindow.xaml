@@ -39,10 +39,10 @@
                     <DataGrid x:Name="Grid" CanUserSortColumns="True" SelectionChanged="Grid_SelectionChanged"
                               MouseDoubleClick="Grid_MouseDoubleClick" RowStyle="{StaticResource DataGridRowClickableStyle}">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Código" Binding="{Binding CodAgrupamento}" Width="Auto" ElementStyle="{StaticResource CenteredCellTextStyle}" />
+                            <DataGridTextColumn Header="Código" Binding="{Binding CodAgrupamento}" Width="Auto" />
                             <DataGridTextColumn Header="Nome" Binding="{Binding Nome}" Width="*" />
-                            <DataGridTextColumn Header="Abrev." Binding="{Binding Abreviatura}" Width="Auto" ElementStyle="{StaticResource CenteredCellTextStyle}" />
-                            <DataGridTextColumn Header="Nº Escolas" Binding="{Binding TotalEscolas}" Width="Auto" ElementStyle="{StaticResource CenteredCellTextStyle}" />
+                            <DataGridTextColumn Header="Abrev." Binding="{Binding Abreviatura}" Width="Auto" />
+                            <DataGridTextColumn Header="Nº Escolas" Binding="{Binding TotalEscolas}" Width="Auto" />
                         </DataGrid.Columns>
                     </DataGrid>
                 </Border>
@@ -75,14 +75,14 @@
                         <DataGrid x:Name="GridEscolas" Grid.Row="0" CanUserSortColumns="True" MouseDoubleClick="GridEscolas_MouseDoubleClick" RowStyle="{StaticResource DataGridRowClickableStyle}">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Escola" Binding="{Binding Nome}" Width="*" />
-                                <DataGridTextColumn Header="Cod. GEPE" Binding="{Binding CodGEPE}" Width="Auto" ElementStyle="{StaticResource CenteredCellTextStyle}" />
+                                <DataGridTextColumn Header="Cod. GEPE" Binding="{Binding CodGEPE}" Width="Auto" />
                                 <DataGridTextColumn Header="Localidade" Binding="{Binding Localidade}" Width="Auto" />
                                 <DataGridTextColumn Header="Freguesia" Binding="{Binding Freguesia}" Width="Auto" />
                                 <DataGridTextColumn Header="Tipo" Binding="{Binding Tipo}" Width="Auto" />
                                 <DataGridTemplateColumn Header="Estado" Width="Auto" CanUserSort="False">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <Border Style="{StaticResource BadgePillStyle}" HorizontalAlignment="Center" Background="{Binding CorEstado, Converter={StaticResource HexColorToBrushConverter}}">
+                                            <Border Style="{StaticResource BadgePillStyle}" Background="{Binding CorEstado, Converter={StaticResource HexColorToBrushConverter}}">
                                                 <TextBlock Text="{Binding Estado}" Style="{StaticResource BadgeTextStyle}" />
                                             </Border>
                                         </DataTemplate>

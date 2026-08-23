@@ -22,13 +22,11 @@ public static class DashboardSnapshotService
     /// para PNG. Devolve null se a captura falhar por qualquer motivo — o relatório continua a ser
     /// gerado na mesma, apenas sem esta imagem.
     ///
-    /// A largura de captura acompanha a disposição atualmente configurada em Administração →
-    /// Aparência (<see cref="DashboardResolucaoService.UhdAtivo"/>): a disposição UHD
-    /// (Themes/LayoutUHD.xaml) foi desenhada para uma zona de conteúdo até 2000px de largura (8
-    /// cartões KPI por linha, 6 gauges numa só linha) — capturar sempre a 1400px, pensado para a
-    /// disposição FHD original, esmagava/sobrepunha esse layout mais largo. Passar explicitamente
-    /// "largura" continua a substituir esta escolha automática, para quem chamar o método
-    /// diretamente com um valor específico.</summary>
+    /// O Dashboard usa sempre a disposição UHD (ver <see cref="DashboardResolucaoService"/>), que
+    /// foi desenhada para uma zona de conteúdo até 2000px de largura (8 cartões KPI por linha, 6
+    /// gauges numa só linha) — por isso a captura usa sempre 2560px de largura por omissão.
+    /// Passar explicitamente "largura" continua a substituir esta escolha automática, para quem
+    /// chamar o método diretamente com um valor específico.</summary>
     public static byte[]? Capturar(int? largura = null)
     {
         Window? janelaAuxiliar = null;

@@ -79,8 +79,8 @@
                 <DataGrid x:Name="Grid" CanUserSortColumns="True" MouseDoubleClick="Grid_MouseDoubleClick"
                           RowHeight="NaN" MinRowHeight="34" RowStyle="{StaticResource DataGridRowClickableStyle}">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Data" Binding="{Binding Data, StringFormat=dd-MM-yyyy}" Width="Auto" ElementStyle="{StaticResource CenteredCellTextStyle}" />
-                        <DataGridTextColumn Header="Cód. GEPE" Binding="{Binding Escola.CodGEPE}" Width="Auto" ElementStyle="{StaticResource CenteredCellTextStyle}" />
+                        <DataGridTextColumn Header="Data" Binding="{Binding Data, StringFormat=dd-MM-yyyy}" Width="Auto" />
+                        <DataGridTextColumn Header="Cód. GEPE" Binding="{Binding Escola.CodGEPE}" Width="Auto" />
                         <DataGridTextColumn Header="Escola" Binding="{Binding Escola.Nome}" Width="Auto" />
                         <DataGridTextColumn Header="Agrupamento" Binding="{Binding Agrupamento.Nome}" Width="Auto" />
                         <DataGridTextColumn Header="Descrição" Binding="{Binding Descricao}" Width="*" />
@@ -93,7 +93,7 @@
                                          restantes categorias para a linha seguinte, dentro da própria célula,
                                          e a linha da grelha cresce em altura automaticamente (ver RowHeight/
                                          MinRowHeight na DataGrid). -->
-                                    <ItemsControl ItemsSource="{Binding Categorias}" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <ItemsControl ItemsSource="{Binding Categorias}" VerticalAlignment="Center">
                                         <ItemsControl.ItemsPanel>
                                             <ItemsPanelTemplate>
                                                 <WrapPanel Orientation="Horizontal" />

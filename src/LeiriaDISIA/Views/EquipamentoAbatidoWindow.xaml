@@ -23,13 +23,11 @@
             <Border Style="{StaticResource CardStyle}">
                 <DataGrid x:Name="Grid" CanUserSortColumns="True" MouseDoubleClick="Grid_MouseDoubleClick" RowStyle="{StaticResource DataGridRowClickableStyle}">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Data Abate" Binding="{Binding DataAbate, StringFormat=dd-MM-yyyy}" Width="Auto" ElementStyle="{StaticResource CenteredCellTextStyle}" />
+                        <DataGridTextColumn Header="Data Abate" Binding="{Binding DataAbate, StringFormat=dd-MM-yyyy}" Width="Auto" />
                         <DataGridTextColumn Header="Equipamento (Nº Série)" Binding="{Binding Equipamento.NumeroSerie}" Width="Auto" />
                         <DataGridTextColumn Header="Descrição" Binding="{Binding DescricaoEquipamento}" Width="*" />
                         <DataGridTextColumn Header="Escola/Local" Binding="{Binding EscolaOuLocal}" Width="Auto" />
-                        <!-- (7.1) Apenas o título da coluna passa a "Estado" — a propriedade
-                             Status do modelo mantém-se inalterada (ver Models e base de dados). -->
-                        <DataGridTextColumn Header="Estado" Binding="{Binding Status}" Width="Auto" ElementStyle="{StaticResource CenteredCellTextStyle}" />
+                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="Auto" />
                     </DataGrid.Columns>
                 </DataGrid>
             </Border>

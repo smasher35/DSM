@@ -23,6 +23,11 @@ public partial class AtividadeDisiaEditWindow : Window
     {
         InitializeComponent();
 
+        // Modo Compacto (Administração → Aparência): em ecrãs pequenos/portáteis, encolhe a
+        // janela para caber na área de trabalho disponível - ver Services/JanelaTamanhoHelper.cs.
+        // Sem efeito em ecrãs normais/grandes ou com o modo desativado.
+        JanelaTamanhoHelper.AjustarSePreciso(this);
+
         // 1.2.1: tinge a barra de título nativa com um tom azul sóbrio, consistente com a
         // identidade da aplicação — ver Services/TitleBarService.cs. A janela continua nativa;
         // mover, minimizar, maximizar, fechar e o comportamento modal não são afetados.

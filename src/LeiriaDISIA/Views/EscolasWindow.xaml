@@ -29,16 +29,16 @@
             <Border Grid.Row="0" Style="{StaticResource CardStyle}">
                 <DataGrid x:Name="Grid" CanUserSortColumns="True" MouseDoubleClick="Grid_MouseDoubleClick" CanUserResizeColumns="True" CanUserReorderColumns="True" RowStyle="{StaticResource DataGridRowClickableStyle}">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Cód." Binding="{Binding CodEscola}" Width="Auto" ElementStyle="{StaticResource CenteredCellTextStyle}" />
+                        <DataGridTextColumn Header="Cód." Binding="{Binding CodEscola}" Width="Auto" />
                         <DataGridTextColumn Header="Escola" Binding="{Binding Nome}" Width="1*" />
-                        <DataGridTextColumn Header="Cód. GEPE" Binding="{Binding CodGEPE}" Width="Auto" ElementStyle="{StaticResource CenteredCellTextStyle}" />
+                        <DataGridTextColumn Header="Cód. GEPE" Binding="{Binding CodGEPE}" Width="Auto" />
                         <DataGridTextColumn Header="Localidade" Binding="{Binding Localidade}" Width="1*" />
                         <DataGridTextColumn Header="Tipo" Binding="{Binding Tipo}" Width="Auto" />
                         <DataGridTextColumn Header="Agrupamento" Binding="{Binding Agrupamento.Nome}" Width="1.2*" />
                         <DataGridTemplateColumn Header="Estado" Width="Auto" CanUserSort="False">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Border Style="{StaticResource BadgePillStyle}" HorizontalAlignment="Center" Background="{Binding CorEstado, Converter={StaticResource HexColorToBrushConverter}}">
+                                    <Border Style="{StaticResource BadgePillStyle}" Background="{Binding CorEstado, Converter={StaticResource HexColorToBrushConverter}}">
                                         <TextBlock Text="{Binding Estado}" Style="{StaticResource BadgeTextStyle}" />
                                     </Border>
                                 </DataTemplate>

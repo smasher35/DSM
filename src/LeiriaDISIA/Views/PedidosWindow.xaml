@@ -69,11 +69,19 @@
             <Border Grid.Row="1" Style="{StaticResource CardStyle}">
                 <DataGrid x:Name="Grid" CanUserSortColumns="True" MouseDoubleClick="Grid_MouseDoubleClick" RowStyle="{StaticResource DataGridRowClickableStyle}">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Data" Binding="{Binding DataPedido, StringFormat=dd-MM-yyyy}" Width="Auto" ElementStyle="{StaticResource CenteredCellTextStyle}" />
-                        <DataGridTextColumn Header="Cód. GEPE" Binding="{Binding Escola.CodGEPE}" Width="Auto" ElementStyle="{StaticResource CenteredCellTextStyle}" />
+                        <DataGridTextColumn Header="Data" Binding="{Binding DataPedido, StringFormat=dd-MM-yyyy}" Width="Auto" />
+                        <DataGridTextColumn Header="Cód. GEPE" Binding="{Binding Escola.CodGEPE}" Width="Auto">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock"><Setter Property="HorizontalAlignment" Value="Center" /></Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
                         <DataGridTextColumn Header="Escola" Binding="{Binding Escola.Nome}" Width="Auto" />
                         <DataGridTextColumn Header="Agrupamento" Binding="{Binding Agrupamento.Nome}" Width="Auto" />
-                        <DataGridTextColumn Header="Nº SIGA" Binding="{Binding NumeroSuporteSiga}" Width="Auto" ElementStyle="{StaticResource CenteredCellTextStyle}" />
+                        <DataGridTextColumn Header="Nº SIGA" Binding="{Binding NumeroSuporteSiga}" Width="Auto">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock"><Setter Property="HorizontalAlignment" Value="Center" /></Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
                         <DataGridTextColumn Header="Razão" Binding="{Binding Razao}" Width="*" />
                         <DataGridTemplateColumn Header="Estado" Width="Auto" SortMemberPath="Estado">
                             <DataGridTemplateColumn.CellTemplate>

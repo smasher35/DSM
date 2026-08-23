@@ -133,7 +133,7 @@ public partial class RelatorioService
 
         if (porCategoria.Count > 0)
         {
-            GraficoBarras(col, "Total de Intervenções por Categoria", porCategoria, coresPorCategoria);
+            GraficoBarras(col, "Total de Intervenções por Categoria", porCategoria);
             col.Item().PaddingTop(2).AlignCenter()
                 .Text("Figura 3 — Total de intervenções por categoria, no mês.")
                 .FontSize(7.5f).Italic().FontColor(Colors.Grey.Darken1);

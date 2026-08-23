@@ -50,19 +50,6 @@
             <conv:EstadoPedidoNomeExibicaoConverter x:Key="EstadoPedidoNomeExibicaoConverter" />
             <conv:EstadoIntervencaoNomeExibicaoConverter x:Key="EstadoIntervencaoNomeExibicaoConverter" />
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
-
-            <!-- (v0.13.6) Estilo único e reutilizável para centrar o valor das células de
-                 DataGrid, usado em vários módulos (Agrupamentos, Escolas, Pedidos, Intervenções,
-                 Atividades DISIA, Equipamento Informático, Equipamento Abatido, Equipamento
-                 Recolhido, Contatos), em vez de repetir o mesmo Style inline em cada
-                 DataGridTextColumn.ElementStyle. Fica aqui (Application.Resources), e não dentro
-                 de ModernTheme.xaml/DarkTheme.xaml, porque o ThemeService substitui esses dois
-                 dicionários por inteiro ao trocar de tema (ver Services/ThemeService.cs), e este
-                 estilo não depende de cor nem de tema, só de alinhamento. -->
-            <Style x:Key="CenteredCellTextStyle" TargetType="TextBlock">
-                <Setter Property="HorizontalAlignment" Value="Center" />
-                <Setter Property="TextAlignment" Value="Center" />
-            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

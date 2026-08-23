@@ -57,21 +57,11 @@ public partial class DashboardView : UserControl
         RegistarMapaResolucao();
         Carregar();
 
-        // Reaplica de imediato a resolução escolhida em Administração → Aparência (guardada entre
-        // sessões). Em FHD não há nada a fazer — é a disposição em que o XAML já nasce.
-        if (DashboardResolucaoService.UhdAtivo)
-            AplicarResolucao(uhd: true);
-
-        // Enquanto este Dashboard estiver visível, reage de imediato se o utilizador mudar a
-        // resolução em Administração → Aparência (sem precisar de reabrir o módulo Dashboard).
-        // A subscrição é removida em Unloaded para não prender esta instância em memória depois
-        // de o utilizador navegar para outro módulo (ver MainWindow: cada navegação cria uma
-        // instância nova de DashboardView).
-        DashboardResolucaoService.ResolucaoMudou += ResolucaoMudou_Handler;
-        Unloaded += (_, _) => DashboardResolucaoService.ResolucaoMudou -= ResolucaoMudou_Handler;
+        // O Dashboard usa sempre a disposição UHD (ver Services/DashboardResolucaoService.cs) -
+        // deixou de haver uma disposição FHD alternativa selecionável pelo utilizador, por isso já
+        // não é preciso reagir a mudanças nem subscrever nenhum evento aqui.
+        AplicarResolucao(uhd: true);
     }
-
-    private void ResolucaoMudou_Handler(object? sender, bool uhd) => AplicarResolucao(uhd);
 
     /// <summary>Associa cada par de invólucros (cartão FHD ↔ cartão UHD equivalente). Chamado uma
     /// única vez, no arranque. Esta lista é o único sítio onde a correspondência entre as duas
@@ -424,6 +414,49 @@ public partial class DashboardView : UserControl
         return string.Join("     ", pares);
     }
 
+    /// <summary>Abrevia o nome de uma categoria de intervenção para usar como rótulo no gráfico
+    /// radar "Intervenções por Categoria — Mês Corrente" (ver <see cref="ConstruirLegendaCategorias"/>
+    /// para a legenda com o nome completo). As categorias são geridas livremente em Administração →
+    /// Categorias de Intervenção (não são um conjunto fixo), por isso a abreviatura não pode vir de
+    /// um campo próprio como acontece com os Agrupamentos — é gerada aqui, a partir do nome:
+    /// - Nomes com mais do que uma palavra "significativa" (ignora conectores curtos como "e", "de",
+    ///   "da"): iniciais de cada palavra - ex. "Redes e Comunicações" → "RC", "Audio-Visual" → "AV".
+    /// - Nomes de uma só palavra: as primeiras 3 letras - ex. "Hardware" → "HAR", "Software" → "SOF".
+    /// - Nomes já curtos (4 carateres ou menos, ex. "VPN"): mantidos tal e qual.</summary>
+    private static string AbreviarCategoria(string nome)
+    {
+        if (string.IsNullOrWhiteSpace(nome)) return nome;
+
+        var palavrasSignificativas = nome
+            .Split(new[] { ' ', '-' }, StringSplitOptions.RemoveEmptyEntries)
+            .Where(p => p.Length > 2)
+            .ToList();
+
+        if (palavrasSignificativas.Count == 0)
+            palavrasSignificativas.Add(nome);
+
+        if (palavrasSignificativas.Count == 1)
+        {
+            var palavra = palavrasSignificativas[0];
+            return palavra.Length <= 4 ? palavra.ToUpperInvariant() : palavra[..3].ToUpperInvariant();
+        }
+
+        return string.Concat(palavrasSignificativas.Select(p => char.ToUpperInvariant(p[0])));
+    }
+
+    /// <summary>Constrói o texto de legenda apresentado por baixo do gráfico radar de categorias,
+    /// mapeando cada abreviatura (ver <see cref="AbreviarCategoria"/>) ao nome completo da
+    /// categoria. Tal como em <see cref="ConstruirLegendaAbreviaturas"/>, entradas em que a
+    /// abreviatura já é igual ao nome completo (categorias já curtas, ex. "VPN") são omitidas.</summary>
+    private static string ConstruirLegendaCategorias(IEnumerable<(string Categoria, int Total, string Cor)> dados)
+    {
+        var pares = dados
+            .Select(d => (d.Categoria, Abreviatura: AbreviarCategoria(d.Categoria)))
+            .Where(d => !string.Equals(d.Abreviatura, d.Categoria, StringComparison.OrdinalIgnoreCase))
+            .Select(d => $"{d.Abreviatura} = {d.Categoria}");
+        return string.Join("     ", pares);
+    }
+
     /// <summary>Duração das animações de entrada dos gráficos do dashboard (valor mais alto = animação mais lenta e com mais impacto visual).</summary>
 
     private void Carregar()
@@ -572,11 +605,30 @@ public partial class DashboardView : UserControl
         };
         ChartPorCategoriaMes.AngleAxes = new[]
         {
-            new LiveChartsCore.SkiaSharpView.PolarAxis { Labels = categoriasParaRadar.Select(c => c.Categoria).ToArray() }
+            // Os nomes completos (ex. "Redes e Comunicações", "Audio-Visual") são compridos
+            // demais para caberem sem se sobrepor à volta de um gráfico radar deste tamanho -
+            // por isso usa-se aqui uma abreviatura curta (ver AbreviarCategoria), com o nome
+            // completo de cada uma na legenda por baixo do gráfico (TxtLegendaCategoriaMes).
+            new LiveChartsCore.SkiaSharpView.PolarAxis
+            {
+                Labels = categoriasParaRadar.Select(c => AbreviarCategoria(c.Categoria)).ToArray()
+            }
         };
+        TxtLegendaCategoriaMes.Text = ConstruirLegendaCategorias(categoriasParaRadar);
+
+        // Sem um MaxLimit explícito, quando o mês tem muito poucas (ou nenhumas) intervenções o
+        // eixo do raio auto-ajusta-se a esse valor mínimo e o polígono "colapsa" quase para o
+        // centro — arrastando consigo os rótulos das categorias à volta, que ficam todos
+        // amontoados/sobrepostos (em vez de espalhados pelo perímetro). Ao impor aqui um "piso"
+        // mínimo de 4 para o MaxLimit, o raio nunca fica tão pequeno a esse ponto: com poucas
+        // intervenções o polígono fica pequeno mas legível, centrado num círculo de tamanho
+        // normal, e os rótulos continuam à volta, bem separados uns dos outros.
+        var maiorValorCategoriaMes = categoriasParaRadar.Count > 0
+            ? categoriasParaRadar.Max(c => c.Total)
+            : 0;
         ChartPorCategoriaMes.RadiusAxes = new[]
         {
-            new LiveChartsCore.SkiaSharpView.PolarAxis { MinLimit = 0 }
+            new LiveChartsCore.SkiaSharpView.PolarAxis { MinLimit = 0, MaxLimit = Math.Max(maiorValorCategoriaMes, 4) }
         };
 
         // (2.5) Intervenções por categoria, por agrupamento — total anual (barras empilhadas)

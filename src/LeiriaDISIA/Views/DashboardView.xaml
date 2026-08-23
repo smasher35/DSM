@@ -246,6 +246,8 @@
                         <StackPanel x:Name="ContentChartPorCategoriaMes">
                             <TextBlock Text="Intervenções por Categoria (total) - Mês Corrente" Style="{StaticResource SectionTitleStyle}" FontSize="16" />
                             <lvc:PolarChart x:Name="ChartPorCategoriaMes" Height="280" />
+                            <TextBlock x:Name="TxtLegendaCategoriaMes" TextWrapping="Wrap" FontSize="10"
+                                       Foreground="{StaticResource BrushTextSecondary}" Margin="0,6,0,0" />
                         </StackPanel>
                     </Border>
                 </UniformGrid>

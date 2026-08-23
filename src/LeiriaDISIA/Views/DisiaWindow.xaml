@@ -120,7 +120,7 @@
             <Border Grid.Row="2" Style="{StaticResource CardStyle}" Padding="18,18,18,18">
                 <DataGrid x:Name="Grid" CanUserSortColumns="True" MouseDoubleClick="Grid_MouseDoubleClick" RowStyle="{StaticResource DataGridRowClickableStyle}">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Data" Binding="{Binding Data, StringFormat=dd-MM-yyyy}" Width="Auto" ElementStyle="{StaticResource CenteredCellTextStyle}" />
+                        <DataGridTextColumn Header="Data" Binding="{Binding Data, StringFormat=dd-MM-yyyy}" Width="Auto" />
                         <DataGridTextColumn Header="Descrição" Binding="{Binding Descricao}" Width="*" />
                         <DataGridTemplateColumn Header="Categoria" Width="Auto" SortMemberPath="Categoria.Nome">
                             <DataGridTemplateColumn.CellTemplate>
@@ -133,7 +133,7 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
                         <DataGridTextColumn Header="Local" Binding="{Binding Local}" Width="Auto" />
-                        <DataGridTextColumn Header="Qtd" Binding="{Binding Quantidade}" Width="Auto" ElementStyle="{StaticResource CenteredCellTextStyle}" />
+                        <DataGridTextColumn Header="Qtd" Binding="{Binding Quantidade}" Width="Auto" />
                         <DataGridTemplateColumn Header="Estado" Width="Auto" SortMemberPath="Estado">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>

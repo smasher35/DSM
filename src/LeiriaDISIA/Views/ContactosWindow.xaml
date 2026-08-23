@@ -28,8 +28,8 @@
                         <DataGridTextColumn Header="Escola" Binding="{Binding Escola.Nome}" Width="Auto" />
                         <DataGridTextColumn Header="Entidade Externa" Binding="{Binding EntidadeExterna}" Width="Auto" />
                         <DataGridTextColumn Header="Função" Binding="{Binding Funcao}" Width="Auto" />
-                        <DataGridTextColumn Header="Telefone" Binding="{Binding Telefone}" Width="Auto" ElementStyle="{StaticResource CenteredCellTextStyle}" />
-                        <DataGridTextColumn Header="Telemóvel" Binding="{Binding Telemovel}" Width="Auto" ElementStyle="{StaticResource CenteredCellTextStyle}" />
+                        <DataGridTextColumn Header="Telefone" Binding="{Binding Telefone}" Width="Auto" />
+                        <DataGridTextColumn Header="Telemóvel" Binding="{Binding Telemovel}" Width="Auto" />
                         <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="Auto" />
                     </DataGrid.Columns>
                 </DataGrid>
