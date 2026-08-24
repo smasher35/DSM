@@ -1,0 +1,51 @@
+<Window x:Class="LeiriaDISIA.Views.SelecionarPedidoWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Selecionar Pedido de Intervenção"
+        Height="600" Width="820" MinHeight="420" MinWidth="640"
+        WindowStartupLocation="CenterOwner" ResizeMode="CanResize"
+        Background="{StaticResource BrushBackground}" FontFamily="Segoe UI">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Selecionar Pedido de Intervenção" Style="{StaticResource SectionTitleStyle}" FontSize="20" Margin="0,0,0,4" />
+        <TextBlock Grid.Row="1" TextWrapping="Wrap" Margin="0,0,0,12" Foreground="{StaticResource BrushTextSecondary}"
+                   Text="Só são mostrados pedidos em aberto (Pendente, Em Andamento ou Em Espera) que ainda não estão associados a nenhuma intervenção. Ao selecionar um, a Escola e a Descrição desta intervenção são preenchidas a partir dele, e o pedido é encerrado automaticamente quando esta intervenção for fechada." />
+
+        <Border Grid.Row="2" Style="{StaticResource CardStyle}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <TextBox x:Name="TxtPesquisa" Grid.Row="0" Style="{StaticResource SearchTextBox}" Margin="0,0,0,10"
+                         TextChanged="TxtPesquisa_TextChanged" />
+
+                <DataGrid x:Name="Grid" Grid.Row="1" AutoGenerateColumns="False" CanUserSortColumns="True"
+                          IsReadOnly="True" SelectionMode="Single" RowStyle="{StaticResource DataGridRowClickableStyle}"
+                          MouseDoubleClick="Grid_MouseDoubleClick">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Data" Binding="{Binding DataPedido, StringFormat=dd-MM-yyyy}" Width="Auto" />
+                        <DataGridTextColumn Header="Escola" Binding="{Binding Escola.Nome}" Width="*" />
+                        <DataGridTextColumn Header="Agrupamento" Binding="{Binding Agrupamento.Nome}" Width="Auto" />
+                        <DataGridTextColumn Header="Razão" Binding="{Binding Razao}" Width="*" />
+                        <DataGridTextColumn Header="Estado" Binding="{Binding Estado, Converter={StaticResource EstadoPedidoNomeExibicaoConverter}}" Width="Auto" />
+                        <DataGridTextColumn Header="Dias em Aberto" Binding="{Binding DiasEmAberto}" Width="Auto" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Border>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Content="Cancelar" Padding="16,8" Margin="0,0,10,0" Click="Cancelar_Click" />
+            <Button x:Name="BtnSelecionar" Content="Selecionar" Padding="16,8" Style="{StaticResource PrimaryButton}"
+                    IsEnabled="False" Click="Selecionar_Click" />
+        </StackPanel>
+    </Grid>
+</Window>

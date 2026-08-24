@@ -31,7 +31,21 @@ public partial class IntervencaoEditWindow : Window
     }
 
     private readonly Intervencao? _existente;
-    private readonly PedidoIntervencao? _pedidoOrigem;
+
+    /// <summary>Pedido de origem da intervenção — vem já preenchido quando a janela é aberta a
+    /// partir de "Criar Intervenção" no <see cref="PedidoEditWindow"/>, ou pode ser preenchido
+    /// depois, a meio da edição, através do botão "🔗 Associar a um Pedido..." (ver
+    /// <see cref="AssociarPedido_Click"/>) — para intervenções registadas diretamente, sem passar
+    /// pelo módulo de Pedidos. Em qualquer dos dois casos, ao gravar com o Estado "Fechada" este
+    /// pedido é automaticamente marcado como concluído (ver o fim de <see cref="Guardar_Click"/>).</summary>
+    private PedidoIntervencao? _pedidoOrigem;
+
+    /// <summary>Cópia do valor de <see cref="_pedidoOrigem"/> tal como estava quando a janela
+    /// abriu (antes de qualquer clique em "Associar"/"Remover associação"). Serve só para
+    /// <see cref="Guardar_Click"/> conseguir distinguir "nunca houve pedido associado" de
+    /// "havia um pedido associado e o utilizador removeu-o agora" — neste segundo caso é preciso
+    /// desfazer o vínculo também na base de dados (ver Guardar_Click), não só em memória.</summary>
+    private PedidoIntervencao? _pedidoOrigemInicial;
     private readonly List<CheckBox> _checkBoxesCategorias = new();
     private readonly List<Escola> _todasAsEscolas;
     private int? _intervencaoIdGuardada;
@@ -56,6 +70,7 @@ public partial class IntervencaoEditWindow : Window
 
         _existente = intervencao;
         _pedidoOrigem = pedidoOrigem;
+        _pedidoOrigemInicial = pedidoOrigem;
 
         _todasAsEscolas = App.Db.Escolas.Include(e => e.Agrupamento).Where(e => e.Estado != EstadosEscola.Desativada).OrderBy(e => e.Nome).ToList();
         CmbEscola.ItemsSource = _todasAsEscolas;
@@ -84,6 +99,7 @@ public partial class IntervencaoEditWindow : Window
             if (pedidoOrigem != null)
                 TxtDescricao.Text = pedidoOrigem.Razao;
 
+            AtualizarPainelPedidoAssociado();
             AtualizarRecolhidosDaEscola();
             return;
         }
@@ -148,6 +164,17 @@ public partial class IntervencaoEditWindow : Window
             });
         }
 
+        // Recupera o pedido já associado a esta intervenção (se algum), tal como a mesma lógica
+        // usada ao gravar (ver o fim de Guardar_Click): ou via PedidoOrigemId (nasceu do pedido),
+        // ou via IntervencaoId no próprio pedido (associado depois, através deste ecrã). Serve só
+        // para mostrar corretamente o painel "Pedido de Intervenção" — a atribuição em si ao
+        // gravar já continua a ser feita do mesmo modo que sempre foi.
+        _pedidoOrigem = completa.PedidoOrigemId != null
+            ? App.Db.PedidosIntervencao.Find(completa.PedidoOrigemId)
+            : App.Db.PedidosIntervencao.FirstOrDefault(p => p.IntervencaoId == completa.Id);
+        _pedidoOrigemInicial = _pedidoOrigem;
+
+        AtualizarPainelPedidoAssociado();
         AtualizarRecolhidosDaEscola();
     }
 
@@ -176,6 +203,57 @@ public partial class IntervencaoEditWindow : Window
             TxtEscolaInfo.Text = "";
 
         AtualizarRecolhidosDaEscola();
+    }
+
+    /// <summary>Atualiza o painel "Pedido de Intervenção" (mensagem informativa + visibilidade dos
+    /// botões) conforme haja, ou não, um pedido associado (<see cref="_pedidoOrigem"/>) nesta
+    /// intervenção — ver <see cref="AssociarPedido_Click"/> e <see cref="RemoverAssociacaoPedido_Click"/>.</summary>
+    private void AtualizarPainelPedidoAssociado()
+    {
+        if (_pedidoOrigem == null)
+        {
+            TxtPedidoAssociadoInfo.Text =
+                "Esta intervenção não está associada a nenhum pedido — ao fechá-la, nenhum pedido será encerrado automaticamente.";
+            BtnAssociarPedido.Visibility = Visibility.Visible;
+            BtnRemoverAssociacaoPedido.Visibility = Visibility.Collapsed;
+        }
+        else
+        {
+            TxtPedidoAssociadoInfo.Text =
+                $"Associada ao pedido de {_pedidoOrigem.DataPedido:dd/MM/yyyy} — {_pedidoOrigem.Escola?.Nome} " +
+                $"({_pedidoOrigem.Solicitante}): \"{_pedidoOrigem.Razao}\". Ao fechar esta intervenção, este pedido é " +
+                "automaticamente marcado como concluído.";
+            BtnAssociarPedido.Visibility = Visibility.Collapsed;
+            BtnRemoverAssociacaoPedido.Visibility = Visibility.Visible;
+        }
+    }
+
+    /// <summary>Permite associar esta intervenção a um pedido já existente, quando ela foi (ou
+    /// está a ser) registada diretamente, sem passar pelo módulo de Pedidos — para que, ao fechá-
+    /// -la, o pedido seja também automaticamente marcado como concluído, tal como já acontecia
+    /// quando a intervenção nasce a partir do próprio pedido (ver <see cref="PedidoEditWindow"/>).
+    /// Ao escolher um pedido, a Escola desta intervenção passa a ser a do pedido (substitui a que
+    /// estivesse selecionada, para não ficar inconsistente com o pedido escolhido), e a Descrição
+    /// é preenchida com a Razão do pedido, mas só se ainda estiver vazia (não substitui uma
+    /// descrição que o utilizador já tenha escrito).</summary>
+    private void AssociarPedido_Click(object sender, RoutedEventArgs e)
+    {
+        var janela = new SelecionarPedidoWindow { Owner = this };
+        if (janela.ShowDialog() != true || janela.PedidoSelecionado == null) return;
+
+        _pedidoOrigem = janela.PedidoSelecionado;
+
+        CmbEscola.SelectedItem = _todasAsEscolas.FirstOrDefault(esc => esc.Id == _pedidoOrigem.EscolaId);
+        if (string.IsNullOrWhiteSpace(TxtDescricao.Text))
+            TxtDescricao.Text = _pedidoOrigem.Razao;
+
+        AtualizarPainelPedidoAssociado();
+    }
+
+    private void RemoverAssociacaoPedido_Click(object sender, RoutedEventArgs e)
+    {
+        _pedidoOrigem = null;
+        AtualizarPainelPedidoAssociado();
     }
 
     private void AtualizarRecolhidosDaEscola()
@@ -352,6 +430,18 @@ public partial class IntervencaoEditWindow : Window
         intervencao.Estado = estado;
         intervencao.MotivoPendente = estado is EstadoIntervencao.Pendente or EstadoIntervencao.EmEspera
             ? TxtMotivoPendente.Text : null;
+
+        // O utilizador removeu (via botão "✖ Remover associação") um pedido que já estava
+        // realmente ligado a esta intervenção — é preciso desfazer o vínculo na base de dados
+        // também (não só limpar _pedidoOrigem em memória), ou a resolução de "pedidoLigado" mais
+        // abaixo voltaria a encontrá-lo pelo IntervencaoId antigo e a "ressuscitar" a ligação.
+        if (_pedidoOrigemInicial != null && _pedidoOrigem == null)
+        {
+            var pedidoAntigo = App.Db.PedidosIntervencao.Find(_pedidoOrigemInicial.Id);
+            if (pedidoAntigo != null && pedidoAntigo.IntervencaoId == intervencao.Id)
+                pedidoAntigo.IntervencaoId = null;
+            intervencao.PedidoOrigemId = null;
+        }
 
         if (_pedidoOrigem != null && intervencao.PedidoOrigemId == null)
             intervencao.PedidoOrigemId = _pedidoOrigem.Id;
