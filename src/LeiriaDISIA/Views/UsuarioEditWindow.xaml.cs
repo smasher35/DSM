@@ -254,6 +254,32 @@ public partial class UsuarioEditWindow : Window
             return;
         }
 
+        // Tal como acontece ao eliminar um utilizador (ver AdministracaoWindow.EliminarUtilizador_Click),
+        // tem de existir sempre pelo menos um utilizador Administrador E Ativo — senão corre-se o
+        // risco de sair da aplicação e ficar sem acesso ao menu Administração. Só é preciso
+        // verificar isto ao EDITAR um utilizador já existente (criar um novo nunca remove ninguém),
+        // e só quando a alteração proposta (mudar o Perfil para Utilizador, e/ou desmarcar Ativo)
+        // faria este utilizador deixar de ser Administrador+Ativo.
+        var perfilProposto = (PerfilUtilizador)(CmbPerfil.SelectedItem ?? PerfilUtilizador.Utilizador);
+        var ativoProposto = ChkAtivo.IsChecked == true;
+        var continuaAdministradorAtivo = perfilProposto == PerfilUtilizador.Administrador && ativoProposto;
+
+        if (_existente != null && !continuaAdministradorAtivo)
+        {
+            var existeOutroAdministradorAtivo = App.Db.Usuarios.Any(u =>
+                u.Id != _existente.Id && u.Perfil == PerfilUtilizador.Administrador && u.Ativo);
+
+            if (!existeOutroAdministradorAtivo)
+            {
+                MessageBox.Show(
+                    "Não é possível gravar esta alteração: tem de existir sempre pelo menos um utilizador " +
+                    "Administrador e Ativo, ou corre-se o risco de ficar sem acesso ao menu Administração. " +
+                    "Torne primeiro outro utilizador Administrador e Ativo, e só depois altere este.",
+                    "Não permitido", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+        }
+
         var eraNovoUtilizador = _existente == null;
 
         Usuario usuario;
@@ -270,8 +296,8 @@ public partial class UsuarioEditWindow : Window
 
         usuario.NomeCompleto = TxtNomeCompleto.Text.Trim();
         usuario.Email = TxtEmail.Text;
-        usuario.Perfil = (PerfilUtilizador)(CmbPerfil.SelectedItem ?? PerfilUtilizador.Utilizador);
-        usuario.Ativo = ChkAtivo.IsChecked == true;
+        usuario.Perfil = perfilProposto;
+        usuario.Ativo = ativoProposto;
 
         if (!string.IsNullOrWhiteSpace(TxtPassword.Password))
         {

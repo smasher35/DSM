@@ -454,12 +454,27 @@ public partial class AdministracaoWindow : Window
             return;
         }
 
-        if (App.Db.Usuarios.Count(u => u.Perfil == PerfilUtilizador.Administrador) <= 1 &&
-            usuario.Perfil == PerfilUtilizador.Administrador)
+        // O que interessa proteger não é "existir pelo menos um utilizador com perfil
+        // Administrador" (um Administrador Inativo não permite entrar na aplicação, por isso não
+        // salva ninguém) — é "existir sempre pelo menos um Administrador ATIVO". Eliminar um
+        // Administrador que já esteja Inativo, ou um Administrador quando ainda existe outro
+        // Administrador ativo, é seguro. Ver também UsuarioEditWindow.Guardar_Click, que protege
+        // a mesma invariante ao editar (mudar o Perfil ou desmarcar Ativo do último Administrador
+        // ativo teria exatamente o mesmo efeito prático que o eliminar).
+        if (usuario.Perfil == PerfilUtilizador.Administrador && usuario.Ativo)
         {
-            MessageBox.Show("Não é possível eliminar o último utilizador com perfil Administrador.",
-                "Não permitido", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
+            var existeOutroAdministradorAtivo = App.Db.Usuarios.Any(u =>
+                u.Id != usuario.Id && u.Perfil == PerfilUtilizador.Administrador && u.Ativo);
+
+            if (!existeOutroAdministradorAtivo)
+            {
+                MessageBox.Show(
+                    "Não é possível eliminar este utilizador: tem de existir sempre pelo menos um utilizador " +
+                    "Administrador e Ativo, ou corre-se o risco de ficar sem acesso ao menu Administração. " +
+                    "Torne primeiro outro utilizador Administrador e Ativo, e só depois elimine este.",
+                    "Não permitido", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
         }
 
         if (MessageBox.Show($"Eliminar o utilizador '{usuario.NomeUtilizador}'?", "Confirmar",
