@@ -97,16 +97,18 @@
                 </Border>
                 <Border Style="{StaticResource CardStyle}" Margin="0,0,10,0">
                     <StackPanel>
-                        <TextBlock x:Name="TxtLocalMaisIntervencionado" Text="—" FontSize="15" FontWeight="Bold"
-                                   Foreground="{StaticResource BrushPrimary}" TextWrapping="Wrap" />
+                        <TextBlock x:Name="TxtLocalMaisIntervencionadoValor" Text="0" Style="{StaticResource KpiValueStyle}" Foreground="{StaticResource BrushPurple}" />
                         <TextBlock Text="Local mais intervencionado" Style="{StaticResource KpiLabelStyle}" />
+                        <TextBlock x:Name="TxtLocalMaisIntervencionado" Text="—" FontSize="11" FontWeight="SemiBold"
+                                   TextWrapping="Wrap" Foreground="{StaticResource BrushTextSecondary}" />
                     </StackPanel>
                 </Border>
                 <Border Style="{StaticResource CardStyle}" Margin="0,0,10,0">
                     <StackPanel>
-                        <TextBlock x:Name="TxtCategoriaMaisUtilizada" Text="—" FontSize="15" FontWeight="Bold"
-                                   Foreground="{StaticResource BrushPrimary}" TextWrapping="Wrap" />
+                        <TextBlock x:Name="TxtCategoriaMaisUtilizadaValor" Text="0" Style="{StaticResource KpiValueStyle}" Foreground="{StaticResource BrushPurple}" />
                         <TextBlock Text="Categoria mais usada" Style="{StaticResource KpiLabelStyle}" />
+                        <TextBlock x:Name="TxtCategoriaMaisUtilizada" Text="—" FontSize="11" FontWeight="SemiBold"
+                                   TextWrapping="Wrap" Foreground="{StaticResource BrushTextSecondary}" />
                     </StackPanel>
                 </Border>
                 <Border Style="{StaticResource CardStyle}" Margin="0,0,0,0">

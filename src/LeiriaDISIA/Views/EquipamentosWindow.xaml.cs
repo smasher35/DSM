@@ -21,6 +21,28 @@ public partial class EquipamentosWindow : Window
     public EquipamentosWindow()
     {
         InitializeComponent();
+
+        // O cabeçalho (cartões-resumo + gauges + legendas) tem um tamanho natural fixo (não muda
+        // com o tamanho do ecrã), pensado para um monitor normal — em ecrãs mais baixos (ex.:
+        // portáteis de 13"), reservar-lhe sempre metade da altura disponível (com um mínimo de
+        // 280px, para não ficar ridiculamente pequeno nem em ecrãs minúsculos) garante que sobra
+        // sempre espaço a sério para a lista de equipamento por baixo, com o cabeçalho a ganhar
+        // scroll próprio se não couber tudo. Em monitores normais/grandes, o cabeçalho cabe
+        // confortavelmente dentro desse teto e continua a aparecer por completo, sem scroll.
+        ScrollCabecalho.MaxHeight = Math.Max(280, SystemParameters.WorkArea.Height * 0.5);
+
+        // Modo Compacto (Administração → Aparência): troca os 3 gauges grandes por 3 barras finas
+        // no painel "Distribuição por Obsolescência" — os gauges (140x140 cada) são o maior
+        // consumidor de altura do cabeçalho a seguir aos cartões-resumo; em ecrãs pequenos, isto
+        // devolve espaço a sério à lista de equipamento por baixo. Ambos os painéis são
+        // atualizados em AtualizarResumo (ver mais abaixo) — só a visibilidade é decidida aqui,
+        // uma única vez, na abertura da janela.
+        if (Services.JanelaCompactaService.Ativo)
+        {
+            PainelObsolescenciaNormal.Visibility = Visibility.Collapsed;
+            PainelObsolescenciaCompacto.Visibility = Visibility.Visible;
+        }
+
         Recarregar();
     }
 
@@ -94,6 +116,25 @@ public partial class EquipamentosWindow : Window
 
         GaugeObsolescenciaObsoleto.Series = DashboardView.ConstruirGaugePercentagem(totalObsoleto, total, "#EF4444");
         TxtGaugeObsolescenciaObsoleto.Text = $"{totalObsoleto} / {total}";
+
+        // Versão compacta (Modo Compacto) do mesmo resumo — 3 barras finas em vez dos 3 gauges
+        // acima. As colunas "Cheia"/"Vazia" de cada barra usam larguras em "*" (estrela) — que se
+        // ajustam automaticamente à largura real do ecrã — em vez de pixels fixos, para a barra
+        // preencher corretamente a percentagem certa seja qual for o tamanho da janela.
+        AtualizarBarraCompacta(ColBarraAtualCheia, ColBarraAtualVazia, TxtBarraAtual, totalAtual, total);
+        AtualizarBarraCompacta(ColBarraMonitorizarCheia, ColBarraMonitorizarVazia, TxtBarraMonitorizar, totalMonitorizar, total);
+        AtualizarBarraCompacta(ColBarraObsoletoCheia, ColBarraObsoletoVazia, TxtBarraObsoleto, totalObsoleto, total);
+    }
+
+    /// <summary>Ajusta a largura preenchida de uma barra fina do painel compacto de obsolescência
+    /// (ver <see cref="AtualizarResumo"/>) para refletir a percentagem de <paramref name="parcela"/>
+    /// sobre <paramref name="total"/>, e atualiza o texto "x / total" ao lado.</summary>
+    private static void AtualizarBarraCompacta(ColumnDefinition colCheia, ColumnDefinition colVazia, TextBlock txt, int parcela, int total)
+    {
+        var percentagem = total == 0 ? 0 : (parcela * 100.0 / total);
+        colCheia.Width = new GridLength(percentagem, GridUnitType.Star);
+        colVazia.Width = new GridLength(100 - percentagem, GridUnitType.Star);
+        txt.Text = $"{parcela} / {total}";
     }
 
     /// <summary>Compara o "Tipo" de um equipamento com um dos valores fixos seedados para o grupo

@@ -89,20 +89,25 @@ public partial class DisiaWindow : Window
                 : 0;
             System.Diagnostics.Debug.WriteLine($"Total Mês ({mesIndex}): {totalMes}");
 
-            // Local mais intervencionado (executar no servidor, depois agrupar em memória)
-            var localMaisIntervencionado = mesIndex > 0
+            // Local mais intervencionado (executar no servidor, depois agrupar em memória).
+            // O total mostrado é o mesmo já usado para o escolher (nº de atividades nesse local) -
+            // mesma lógica do cartão análogo "Escola mais intervencionada" no Dashboard (ver
+            // DashboardService.cs / DashboardView.xaml), agora uniformizada aqui também.
+            var localMaisIntervencionadoGrupo = mesIndex > 0
                 ? App.Db.AtividadesDisia
                     .Where(a => a.Ano == ano && a.Mes == mesIndex && !string.IsNullOrEmpty(a.Local))
                     .AsEnumerable()  // Traz dados para memória
                     .GroupBy(a => a.Local)
                     .OrderByDescending(g => g.Count())
-                    .FirstOrDefault()?.Key ?? "—"
+                    .FirstOrDefault()
                 : App.Db.AtividadesDisia
                     .Where(a => a.Ano == ano && !string.IsNullOrEmpty(a.Local))
                     .AsEnumerable()  // Traz dados para memória
                     .GroupBy(a => a.Local)
                     .OrderByDescending(g => g.Count())
-                    .FirstOrDefault()?.Key ?? "—";
+                    .FirstOrDefault();
+            var localMaisIntervencionado = localMaisIntervencionadoGrupo?.Key ?? "—";
+            var localMaisIntervencionadoTotal = localMaisIntervencionadoGrupo?.Count() ?? 0;
             System.Diagnostics.Debug.WriteLine($"Local mais intervencionado: {localMaisIntervencionado}");
 
             // Total de quantidade (vezes que o serviço foi prestado)
@@ -112,21 +117,23 @@ public partial class DisiaWindow : Window
             System.Diagnostics.Debug.WriteLine($"Total Quantidade: {totalQuantidade}");
 
             // Categoria mais utilizada (por frequência) - executar no servidor, depois agrupar em memória
-            var categoriaMaisUtilizada = mesIndex > 0
+            var categoriaMaisUtilizadaGrupo = mesIndex > 0
                 ? App.Db.AtividadesDisia
                     .Where(a => a.Ano == ano && a.Mes == mesIndex && a.Categoria != null)
                     .Include(a => a.Categoria)
                     .AsEnumerable()  // Traz dados para memória
                     .GroupBy(a => a.Categoria.Nome)
                     .OrderByDescending(g => g.Count())
-                    .FirstOrDefault()?.Key ?? "—"
+                    .FirstOrDefault()
                 : App.Db.AtividadesDisia
                     .Where(a => a.Ano == ano && a.Categoria != null)
                     .Include(a => a.Categoria)
                     .AsEnumerable()  // Traz dados para memória
                     .GroupBy(a => a.Categoria.Nome)
                     .OrderByDescending(g => g.Count())
-                    .FirstOrDefault()?.Key ?? "—";
+                    .FirstOrDefault();
+            var categoriaMaisUtilizada = categoriaMaisUtilizadaGrupo?.Key ?? "—";
+            var categoriaMaisUtilizadaTotal = categoriaMaisUtilizadaGrupo?.Count() ?? 0;
             System.Diagnostics.Debug.WriteLine($"Categoria mais utilizada: {categoriaMaisUtilizada}");
 
             // Atividades DISIA pendentes (todas, de qualquer ano/mês - não fica limitado aos filtros atuais,
@@ -155,6 +162,7 @@ public partial class DisiaWindow : Window
             if (TxtLocalMaisIntervencionado != null)
             {
                 TxtLocalMaisIntervencionado.Text = localMaisIntervencionado;
+                if (TxtLocalMaisIntervencionadoValor != null) TxtLocalMaisIntervencionadoValor.Text = localMaisIntervencionadoTotal.ToString();
                 System.Diagnostics.Debug.WriteLine("TxtLocalMaisIntervencionado atualizado");
             }
             else
@@ -171,6 +179,7 @@ public partial class DisiaWindow : Window
             if (TxtCategoriaMaisUtilizada != null)
             {
                 TxtCategoriaMaisUtilizada.Text = categoriaMaisUtilizada;
+                if (TxtCategoriaMaisUtilizadaValor != null) TxtCategoriaMaisUtilizadaValor.Text = categoriaMaisUtilizadaTotal.ToString();
                 System.Diagnostics.Debug.WriteLine("TxtCategoriaMaisUtilizada atualizado");
             }
             else
