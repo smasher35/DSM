@@ -56,10 +56,11 @@ public partial class DisiaWindow : Window
             var termo = TxtPesquisa?.Text?.Trim();
             if (!string.IsNullOrWhiteSpace(termo))
             {
+                var termoLower = termo.ToLower();
                 query = query.Where(a =>
-                    (a.Descricao != null && a.Descricao.Contains(termo, StringComparison.OrdinalIgnoreCase)) ||
-                    (a.Local != null && a.Local.Contains(termo, StringComparison.OrdinalIgnoreCase)) ||
-                    (a.Categoria != null && a.Categoria.Nome.Contains(termo, StringComparison.OrdinalIgnoreCase)));
+                    (a.Descricao != null && a.Descricao.ToLower().Contains(termoLower)) ||
+                    (a.Local != null && a.Local.ToLower().Contains(termoLower)) ||
+                    (a.Categoria != null && a.Categoria.Nome.ToLower().Contains(termoLower)));
             }
 
             Grid.ItemsSource = query.OrderByDescending(a => a.Data).ToList();
