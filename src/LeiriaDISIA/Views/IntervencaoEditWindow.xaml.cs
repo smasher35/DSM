@@ -419,7 +419,13 @@ public partial class IntervencaoEditWindow : Window
     /// sem uma escola selecionada — o equipamento fica sempre ligado à escola da intervenção (ver
     /// <see cref="EquipamentoPickerWindow"/> e <see cref="Guardar"/>). A validação vive aqui, na
     /// camada de comando, e não apenas num IsEnabled de botão, para não poder ser contornada.</summary>
-    private void AdicionarLinha(ObservableCollection<LinhaEquipamento> lista)
+    /// <param name="exigirNaEscola">Repassado ao <see cref="EquipamentoPickerWindow"/> — impede
+    /// escolher equipamento que não esteja fisicamente na escola neste momento (ver o comentário
+    /// completo desse parâmetro lá). Usado para "reparado no local" e para "a recolher" (só faz
+    /// sentido recolher, ou reparar no local, equipamento que está mesmo lá); não para "a abater",
+    /// que pode legitimamente já estar na DISIA (ex.: equipamento recolhido para reparação que
+    /// afinal se revelou irreparável).</param>
+    private void AdicionarLinha(ObservableCollection<LinhaEquipamento> lista, bool exigirNaEscola)
     {
         var escolaId = (CmbEscola.SelectedItem as Escola)?.Id;
         if (escolaId == null)
@@ -432,7 +438,7 @@ public partial class IntervencaoEditWindow : Window
 
         var idsJaNaLista = _intervencionados.Concat(_recolhidos).Concat(_abatidos).Select(l => l.EquipamentoId);
 
-        var picker = new EquipamentoPickerWindow(escolaId, idsJaNaLista) { Owner = this };
+        var picker = new EquipamentoPickerWindow(escolaId, idsJaNaLista, exigirNaEscola: exigirNaEscola) { Owner = this };
         if (picker.ShowDialog() != true || picker.EquipamentoSelecionado == null) return;
 
         var eq = picker.EquipamentoSelecionado;
@@ -445,9 +451,9 @@ public partial class IntervencaoEditWindow : Window
         });
     }
 
-    private void AdicionarIntervencionado_Click(object sender, RoutedEventArgs e) => AdicionarLinha(_intervencionados);
-    private void AdicionarRecolhido_Click(object sender, RoutedEventArgs e) => AdicionarLinha(_recolhidos);
-    private void AdicionarAbatido_Click(object sender, RoutedEventArgs e) => AdicionarLinha(_abatidos);
+    private void AdicionarIntervencionado_Click(object sender, RoutedEventArgs e) => AdicionarLinha(_intervencionados, exigirNaEscola: true);
+    private void AdicionarRecolhido_Click(object sender, RoutedEventArgs e) => AdicionarLinha(_recolhidos, exigirNaEscola: true);
+    private void AdicionarAbatido_Click(object sender, RoutedEventArgs e) => AdicionarLinha(_abatidos, exigirNaEscola: false);
 
     private void RemoverLinha(object sender, ObservableCollection<LinhaEquipamento> lista, string tipoRegisto)
     {

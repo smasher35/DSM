@@ -31,6 +31,16 @@
                 <DataGridTextColumn Header="Tipo" Binding="{Binding Tipo}" Width="Auto" />
                 <DataGridTextColumn Header="Marca / Modelo" Binding="{Binding MarcaModelo}" Width="Auto" />
                 <DataGridTextColumn Header="Escola" Binding="{Binding Escola.Nome}" Width="*" />
+                <DataGridTemplateColumn Header="Localização" Width="Auto">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Border Style="{StaticResource BadgePillStyle}"
+                                    Background="{Binding LocalizacaoCorHex, Converter={StaticResource HexColorToBrushConverter}}">
+                                <TextBlock Text="{Binding LocalizacaoTexto}" Style="{StaticResource BadgeTextStyle}" />
+                            </Border>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
 

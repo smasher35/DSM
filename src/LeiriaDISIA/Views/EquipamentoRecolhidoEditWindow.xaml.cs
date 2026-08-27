@@ -120,7 +120,7 @@ public partial class EquipamentoRecolhidoEditWindow : Window
             return;
         }
 
-        var picker = new EquipamentoPickerWindow(escola.Id, excluirJaRecolhido: true, restringirAEscola: true) { Owner = this };
+        var picker = new EquipamentoPickerWindow(escola.Id, excluirJaRecolhido: true, restringirAEscola: true, exigirNaEscola: true) { Owner = this };
         if (picker.ShowDialog() != true || picker.EquipamentoSelecionado == null) return;
 
         _equipamentoSelecionado = App.Db.Equipamentos.Include(eq => eq.Escola)

@@ -22,12 +22,24 @@ public partial class EquipamentoPickerWindow : Window
         public string? Tipo => Equipamento.Tipo;
         public string MarcaModelo => $"{Equipamento.Marca} {Equipamento.Modelo}".Trim();
         public Escola? Escola => Equipamento.Escola;
+
+        /// <summary>Verdadeiro quando o equipamento está fisicamente na escola a que está afeto —
+        /// "Em Serviço" é o único estado que significa isso; qualquer outro (Recolhido, Em
+        /// Reparação, Reparado, Aguarda Entrega, Em Armazém) significa que está algures na DISIA,
+        /// fora da escola, independentemente de ter ou não um registo ativo em
+        /// <see cref="Models.EquipamentoRecolhido"/> - é este campo (Estado do próprio
+        /// Equipamento), e não esse registo, que reflete de forma fiável a localização atual.</summary>
+        public bool NaEscola => Equipamento.Estado.Equals(EstadosEquipamento.EmServico, StringComparison.OrdinalIgnoreCase);
+
+        public string LocalizacaoTexto => NaEscola ? "Na Escola" : "Na DISIA";
+        public string LocalizacaoCorHex => NaEscola ? "#22C55E" : "#F59E0B";
     }
 
     private readonly List<LinhaEquipamento> _todos;
     private readonly List<LinhaEquipamento> _daEscola;
     private readonly int? _escolaIdFiltro;
     private readonly bool _restringirAEscola;
+    private readonly bool _exigirNaEscola;
 
     public Equipamento? EquipamentoSelecionado { get; private set; }
 
@@ -38,8 +50,15 @@ public partial class EquipamentoPickerWindow : Window
     /// recolha ativa (registo em <see cref="EquipamentoRecolhido"/> com Estado diferente de
     /// "Entregue") — impede recolher o mesmo equipamento mais do que uma vez em simultâneo. Só é
     /// usado no fluxo de registo de recolha; os restantes pickers mantêm o comportamento anterior.</param>
+    /// <param name="exigirNaEscola">Quando verdadeiro, o equipamento continua visível na lista
+    /// (com o badge "Na DISIA" a vermelho/laranja, para o utilizador perceber porquê), mas NÃO
+    /// pode ser confirmado como seleção se não estiver fisicamente na escola (Estado diferente de
+    /// "Em Serviço") — mostra uma mensagem a explicar em vez de deixar selecionar. Usado nos
+    /// fluxos onde o equipamento tem mesmo de estar presente na escola: "Equipamento reparado no
+    /// local" de uma Intervenção, e o registo de uma nova Recolha (não se pode recolher, nem
+    /// reparar no local, equipamento que já não está lá).</param>
     public EquipamentoPickerWindow(int? escolaIdFiltro = null, IEnumerable<int>? excluirIds = null,
-        bool excluirJaRecolhido = false, bool restringirAEscola = false)
+        bool excluirJaRecolhido = false, bool restringirAEscola = false, bool exigirNaEscola = false)
     {
         InitializeComponent();
         // 1.2.1: tinge a barra de titulo nativa com um tom azul sobrio, consistente com a
@@ -49,6 +68,7 @@ public partial class EquipamentoPickerWindow : Window
 
         _escolaIdFiltro = escolaIdFiltro;
         _restringirAEscola = restringirAEscola;
+        _exigirNaEscola = exigirNaEscola;
 
         var excluidos = (excluirIds ?? Enumerable.Empty<int>()).ToHashSet();
         if (excluirJaRecolhido)
@@ -102,17 +122,26 @@ public partial class EquipamentoPickerWindow : Window
 
     private void ConfirmarSelecao()
     {
-        if (Grid.SelectedItem is LinhaEquipamento linha)
-        {
-            EquipamentoSelecionado = linha.Equipamento;
-            DialogResult = true;
-            Close();
-        }
-        else
+        if (Grid.SelectedItem is not LinhaEquipamento linha)
         {
             MessageBox.Show("Selecione um equipamento da lista.", "Nenhum equipamento selecionado",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
         }
+
+        if (_exigirNaEscola && !linha.NaEscola)
+        {
+            MessageBox.Show(
+                $"O equipamento \"{linha.NumeroSerie}\" não está fisicamente na escola neste momento " +
+                $"(estado atual: \"{linha.Equipamento.Estado}\", localização: Na DISIA) — não pode ser " +
+                "selecionado. Só é possível escolher equipamento que esteja realmente na escola.",
+                "Equipamento não está na escola", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        EquipamentoSelecionado = linha.Equipamento;
+        DialogResult = true;
+        Close();
     }
 
     private void Grid_MouseDoubleClick(object sender, MouseButtonEventArgs e) => ConfirmarSelecao();
