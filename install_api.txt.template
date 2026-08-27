@@ -1,0 +1,20 @@
+REM ============================================================================
+REM OpenRouteService API Key Configuration Template
+REM ============================================================================
+REM 
+REM This is a TEMPLATE file. To configure the API key:
+REM 
+REM 1. Copy this file to "install_api.txt" (without the .template extension)
+REM 2. Visit https://openrouteservice.org/dev/#/signup to obtain a free API key
+REM 3. Replace YOUR_OPENROUTESERVICE_API_KEY_HERE below with your actual key
+REM 4. Run the command in an Administrator command prompt
+REM 5. Restart the application to use the new configuration
+REM 
+REM SECURITY WARNING:
+REM - Never commit your actual API key to version control
+REM - The file "install_api.txt" is in .gitignore to prevent accidental commits
+REM - If a key is compromised, revoke it immediately at openrouteservice.org
+REM 
+REM ============================================================================
+
+setx DISIA_ORS_API_KEY "YOUR_OPENROUTESERVICE_API_KEY_HERE" /M
