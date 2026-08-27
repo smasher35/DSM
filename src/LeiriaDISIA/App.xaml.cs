@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Windows;
 using LeiriaDISIA.Data;
@@ -154,6 +155,10 @@ public partial class App : Application
     /// <summary>Substitui o ficheiro de base de dados atual por outro (restauro de cópia de segurança).</summary>
     public static void RestaurarBackup(string caminhoFicheiroBackup)
     {
+        if (caminhoFicheiroBackup == null || caminhoFicheiroBackup.Contains(".."))
+        {
+            throw new ArgumentException("Invalid file path");
+        }
         FecharLigacaoDb();
         File.Copy(caminhoFicheiroBackup, AppDbContext.DbPath, overwrite: true);
         ReabrirLigacaoDb();
