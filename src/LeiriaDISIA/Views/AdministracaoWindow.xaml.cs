@@ -429,6 +429,70 @@ public partial class AdministracaoWindow : Window
     private void GridUtilizadores_MouseDoubleClick(object sender, MouseButtonEventArgs e) => AbrirEdicaoUtilizador();
     private void EditarUtilizador_Click(object sender, RoutedEventArgs e) => AbrirEdicaoUtilizador();
 
+    /// <summary>"Repor Password" (Administração → Utilizadores): gera uma nova password
+    /// temporária, aleatória e segura (ver <see cref="GeradorPasswordTemporaria"/>) para o
+    /// utilizador selecionado, invalidando a password anterior de imediato. O utilizador fica
+    /// marcado como tendo de a alterar no próximo login (ver <see cref="Usuario.PrecisaAlterarPassword"/>
+    /// e Views/LoginWindow.xaml.cs). Por motivos de segurança a aplicação nunca envia passwords por
+    /// email (ver o email de boas-vindas em UsuarioEditWindow/EmailService) — a password temporária
+    /// é sempre mostrada apenas aqui, no ecrã, ao administrador, para que a transmita ao utilizador
+    /// pelo canal que considerar adequado (verbalmente, mensagem interna, etc.).</summary>
+    private void ReporPassword_Click(object sender, RoutedEventArgs e)
+    {
+        if (GridUtilizadores.SelectedItem is not Usuario usuarioSelecionado)
+        {
+            MessageBox.Show("Selecione um utilizador para lhe repor a password.", "Ação necessária",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        // Confirmação prévia — repor a password é uma ação com impacto imediato (invalida a
+        // password atual do utilizador), por isso não deve acontecer com um único clique acidental.
+        var éOProprioUtilizadorLogado = usuarioSelecionado.Id == SessaoAtual.UtilizadorLogado?.Id;
+        var avisoUtilizadorInativo = usuarioSelecionado.Ativo ? "" :
+            "\n\nNote que este utilizador está atualmente Inativo — a nova password só terá efeito quando for reativado.";
+        var avisoProprioUtilizador = éOProprioUtilizadorLogado ?
+            "\n\nEstá prestes a repor a SUA PRÓPRIA password. Terá de utilizar a nova password temporária " +
+            "no seu próximo login." : "";
+
+        var confirmar = MessageBox.Show(
+            $"Repor a password de \"{usuarioSelecionado.NomeCompleto}\" ({usuarioSelecionado.NomeUtilizador})?\n\n" +
+            "A password atual deixa imediatamente de ser válida. Será gerada uma nova password temporária, " +
+            "que terá de ser alterada no próximo login." + avisoProprioUtilizador + avisoUtilizadorInativo,
+            "Confirmar reposição de password", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        if (confirmar != MessageBoxResult.Yes) return;
+
+        try
+        {
+            // Confirma que o utilizador ainda existe na base de dados (pode ter sido eliminado por
+            // outra sessão/utilização, entretanto, entre a seleção na grelha e este clique).
+            var usuario = App.Db.Usuarios.FirstOrDefault(u => u.Id == usuarioSelecionado.Id);
+            if (usuario == null)
+            {
+                MessageBox.Show("Este utilizador já não existe (poderá ter sido eliminado entretanto).",
+                    "Utilizador não encontrado", MessageBoxButton.OK, MessageBoxImage.Warning);
+                RecarregarUtilizadores();
+                return;
+            }
+
+            // Gera a password temporária, grava-a, gera o documento PDF com as credenciais e
+            // entrega-o ao utilizador - por email automático, se o SMTP já estiver configurado, ou
+            // através do cliente de email externo do próprio computador, caso contrário (ver
+            // ReporPasswordFluxoService para o fluxo completo).
+            var resultado = new ReporPasswordFluxoService().Executar(usuario);
+
+            MessageBox.Show(resultado.MensagemParaAdministrador, "Password Reposta", MessageBoxButton.OK,
+                resultado.EnviadoPorEmail ? MessageBoxImage.Information : MessageBoxImage.Warning);
+
+            RecarregarUtilizadores();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Não foi possível repor a password: {ex.Message}", "Erro",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
     private void AbrirEdicaoUtilizador()
     {
         if (GridUtilizadores.SelectedItem is not Usuario usuario)

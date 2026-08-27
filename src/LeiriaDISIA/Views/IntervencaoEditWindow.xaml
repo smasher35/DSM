@@ -1,7 +1,7 @@
 <Window x:Class="LeiriaDISIA.Views.IntervencaoEditWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Intervenção" Height="955" Width="1528" MinHeight="640" MinWidth="1100"
+        Title="Intervenção" Height="818" Width="1528" MinHeight="640" MinWidth="1100"
         WindowStartupLocation="CenterOwner" ResizeMode="CanResize"
         Background="{StaticResource BrushBackground}">
     <Grid Margin="20,16,20,16">
@@ -156,7 +156,7 @@
             </Grid>
 
             <!-- ===================== COLUNA 3 — Equipamento recolhido da escola ===================== -->
-            <Border Grid.Column="4" Style="{StaticResource CardStyle}" Height="821" VerticalAlignment="Top" Margin="0,10,0,0">
+            <Border Grid.Column="4" Style="{StaticResource CardStyle}" Height="694" VerticalAlignment="Bottom">
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top" Text="Equipamento atualmente recolhido desta escola" FontWeight="Bold" Margin="0,0,0,4" TextWrapping="Wrap" />
                     <TextBlock DockPanel.Dock="Top" Text="Depois de reparado, use o botão Devolver para o entregar de volta à escola."
@@ -186,6 +186,7 @@
         </Grid>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Content="📄 Importar do PDF" Style="{StaticResource AdminButtonIndigo}" Click="ImportarPdf_Click" Padding="12,6" Margin="0,0,8,0" />
             <Button x:Name="BtnImprimirPdf" Content="🖨️ Imprimir Relatório (PDF)" Click="ImprimirPdf_Click" Padding="12,6" IsEnabled="False" Margin="0,0,8,0" />
             <Button Content="Cancelar" Click="Cancelar_Click" Margin="0,0,8,0" Padding="16,6" />
             <Button Content="Guardar Intervenção" Style="{StaticResource PrimaryButton}" Click="Guardar_Click" Padding="16,6" />

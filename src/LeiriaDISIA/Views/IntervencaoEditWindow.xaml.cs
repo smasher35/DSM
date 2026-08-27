@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using Button = System.Windows.Controls.Button;
 using LeiriaDISIA.Models;
 using LeiriaDISIA.Services;
@@ -56,7 +57,8 @@ public partial class IntervencaoEditWindow : Window
 
     public bool Sucesso { get; private set; }
 
-    public IntervencaoEditWindow(Intervencao? intervencao, Escola? escolaPreSelecionada = null, PedidoIntervencao? pedidoOrigem = null)
+    public IntervencaoEditWindow(Intervencao? intervencao, Escola? escolaPreSelecionada = null,
+        PedidoIntervencao? pedidoOrigem = null, bool importarPdfAoAbrir = false)
     {
         InitializeComponent();
         // Modo Compacto (Administração → Aparência): em ecrãs pequenos/portáteis, encolhe a
@@ -101,6 +103,15 @@ public partial class IntervencaoEditWindow : Window
 
             AtualizarPainelPedidoAssociado();
             AtualizarRecolhidosDaEscola();
+
+            // Atalho a partir do botão "📄 Importar Intervenção PDF" na barra de ferramentas do
+            // módulo (ver IntervencoesWindow.ImportarPdf_Click) - poupa um clique a quem já sabe
+            // que vai importar, abrindo logo o diálogo de seleção do ficheiro. Usa Dispatcher para
+            // só disparar depois de a janela estar completamente desenhada (o diálogo de ficheiro
+            // fica corretamente centrado sobre ela).
+            if (importarPdfAoAbrir)
+                Dispatcher.BeginInvoke(new Action(ExecutarImportacaoPdf), System.Windows.Threading.DispatcherPriority.Loaded);
+
             return;
         }
 
@@ -176,6 +187,100 @@ public partial class IntervencaoEditWindow : Window
 
         AtualizarPainelPedidoAssociado();
         AtualizarRecolhidosDaEscola();
+    }
+
+    /// <summary>Botão "📄 Importar do PDF" — ver <see cref="ExecutarImportacaoPdf"/>.</summary>
+    private void ImportarPdf_Click(object sender, RoutedEventArgs e) => ExecutarImportacaoPdf();
+
+    /// <summary>Lê um Relatório de Intervenção em PDF gerado anteriormente pela própria aplicação
+    /// (ver <see cref="Services.IntervencaoPdfImportService"/>) e pré-preenche este formulário com
+    /// os dados encontrados. NUNCA grava nada na base de dados por si só — só depois de rever os
+    /// dados é que o utilizador clica em "Guardar Intervenção", exatamente como em qualquer outra
+    /// utilização deste formulário (criar a partir de um Pedido, ou manualmente). Campos que não
+    /// forem encontrados no PDF ficam simplesmente como estavam, para preenchimento manual.</summary>
+    private void ExecutarImportacaoPdf()
+    {
+        var dialogo = new OpenFileDialog
+        {
+            Title = "Selecionar Relatório de Intervenção (PDF)",
+            Filter = "Ficheiros PDF (*.pdf)|*.pdf",
+            CheckFileExists = true
+        };
+        if (dialogo.ShowDialog(this) != true) return;
+
+        IntervencaoPdfImportService.Resultado resultado;
+        Mouse.OverrideCursor = Cursors.Wait;
+        try
+        {
+            resultado = new IntervencaoPdfImportService().Importar(dialogo.FileName);
+        }
+        finally
+        {
+            Mouse.OverrideCursor = null;
+        }
+
+        if (!resultado.Sucesso)
+        {
+            MessageBox.Show(resultado.MensagemErro ?? "Não foi possível importar o ficheiro selecionado.",
+                "Importação falhada", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+
+        var avisos = new List<string>();
+
+        if (resultado.EscolaId != null)
+            CmbEscola.SelectedItem = _todasAsEscolas.FirstOrDefault(esc => esc.Id == resultado.EscolaId);
+        else if (!string.IsNullOrWhiteSpace(resultado.EscolaNomeLido))
+            avisos.Add($"Não foi possível encontrar a escola \"{resultado.EscolaNomeLido}\" — selecione-a manualmente.");
+
+        if (resultado.Data != null) DpData.SelectedDate = resultado.Data;
+        if (resultado.Estado != null) CmbEstado.SelectedItem = resultado.Estado;
+        if (!string.IsNullOrWhiteSpace(resultado.Descricao)) TxtDescricao.Text = resultado.Descricao;
+
+        foreach (var cb in _checkBoxesCategorias)
+        {
+            var categoria = (CategoriaIntervencao)cb.Tag;
+            if (resultado.CategoriaIds.Contains(categoria.Id)) cb.IsChecked = true;
+        }
+
+        var equipamentosImportados = 0;
+        var equipamentosIgnorados = 0;
+        foreach (var linha in resultado.Equipamentos)
+        {
+            // Uma linha só pode ser adicionada à grelha se o Nº de Série lido corresponder a um
+            // equipamento realmente existente NA ESCOLA importada (o formulário só permite associar
+            // equipamento da escola selecionada — ver AdicionarLinha) - caso contrário fica de fora,
+            // e é contabilizada no aviso final para o utilizador a associar manualmente se for caso disso.
+            var equipamento = linha.EquipamentoId != null ? App.Db.Equipamentos.Find(linha.EquipamentoId) : null;
+            if (equipamento == null || (resultado.EscolaId != null && equipamento.EscolaId != resultado.EscolaId))
+            {
+                equipamentosIgnorados++;
+                continue;
+            }
+
+            if (_intervencionados.Any(l => l.EquipamentoId == equipamento.Id)) continue; // já estava na lista
+
+            _intervencionados.Add(new LinhaEquipamento
+            {
+                EquipamentoId = equipamento.Id,
+                NumeroSerie = equipamento.NumeroSerie,
+                NumeroInventario = equipamento.NumeroInventario,
+                Descricao = $"{equipamento.Tipo} {equipamento.Marca} {equipamento.Modelo}".Trim()
+            });
+            equipamentosImportados++;
+        }
+
+        if (equipamentosIgnorados > 0)
+            avisos.Add($"{equipamentosIgnorados} linha(s) de equipamento do relatório não puderam ser associadas " +
+                       "automaticamente (número de série não encontrado na base de dados, ou equipamento de outra " +
+                       "escola) — adicione-as manualmente em \"Equipamento Intervencionado\", se necessário.");
+
+        var mensagem = "Dados importados do PDF com sucesso. Reveja os campos preenchidos antes de gravar.";
+        if (equipamentosImportados > 0) mensagem += $"\n\n{equipamentosImportados} equipamento(s) associado(s) automaticamente.";
+        if (avisos.Count > 0) mensagem += "\n\n" + string.Join("\n", avisos);
+
+        MessageBox.Show(mensagem, "Importação concluída", MessageBoxButton.OK,
+            avisos.Count > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
     }
 
     private void TxtPesquisaEscola_TextChanged(object sender, TextChangedEventArgs e)

@@ -57,6 +57,19 @@ public partial class LoginWindow : Window
             return;
         }
 
+        // "Repor Password" (Administração → Utilizadores) marca a conta assim - a autenticação em
+        // si já foi validada acima com a password temporária, mas o acesso normal só é dado depois
+        // de o próprio utilizador a substituir por uma da sua escolha (ver
+        // AlterarPasswordObrigatorioWindow, que bloqueia o fecho até isso acontecer).
+        if (utilizador.PrecisaAlterarPassword)
+        {
+            var janelaAlterarPassword = new AlterarPasswordObrigatorioWindow(utilizador) { Owner = this };
+            janelaAlterarPassword.ShowDialog();
+            // ShowDialog só retorna quando a password foi alterada com sucesso (a janela impede o
+            // fecho por qualquer outra via - ver o Closing dessa janela), por isso não é preciso
+            // verificar aqui o resultado nem interromper o login.
+        }
+
         utilizador.UltimoLogin = DateTime.Now;
         App.Db.SaveChanges();
 

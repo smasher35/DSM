@@ -24,6 +24,13 @@ public class Usuario
     public PerfilUtilizador Perfil { get; set; } = PerfilUtilizador.Utilizador;
     public bool Ativo { get; set; } = true;
 
+    /// <summary>Verdadeiro quando a password atual é temporária (definida por um administrador
+    /// através de "Repor Password" — ver Views/AdministracaoWindow.xaml.cs) e ainda não foi
+    /// trocada pelo próprio utilizador. Enquanto estiver a true, o login (ver Views/LoginWindow.xaml.cs)
+    /// força a apresentação da janela de alteração obrigatória (Views/AlterarPasswordObrigatorioWindow)
+    /// antes de dar acesso normal à aplicação.</summary>
+    public bool PrecisaAlterarPassword { get; set; } = false;
+
     /// <summary>
     /// Caminho relativo à pasta de avatares, ou null se sem avatar personalizado.
     /// Formato: "avatares/{UserId}.png"

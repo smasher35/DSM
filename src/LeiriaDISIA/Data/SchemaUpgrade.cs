@@ -185,6 +185,12 @@ public static class SchemaUpgrade
         AdicionarColunaSeNaoExistir(conexao, "PedidosIntervencao", "Prioridade", "TEXT NOT NULL DEFAULT 'Normal'");
         AdicionarColunaSeNaoExistir(conexao, "PedidosIntervencao", "ObrigatorioNaRota", "INTEGER NOT NULL DEFAULT 0");
 
+        // "Repor Password" (Administração → Utilizadores): marca a conta como tendo uma password
+        // temporária, obrigando à sua alteração no próximo login (ver Views/LoginWindow.xaml.cs e
+        // Views/AlterarPasswordObrigatorioWindow.xaml.cs). Por omissão false para todas as contas
+        // já existentes - não obriga ninguém a mudar a password ao atualizar a aplicação.
+        AdicionarColunaSeNaoExistir(conexao, "Usuarios", "PrecisaAlterarPassword", "INTEGER NOT NULL DEFAULT 0");
+
         CriarPlanoRotaSePreciso(conexao);
     }
 

@@ -89,6 +89,59 @@ public static class EmailService
         cliente.Send(mensagem);
     }
 
+    /// <summary>Envia por email o documento PDF com a password temporária gerada por "Repor
+    /// Password" (ver <see cref="ReporPasswordFluxoService"/>), como anexo. Lança exceção em caso
+    /// de falha — deve ser chamado dentro de um try/catch pelo chamador (que já trata essa falha,
+    /// caindo no mecanismo de recurso de mail externo).</summary>
+    public static void EnviarEmailPasswordTemporaria(string emailDestino, string nomeCompleto, string caminhoPdf)
+    {
+        if (!AppSettingsService.SmtpConfigurado)
+            throw new InvalidOperationException(
+                "O servidor de email (SMTP) ainda não está configurado. Aceda a Configurações > Email para o configurar.");
+
+        using var mensagem = new MailMessage
+        {
+            From = new MailAddress(AppSettingsService.SmtpEmailRemetente, AppSettingsService.SmtpNomeRemetente),
+            Subject = "As suas credenciais temporárias de acesso — Gestão DISIA",
+            Body = ConstruirHtmlPasswordTemporaria(nomeCompleto),
+            IsBodyHtml = true,
+            BodyEncoding = System.Text.Encoding.UTF8,
+            SubjectEncoding = System.Text.Encoding.UTF8
+        };
+        mensagem.To.Add(new MailAddress(emailDestino));
+        mensagem.Attachments.Add(new Attachment(caminhoPdf, "application/pdf") { Name = "Credenciais_Temporarias.pdf" });
+
+        using var cliente = new SmtpClient(AppSettingsService.SmtpServidor, AppSettingsService.SmtpPorta)
+        {
+            EnableSsl = AppSettingsService.SmtpUsarSsl,
+            DeliveryMethod = SmtpDeliveryMethod.Network
+        };
+
+        if (!string.IsNullOrWhiteSpace(AppSettingsService.SmtpUtilizador))
+        {
+            cliente.Credentials = new NetworkCredential(
+                AppSettingsService.SmtpUtilizador, AppSettingsService.SmtpPassword);
+        }
+
+        cliente.Send(mensagem);
+    }
+
+    private static string ConstruirHtmlPasswordTemporaria(string nomeCompleto)
+    {
+        var primeiroNome = string.IsNullOrWhiteSpace(nomeCompleto) ? "Utilizador" : nomeCompleto.Split(' ')[0];
+        return $"""
+            <div style="font-family: Segoe UI, Arial, sans-serif; color: #1f2937; max-width: 560px;">
+                <p>Boa tarde, {primeiroNome},</p>
+                <p>Foi reposta a sua password de acesso à <strong>Gestão DISIA</strong>. Em anexo
+                (documento PDF) encontra a sua nova password temporária, e as instruções para a
+                alterar no seu próximo login.</p>
+                <p style="color: #6b7280; font-size: 12.5px;">Por motivos de segurança, a password
+                não é apresentada no corpo deste email — consulte o documento em anexo.</p>
+                <p>Cumprimentos,<br/>DISIA — Divisão de Sistemas de Informação, Câmara Municipal de Leiria</p>
+            </div>
+            """;
+    }
+
     private static string ConstruirHtmlBoasVindas(string nomeCompleto, string nomeUtilizador, string perfil)
     {
         var primeiroNome = string.IsNullOrWhiteSpace(nomeCompleto)

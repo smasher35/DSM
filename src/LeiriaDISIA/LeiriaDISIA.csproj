@@ -47,6 +47,12 @@
     <!-- Geração de relatórios .pdf (recibo/relatório de intervenção individual) -->
     <PackageReference Include="QuestPDF" Version="2024.10.2" />
 
+    <!-- Leitura/extração de texto de PDFs gerados pela própria aplicação (importar intervenção a
+         partir de um Relatório de Intervenção em PDF já emitido - ver
+         Services/IntervencaoPdfImportService.cs). Extração direta de texto/posições, sem OCR:
+         os PDFs de origem são sempre gerados pelo QuestPDF acima, com texto real e selecionável. -->
+    <PackageReference Include="PdfPig" Version="0.1.9" />
+
     <!-- Mapa (Google Maps) na ficha da escola -->
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
 

@@ -139,6 +139,19 @@ public partial class RelatoriosWindow : Window
         TxtEstadoRascunhoIA.Visibility = Visibility.Visible;
         TxtEstadoRascunhoIA.Text = "⏳ A gerar o rascunho com IA local... Na primeira utilização, isto pode demorar 1-2 minutos, enquanto o modelo é carregado para memória.";
 
+        // Se o utilizador já tiver escrito alguma coisa nestes 4 campos (ex.: uma nota rápida
+        // sobre algo que aconteceu no mês), essa informação é lida AQUI, na UI thread, antes de
+        // qualquer coisa - tanto porque um TextBox só pode ser acedido a partir da UI thread (o
+        // resto do trabalho corre em Task.Run), como para garantir que o texto do utilizador é
+        // capturado antes de os campos poderem vir a ser sobrescritos pelo resultado da IA mais
+        // abaixo (nunca se perde o que o utilizador escreveu sem primeiro o aproveitar como
+        // orientação - ver GerarRascunhoReflexaoCriticaIaAsync). Um campo vazio mantém exatamente
+        // o comportamento atual (sem indicação nenhuma nesse campo).
+        var indicacaoBalanco = TxtBalancoGeral.Text;
+        var indicacaoDesafios = TxtDesafios.Text;
+        var indicacaoPropostas = TxtPropostas.Text;
+        var indicacaoNotaFinal = TxtNotaFinal.Text;
+
         try
         {
             var (balanco, desafios, propostas, notaFinal) = await Task.Run(async () =>
@@ -150,7 +163,8 @@ public partial class RelatoriosWindow : Window
                 // O lambda tem de ser "async" (e não só devolver a Task) para o "using" só libertar
                 // o contexto depois de todo o trabalho assíncrono (incluindo a chamada à IA) acabar.
                 using var dbFundo = new AppDbContext();
-                return await new RelatorioService(dbFundo).GerarRascunhoReflexaoCriticaIaAsync(ano, mes);
+                return await new RelatorioService(dbFundo).GerarRascunhoReflexaoCriticaIaAsync(
+                    ano, mes, indicacaoBalanco, indicacaoDesafios, indicacaoPropostas, indicacaoNotaFinal);
             });
 
             TxtBalancoGeral.Text = balanco;

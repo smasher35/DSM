@@ -82,6 +82,17 @@ public partial class IntervencoesWindow : Window
         if (janela.Sucesso) Recarregar();
     }
 
+    /// <summary>Abre o formulário "Inserir Intervenção" já com o diálogo de seleção de PDF
+    /// aberto (ver <see cref="IntervencaoEditWindow"/>, construtor com <c>importarPdfAoAbrir: true</c>)
+    /// — atalho para quem já sabe que vai importar, sem ter de clicar outra vez no botão "📄
+    /// Importar do PDF" que também existe dentro do formulário.</summary>
+    private void ImportarPdf_Click(object sender, RoutedEventArgs e)
+    {
+        var janela = new IntervencaoEditWindow(null, importarPdfAoAbrir: true) { Owner = this };
+        janela.ShowDialog();
+        if (janela.Sucesso) Recarregar();
+    }
+
     private void Grid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
         if (Grid.SelectedItem is not Intervencao intervencao) return;

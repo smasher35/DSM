@@ -23,12 +23,25 @@ public partial class RelatorioService
     /// dados reais do mês, cada rascunho fica diferente e adaptado ao que realmente foi feito, em
     /// vez de repetir sempre as mesmas frases.
     ///
+    /// Os quatro parâmetros opcionais <paramref name="indicacaoBalanco"/>, <paramref name="indicacaoDesafios"/>,
+    /// <paramref name="indicacaoPropostas"/> e <paramref name="indicacaoNotaFinal"/> correspondem
+    /// ao que o utilizador já tenha escrito manualmente nos quatro campos do relatório antes de
+    /// pedir o rascunho por IA (ver Views/RelatoriosWindow.xaml.cs). Quando não vazios, são
+    /// tratados como ORIENTAÇÃO/CONTEXTO fornecido pelo utilizador para essa secção em concreto -
+    /// a IA usa-os para elaborar um texto profissional e coerente, mas não os copia literalmente
+    /// (ver <see cref="ConstruirPromptReflexaoCritica"/>). Cada campo é independente: pode vir só
+    /// um preenchido e os outros três vazios, sem que isso mude o comportamento dos restantes
+    /// (que continuam a ser gerados exatamente como antes, a partir só dos dados do mês). Quando
+    /// os quatro vêm vazios (ou esta sobrecarga não é chamada), o comportamento é EXATAMENTE o
+    /// mesmo que já existia antes desta alteração.
+    ///
     /// Se, por qualquer motivo (modelo não instalado/configurado, resposta mal formatada, etc.)
     /// não for possível obter alguma das quatro secções a partir da IA, essa secção em concreto
     /// usa o rascunho do método determinístico como rede de segurança — nunca fica um campo
     /// completamente vazio por falha da IA.</summary>
     public async Task<(string Balanco, string Desafios, string Propostas, string NotaFinal)> GerarRascunhoReflexaoCriticaIaAsync(
-        int ano, int mes, CancellationToken ct = default)
+        int ano, int mes, string? indicacaoBalanco = null, string? indicacaoDesafios = null,
+        string? indicacaoPropostas = null, string? indicacaoNotaFinal = null, CancellationToken ct = default)
     {
         var mesFormatado = $"{NomesMeses[mes]} de {ano}";
 
@@ -75,7 +88,8 @@ public partial class RelatorioService
             mesFormatado, intervencoes.Count, agrupamentosEnvolvidos, porCategoria.Select(c => (c.Categoria!, c.Total)).ToList(),
             atividadesDisia.Count, atividadesDisia.Sum(a => a.Quantidade), atividadesPendentesGeral,
             equipamentoRecolhidoNoMes, totalTicketsSiga, dadosSiga.TotalAlteracaoPasswords,
-            escolasMaisIntervencionadas.Select(e => (e.Escola, e.Total)).ToList());
+            escolasMaisIntervencionadas.Select(e => (e.Escola, e.Total)).ToList(),
+            indicacaoBalanco, indicacaoDesafios, indicacaoPropostas, indicacaoNotaFinal);
 
         string textoGerado;
         try
@@ -127,12 +141,21 @@ public partial class RelatorioService
     /// <summary>Constrói o prompt em português, com os dados reais do mês, pedindo ao modelo local
     /// que escreva as quatro secções da Reflexão Crítica num estilo formal/administrativo,
     /// delimitadas pelos marcadores acordados — para depois se conseguir separar cada secção do
-    /// texto gerado (ver <see cref="ExtrairSeccao"/>).</summary>
+    /// texto gerado (ver <see cref="ExtrairSeccao"/>).
+    ///
+    /// Quando o utilizador já tiver escrito alguma indicação manual num dos quatro campos (ver
+    /// <see cref="GerarRascunhoReflexaoCriticaIaAsync"/>), essa indicação é acrescentada ao
+    /// prompt, um bloco "CONTEXTO ADICIONAL FORNECIDO PELO UTILIZADOR" com um parágrafo por campo
+    /// preenchido (secção 3.7 do pedido) — nunca um bloco com os quatro títulos completos quando só
+    /// alguns estão preenchidos, para não sugerir ao modelo que os vazios também têm indicação (é
+    /// isso que faz o comportamento continuar exatamente igual ao atual nos campos vazios).</summary>
     private static string ConstruirPromptReflexaoCritica(
         string mesFormatado, int totalIntervencoes, int agrupamentosEnvolvidos,
         List<(string Categoria, int Total)> porCategoria, int totalAtividadesDisia, int totalServicosDisia,
         int atividadesPendentesGeral, int equipamentoRecolhidoNoMes, int totalTicketsSiga, int totalPasswords,
-        List<(string Escola, int Total)> escolasMaisIntervencionadas)
+        List<(string Escola, int Total)> escolasMaisIntervencionadas,
+        string? indicacaoBalanco = null, string? indicacaoDesafios = null,
+        string? indicacaoPropostas = null, string? indicacaoNotaFinal = null)
     {
         var listaCategorias = porCategoria.Count == 0
             ? "sem dados de categorias este mês"
@@ -141,6 +164,37 @@ public partial class RelatorioService
         var listaEscolas = escolasMaisIntervencionadas.Count == 0
             ? "sem dados suficientes"
             : string.Join(", ", escolasMaisIntervencionadas.Select(e => $"{e.Escola} ({e.Total} intervenções)"));
+
+        // Um parágrafo por campo preenchido, na ordem em que aparecem no relatório - um campo
+        // vazio simplesmente não gera parágrafo nenhum aqui (ver o comentário do método).
+        var indicacoes = new List<string>();
+        if (!string.IsNullOrWhiteSpace(indicacaoBalanco))
+            indicacoes.Add($"Balanço de Mês:\n{indicacaoBalanco.Trim()}");
+        if (!string.IsNullOrWhiteSpace(indicacaoDesafios))
+            indicacoes.Add($"Principais Desafios e Constrangimentos:\n{indicacaoDesafios.Trim()}");
+        if (!string.IsNullOrWhiteSpace(indicacaoPropostas))
+            indicacoes.Add($"Propostas de Melhoria para os Próximos Meses:\n{indicacaoPropostas.Trim()}");
+        if (!string.IsNullOrWhiteSpace(indicacaoNotaFinal))
+            indicacoes.Add($"Nota Final:\n{indicacaoNotaFinal.Trim()}");
+
+        // Bloco só incluído no prompt quando existe pelo menos uma indicação - um prompt sem
+        // nenhum campo preenchido fica IDÊNTICO ao que já existia antes desta alteração (ver
+        // requisito de comportamento incremental).
+        var blocoIndicacoes = indicacoes.Count == 0 ? "" : $"""
+
+
+            CONTEXTO ADICIONAL FORNECIDO PELO UTILIZADOR
+
+            O utilizador que está a preparar este relatório já escreveu as seguintes indicações,
+            para as secções abaixo indicadas. Usa estas indicações como orientação/informação real
+            sobre o que aconteceu no mês para escreveres essa secção em concreto — não as copies
+            literalmente, mas redige um texto profissional e coerente com o resto do relatório a
+            partir delas. Não inventes factos que as contradigam. As secções não mencionadas aqui
+            (se houver) devem continuar a ser escritas apenas com base nos dados reais acima.
+
+            {string.Join("\n\n", indicacoes)}
+
+            """;
 
         return $"""
             És um técnico superior de informática da Divisão de Sistemas de Informação (DISIA) da
@@ -162,7 +216,7 @@ public partial class RelatorioService
             - Atividades DISIA ainda pendentes/por concluir (de qualquer mês, acumulado): {atividadesPendentesGeral}.
             - Equipamento informático recolhido para reparação este mês: {equipamentoRecolhidoNoMes}.
             - Pedidos tratados na plataforma SIGA (tipificação/estado): {totalTicketsSiga}; alterações de password: {totalPasswords}.
-
+            {blocoIndicacoes}
             Responde EXATAMENTE no seguinte formato, sem nenhum texto antes do primeiro marcador
             nem comentários fora das secções:
 
