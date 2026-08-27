@@ -23,9 +23,6 @@
 
             <Button Content="Entrar" Style="{StaticResource PrimaryButton}" Click="Entrar_Click"
                     Padding="0,10" Margin="0,10,0,0" FontSize="15" />
-
-            <TextBlock Text="Utilizador inicial: admin / admin123" FontSize="10"
-                       Foreground="{StaticResource BrushTextSecondary}" HorizontalAlignment="Center" Margin="0,16,0,0" />
         </StackPanel>
     </Border>
 </Window>
