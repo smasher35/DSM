@@ -25,6 +25,12 @@ public class Usuario
     public bool Ativo { get; set; } = true;
 
     /// <summary>
+    /// Indica se o utilizador deve alterar a palavra-passe no próximo login.
+    /// Usado para contas bootstrap e resets de segurança.
+    /// </summary>
+    public bool RequerAlteracaoPassword { get; set; } = false;
+
+    /// <summary>
     /// Caminho relativo à pasta de avatares, ou null se sem avatar personalizado.
     /// Formato: "avatares/{UserId}.png"
     /// </summary>

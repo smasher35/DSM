@@ -48,7 +48,8 @@ public static class DbInitializer
                 Perfil = PerfilUtilizador.Administrador,
                 PasswordHash = hash,
                 PasswordSalt = salt,
-                Ativo = true
+                Ativo = true,
+                RequerAlteracaoPassword = true  // Força alteração no primeiro login
             });
         }
 

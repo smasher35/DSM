@@ -57,6 +57,19 @@ public partial class LoginWindow : Window
             return;
         }
 
+        // Verificar se é necessário alterar a palavra-passe
+        if (utilizador.RequerAlteracaoPassword)
+        {
+            var alterarPasswordWindow = new AlterarPasswordWindow(utilizador) { Owner = this };
+            var alterado = alterarPasswordWindow.ShowDialog();
+
+            if (alterado != true)
+            {
+                MostrarErro("Deve alterar a palavra-passe para continuar.");
+                return;
+            }
+        }
+
         utilizador.UltimoLogin = DateTime.Now;
         App.Db.SaveChanges();
 

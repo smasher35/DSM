@@ -51,6 +51,9 @@ public static class SchemaUpgrade
         // Adiciona suporte para avatares de utilizadores
         AdicionarColunaSeNaoExistir(conexao, "Usuarios", "CaminhoAvatar", "TEXT");
 
+        // Adiciona flag de alteração obrigatória de password (segurança: contas bootstrap)
+        AdicionarColunaSeNaoExistir(conexao, "Usuarios", "RequerAlteracaoPassword", "INTEGER NOT NULL DEFAULT 0");
+
         // Jardins de infância integrados
         AdicionarColunaSeNaoExistir(conexao, "Escolas", "Integrado", "INTEGER NOT NULL DEFAULT 0");
 
