@@ -191,7 +191,36 @@ public static class SchemaUpgrade
         // já existentes - não obriga ninguém a mudar a password ao atualizar a aplicação.
         AdicionarColunaSeNaoExistir(conexao, "Usuarios", "PrecisaAlterarPassword", "INTEGER NOT NULL DEFAULT 0");
 
+        // Auditoria: tentativas de login falhadas consecutivas, para o bloqueio automático de
+        // conta (ver Administração → Segurança) - reutiliza o campo Ativo já existente em vez de
+        // um novo conceito de "bloqueado": a conta fica marcada Inativa, e só um administrador a
+        // reativa em Administração → Utilizadores, exatamente como já acontecia para qualquer
+        // outro motivo de desativação.
+        AdicionarColunaSeNaoExistir(conexao, "Usuarios", "TentativasFalhadasConsecutivas", "INTEGER NOT NULL DEFAULT 0");
+
+        CriarRegistosAuditoriaSePreciso(conexao);
+
         CriarPlanoRotaSePreciso(conexao);
+    }
+
+    /// <summary>Ver <see cref="Models.RegistoAuditoria"/>. Numa base de dados nova, o EnsureCreated
+    /// do EF Core já cria esta tabela sozinho; isto só é preciso para bases de dados já em uso
+    /// antes desta versão.</summary>
+    private static void CriarRegistosAuditoriaSePreciso(SqliteConnection conexao)
+    {
+        if (TabelaExiste(conexao, "RegistosAuditoria")) return;
+
+        using var cmd = conexao.CreateCommand();
+        cmd.CommandText = @"
+            CREATE TABLE ""RegistosAuditoria"" (
+                ""Id"" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                ""DataHora"" TEXT NOT NULL,
+                ""Utilizador"" TEXT NOT NULL DEFAULT 'sistema',
+                ""Acao"" TEXT NOT NULL,
+                ""Detalhe"" TEXT NULL,
+                ""Resultado"" TEXT NOT NULL DEFAULT 'Sucesso'
+            )";
+        cmd.ExecuteNonQuery();
     }
 
     /// <summary>Planeamento de Rotas: plano diário + paragens ordenadas — ver

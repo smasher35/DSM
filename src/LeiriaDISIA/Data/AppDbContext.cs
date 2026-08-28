@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using LeiriaDISIA.Models;
+using LeiriaDISIA.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace LeiriaDISIA.Data;
@@ -35,11 +36,110 @@ public class AppDbContext : DbContext
     public DbSet<RelatorioMensalDados> RelatoriosMensaisDados => Set<RelatorioMensalDados>();
     public DbSet<PlanoRota> PlanosRota => Set<PlanoRota>();
     public DbSet<PlanoRotaParagem> PlanoRotaParagens => Set<PlanoRotaParagem>();
+    public DbSet<RegistoAuditoria> RegistosAuditoria => Set<RegistoAuditoria>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(DbPath)!);
         options.UseSqlite($"Data Source={DbPath}");
+    }
+
+    /// <summary>Tipos de entidade que NÃO são auditados automaticamente por <see cref="SaveChanges()"/>:
+    /// - <see cref="RegistoAuditoria"/>: evita a própria auditoria auditar-se a si mesma.
+    /// - <see cref="Usuario"/>: já tem auditoria própria, mais detalhada (Acções "CriarUtilizador",
+    ///   "EditarUtilizador", "EliminarUtilizador", "ReporPassword" — ver Services/AuditoriaService.cs
+    ///   e os pontos onde é chamado), por isso audita-lo também aqui duplicaria a informação com um
+    ///   nome de ação menos claro ("CriarUsuario" genérico).
+    /// - Tabelas de junção/detalhe que só existem como parte de gravar um registo "pai" (ex.: as
+    ///   categorias e o equipamento associados a uma Intervenção, ou as paragens de um Plano de
+    ///   Rota): audita-las à parte criaria várias entradas quase idênticas por cada gravação do
+    ///   registo principal, sem valor informativo a mais.
+    /// - <see cref="RelatorioMensalDados"/>: rascunho/cache do relatório mensal, gravado com muita
+    ///   frequência enquanto o utilizador o edita — não é um "registo" no sentido em que os
+    ///   restantes módulos são.</summary>
+    private static readonly HashSet<Type> TiposExcluidosDaAuditoriaAutomatica = new()
+    {
+        typeof(RegistoAuditoria), typeof(Usuario), typeof(IntervencaoEquipamento), typeof(IntervencaoCategoria),
+        typeof(EquipamentoCaracteristicaValor), typeof(CaracteristicaEquipamentoOpcao), typeof(PlanoRotaParagem),
+        typeof(SubCategoriaIntervencao), typeof(RelatorioMensalDados)
+    };
+
+    /// <summary>Nomes de propriedade tentados, por ordem, para obter uma descrição breve e legível
+    /// de qualquer entidade recém-criada/eliminada, a incluir no <see cref="RegistoAuditoria.Detalhe"/>
+    /// — por reflexão, para funcionar com qualquer tipo de entidade sem precisar de um caso
+    /// especial por módulo.</summary>
+    private static readonly string[] PropriedadesDescritivas =
+        { "Nome", "NomeCompleto", "Titulo", "Descricao", "Razao", "NumeroSerie", "Assunto" };
+
+    /// <summary>Ver <see cref="TiposExcluidosDaAuditoriaAutomatica"/>: regista automaticamente, em
+    /// <see cref="RegistosAuditoria"/>, a criação ou eliminação de qualquer registo em qualquer
+    /// módulo — sem precisar de uma chamada explícita em cada ecrã de Guardar/Eliminar. Isto
+    /// significa que a aplicação já fica "pronta a funcionar" também para módulos futuros: um tipo
+    /// de entidade novo é automaticamente auditado assim que passa a ser gravado através deste
+    /// AppDbContext, sem precisar de nenhuma alteração aqui.
+    ///
+    /// Implementação em duas fases porque o Id de uma entidade nova só fica disponível DEPOIS de
+    /// <c>base.SaveChanges()</c> (o SQLite atribui-o no INSERT): 1) antes de gravar, guarda-se uma
+    /// descrição de cada entidade Added/Deleted; 2) grava-se a alteração real do utilizador;
+    /// 3) só depois se grava o(s) registo(s) de auditoria correspondente(s), com um SEGUNDO
+    /// <c>base.SaveChanges()</c> — chamado diretamente na classe base, e não em
+    /// <c>this.SaveChanges()</c>, para não voltar a entrar neste método (o que causaria
+    /// recursividade infinita).</summary>
+    public override int SaveChanges()
+    {
+        var eventos = PrepararEventosDeAuditoria();
+        var resultado = base.SaveChanges();
+        RegistarEventosDeAuditoria(eventos);
+        return resultado;
+    }
+
+    private record EventoAuditoriaPendente(object Entidade, Type Tipo, bool FoiCriado, string? Descricao);
+
+    private List<EventoAuditoriaPendente> PrepararEventosDeAuditoria()
+    {
+        var eventos = new List<EventoAuditoriaPendente>();
+
+        foreach (var entrada in ChangeTracker.Entries())
+        {
+            if (entrada.State != EntityState.Added && entrada.State != EntityState.Deleted) continue;
+
+            var tipo = entrada.Entity.GetType();
+            if (TiposExcluidosDaAuditoriaAutomatica.Contains(tipo)) continue;
+
+            eventos.Add(new EventoAuditoriaPendente(entrada.Entity, tipo, entrada.State == EntityState.Added, DescreverEntidade(entrada.Entity)));
+        }
+
+        return eventos;
+    }
+
+    private void RegistarEventosDeAuditoria(List<EventoAuditoriaPendente> eventos)
+    {
+        if (eventos.Count == 0) return;
+
+        foreach (var evento in eventos)
+        {
+            RegistosAuditoria.Add(new RegistoAuditoria
+            {
+                Utilizador = SessaoAtual.UtilizadorLogado?.NomeUtilizador ?? "sistema",
+                Acao = (evento.FoiCriado ? "Criar" : "Eliminar") + evento.Tipo.Name,
+                Detalhe = evento.Descricao,
+                Resultado = "Sucesso"
+            });
+        }
+
+        // Chamada diretamente à base, não a "SaveChanges()" - ver o comentário do método acima.
+        base.SaveChanges();
+    }
+
+    private static string? DescreverEntidade(object entidade)
+    {
+        var tipo = entidade.GetType();
+        foreach (var nomePropriedade in PropriedadesDescritivas)
+        {
+            var valor = tipo.GetProperty(nomePropriedade)?.GetValue(entidade) as string;
+            if (!string.IsNullOrWhiteSpace(valor)) return valor;
+        }
+        return null;
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

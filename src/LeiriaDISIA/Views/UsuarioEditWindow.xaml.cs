@@ -341,6 +341,14 @@ public partial class UsuarioEditWindow : Window
             EnviarEmailBoasVindas(usuario);
         }
 
+        // Auditoria (Administração → Auditoria) - a criação/edição de um Usuario não é apanhada
+        // pela auditoria automática de AppDbContext.SaveChanges (ver o comentário lá, e
+        // TiposExcluidosDaAuditoriaAutomatica), precisamente para poder ter aqui um nome de ação
+        // mais claro e distinguir Criar de Editar.
+        AuditoriaService.Registar(
+            eraNovoUtilizador ? "CriarUtilizador" : "EditarUtilizador", "Sucesso",
+            $"{usuario.NomeCompleto} ({usuario.NomeUtilizador}) — Perfil: {usuario.Perfil}");
+
         Sucesso = true;
         Close();
     }

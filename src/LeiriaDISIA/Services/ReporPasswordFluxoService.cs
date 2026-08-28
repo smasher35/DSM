@@ -29,6 +29,7 @@ public class ReporPasswordFluxoService
         usuario.PasswordSalt = salt;
         usuario.PrecisaAlterarPassword = true;
         App.Db.SaveChanges();
+        AuditoriaService.Registar("ReporPassword", "Sucesso", $"{usuario.NomeCompleto} ({usuario.NomeUtilizador})");
 
         // Pasta própria (não a pasta temporária "raiz" do Windows, partilhada por todos os
         // programas) para ser fácil de encontrar manualmente, caso seja preciso (ver o mecanismo

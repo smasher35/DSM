@@ -78,6 +78,10 @@ public partial class AdministracaoWindow : Window
 
         // Carregar escolas desativadas na inicialização
         RecarregarEscolasDesativadas();
+
+        CarregarSeguranca();
+        CarregarSistema();
+        CarregarAuditoria();
     }
 
     private void MenuPrincipal_Click(object sender, RoutedEventArgs e) => Close();
@@ -544,8 +548,10 @@ public partial class AdministracaoWindow : Window
         if (MessageBox.Show($"Eliminar o utilizador '{usuario.NomeUtilizador}'?", "Confirmar",
                 MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
 
+        var descricao = $"{usuario.NomeCompleto} ({usuario.NomeUtilizador}) — Perfil: {usuario.Perfil}";
         App.Db.Usuarios.Remove(usuario);
         App.Db.SaveChanges();
+        AuditoriaService.Registar("EliminarUtilizador", "Sucesso", descricao);
         RecarregarUtilizadores();
     }
 
@@ -1877,12 +1883,23 @@ public partial class AdministracaoWindow : Window
 
     private void TabsAdministracao_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        // Recarregar escolas desativadas quando a aba é selecionada
-        if (TabsAdministracao.SelectedIndex == 4) // Índice da aba "Escolas Desativadas"
-            RecarregarEscolasDesativadas();
+        // Comparação direta ao separador (em vez de números de índice fixos, como
+        // "SelectedIndex == 4") - índices ficam errados sempre que a ordem das abas muda (foi
+        // exatamente isso que aconteceu aqui: ao acrescentar as abas Segurança/Sistema/Auditoria,
+        // os índices "4" e "8" usados antes já correspondiam a abas completamente diferentes das
+        // que o comentário dizia, e por isso Escolas Desativadas/Eliminar Registos podiam já
+        // não estar a atualizar corretamente). Comparar contra o próprio TabItem, por referência,
+        // continua correto seja qual for a posição em que a aba estiver.
+        var selecionada = TabsAdministracao.SelectedItem;
 
-        if (TabsAdministracao.SelectedIndex == 8) // Índice da aba "Eliminar Registos"
+        if (ReferenceEquals(selecionada, TabEscolasDesativadas))
+            RecarregarEscolasDesativadas();
+        else if (ReferenceEquals(selecionada, TabEliminarRegistos))
             CarregarGridEliminar();
+        else if (ReferenceEquals(selecionada, TabSistema))
+            CarregarSistema();
+        else if (ReferenceEquals(selecionada, TabAuditoria))
+            CarregarAuditoria();
     }
 
     private void RecarregarEscolasDesativadas()
@@ -2485,4 +2502,284 @@ public partial class AdministracaoWindow : Window
     private void ExportarComunicacoes_Click(object sender, RoutedEventArgs e) =>
         ExportarComDialogo("Exportar Comunicações", "Comunicacoes.xlsx",
             caminho => ExcelExportService.ExportarComunicacoes(App.Db, caminho));
+
+    // =========================================================================
+    // ABA: SEGURANÇA
+    // =========================================================================
+
+    private void CarregarSeguranca()
+    {
+        TxtPoliticaMinCaracteres.Text = AppSettingsService.PoliticaPasswordMinCaracteres.ToString();
+        ChkPoliticaMaiuscula.IsChecked = AppSettingsService.PoliticaPasswordExigirMaiuscula;
+        ChkPoliticaMinuscula.IsChecked = AppSettingsService.PoliticaPasswordExigirMinuscula;
+        ChkPoliticaNumero.IsChecked = AppSettingsService.PoliticaPasswordExigirNumero;
+        ChkPoliticaSimbolo.IsChecked = AppSettingsService.PoliticaPasswordExigirSimbolo;
+
+        TxtTentativasLoginMaximo.Text = AppSettingsService.TentativasLoginMaximo.ToString();
+
+        ChkSessaoInatividade.IsChecked = AppSettingsService.SessaoTerminarPorInatividade;
+        TxtSessaoMinutos.Text = AppSettingsService.SessaoMinutosInatividade.ToString();
+    }
+
+    private void GuardarPoliticaPassword_Click(object sender, RoutedEventArgs e)
+    {
+        if (!int.TryParse(TxtPoliticaMinCaracteres.Text, out var minCaracteres) || minCaracteres < 1)
+        {
+            MessageBox.Show("Indique um número de caracteres válido (mínimo 1).", "Valor inválido",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        AppSettingsService.PoliticaPasswordMinCaracteres = minCaracteres;
+        AppSettingsService.PoliticaPasswordExigirMaiuscula = ChkPoliticaMaiuscula.IsChecked == true;
+        AppSettingsService.PoliticaPasswordExigirMinuscula = ChkPoliticaMinuscula.IsChecked == true;
+        AppSettingsService.PoliticaPasswordExigirNumero = ChkPoliticaNumero.IsChecked == true;
+        AppSettingsService.PoliticaPasswordExigirSimbolo = ChkPoliticaSimbolo.IsChecked == true;
+
+        MessageBox.Show("Política de palavras-passe guardada.", "Guardado", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void GuardarTentativasLogin_Click(object sender, RoutedEventArgs e)
+    {
+        if (!int.TryParse(TxtTentativasLoginMaximo.Text, out var maximo) || maximo < 0)
+        {
+            MessageBox.Show("Indique um número válido (0 para desativar o bloqueio automático).", "Valor inválido",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        AppSettingsService.TentativasLoginMaximo = maximo;
+        MessageBox.Show("Configuração de tentativas de login guardada.", "Guardado", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void GuardarSessao_Click(object sender, RoutedEventArgs e)
+    {
+        if (!int.TryParse(TxtSessaoMinutos.Text, out var minutos) || minutos < 1)
+        {
+            MessageBox.Show("Indique um número de minutos válido (mínimo 1).", "Valor inválido",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        AppSettingsService.SessaoTerminarPorInatividade = ChkSessaoInatividade.IsChecked == true;
+        AppSettingsService.SessaoMinutosInatividade = minutos;
+        // Conta a inatividade a partir de agora, não desde a última interação real - evita que uma
+        // sessão já "quase no limite" termine poucos segundos depois de ativar esta opção.
+        SessaoInatividadeService.RegistarAtividade();
+
+        MessageBox.Show("Configuração de sessão guardada.", "Guardado", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    // =========================================================================
+    // ABA: SISTEMA
+    // =========================================================================
+
+    private void CarregarSistema()
+    {
+        TxtVersaoAplicacao.Text = AppSettingsService.VersaoApp;
+        TxtVersaoDotNet.Text = Environment.Version.ToString();
+        TxtSistemaOperativo.Text = Environment.OSVersion.VersionString;
+        TxtDiretorioInstalacao.Text = AppContext.BaseDirectory;
+
+        TxtPastaDados.Text = Path.GetDirectoryName(AppDbContext.DbPath) ?? "";
+
+        AtualizarEstadoSistema_Click(this, new RoutedEventArgs());
+        AtualizarDiretoriosDisco_Click(this, new RoutedEventArgs());
+    }
+
+    private void AbrirDiretorioInstalacao_Click(object sender, RoutedEventArgs e) => AbrirNoExplorador(TxtDiretorioInstalacao.Text);
+    private void CopiarDiretorioInstalacao_Click(object sender, RoutedEventArgs e) => CopiarParaAreaTransferencia(TxtDiretorioInstalacao.Text);
+    private void AbrirPastaDados_Click(object sender, RoutedEventArgs e) => AbrirNoExplorador(TxtPastaDados.Text);
+    private void CopiarPastaDados_Click(object sender, RoutedEventArgs e) => CopiarParaAreaTransferencia(TxtPastaDados.Text);
+
+    private static void AbrirNoExplorador(string caminho)
+    {
+        try
+        {
+            if (Directory.Exists(caminho))
+                Process.Start(new ProcessStartInfo(caminho) { UseShellExecute = true });
+            else
+                Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{caminho}\"") { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Não foi possível abrir o explorador de ficheiros: {ex.Message}", "Erro",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private static void CopiarParaAreaTransferencia(string texto)
+    {
+        try { Clipboard.SetText(texto); }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Não foi possível copiar para a área de transferência: {ex.Message}", "Erro",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void AtualizarEstadoSistema_Click(object sender, RoutedEventArgs e)
+    {
+        // Três estados, não dois: o modelo é carregado para memória de forma preguiçosa (só na
+        // primeira geração/teste pedida em cada sessão - carregar demora 1-2 minutos, por isso não
+        // se faz sempre ao abrir a aplicação), por isso mostrar apenas "Carregado"/"Não carregado"
+        // seria enganador logo a seguir a abrir a aplicação: mostraria sempre "Não carregado", mesmo
+        // com um modelo válido configurado e já testado com sucesso numa sessão anterior. Aqui
+        // distingue-se "nem sequer está configurado" de "está configurado, só ainda não foi usado
+        // nesta sessão" de "já está mesmo carregado em memória".
+        var carregado = IaLocalService.Instancia.EstaCarregado;
+        var configurado = IaLocalService.ModeloDisponivel;
+
+        var (texto, corHex) = (configurado, carregado) switch
+        {
+            (false, _) => ("Não configurado", "#9CA3AF"),
+            (true, false) => ("Configurado (ainda não usado nesta sessão)", "#F59E0B"),
+            (true, true) => ("Carregado", "#22C55E")
+        };
+
+        TxtModeloIa.Text = texto;
+        BadgeModeloIa.Background = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFromString(corHex)!;
+
+        var utilizadorAtual = SessaoAtual.UtilizadorLogado;
+        TxtSessaoIniciadaPor.Text = utilizadorAtual == null ? "-" : $"{utilizadorAtual.NomeCompleto} ({utilizadorAtual.Perfil})";
+
+        var memoriaBytes = Environment.WorkingSet;
+        TxtMemoriaEmUso.Text = $"{memoriaBytes / 1024.0 / 1024.0 / 1024.0:F1} GB";
+    }
+
+    private void AtualizarDiretoriosDisco_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var pastaDados = TxtPastaDados.Text;
+            var tamanhoBytes = Directory.Exists(pastaDados)
+                ? new DirectoryInfo(pastaDados).EnumerateFiles("*", SearchOption.AllDirectories).Sum(f => f.Length)
+                : 0;
+            TxtTamanhoPastaDados.Text = FormatarTamanho(tamanhoBytes);
+
+            var unidade = new DriveInfo(Path.GetPathRoot(pastaDados) ?? "C:\\");
+            TxtEspacoLivre.Text = $"{unidade.AvailableFreeSpace / 1024.0 / 1024.0 / 1024.0:F1} GB livres " +
+                                  $"de {unidade.TotalSize / 1024.0 / 1024.0 / 1024.0:F1} GB ({unidade.Name})";
+        }
+        catch (Exception ex)
+        {
+            TxtTamanhoPastaDados.Text = "-";
+            TxtEspacoLivre.Text = $"Erro ao calcular: {ex.Message}";
+        }
+    }
+
+    private static string FormatarTamanho(long bytes) => bytes switch
+    {
+        < 1024 => $"{bytes} B",
+        < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
+        < 1024 * 1024 * 1024 => $"{bytes / 1024.0 / 1024.0:F1} MB",
+        _ => $"{bytes / 1024.0 / 1024.0 / 1024.0:F1} GB"
+    };
+
+    // =========================================================================
+    // ABA: AUDITORIA
+    // =========================================================================
+
+    private class LinhaAuditoria
+    {
+        public DateTime DataHora { get; set; }
+        public string Utilizador { get; set; } = "";
+        public string Acao { get; set; } = "";
+        public string? Detalhe { get; set; }
+        public string Resultado { get; set; } = "";
+        public string CorResultado => Resultado.Equals("Sucesso", StringComparison.OrdinalIgnoreCase) ? "#22C55E" : "#EF4444";
+    }
+
+    private bool _carregandoFiltrosAuditoria;
+
+    private void CarregarAuditoria()
+    {
+        _carregandoFiltrosAuditoria = true;
+
+        // As opções do filtro "Ação" vêm de dois sítios: os valores geridos em Administração →
+        // Dados Fixos (GruposValorFixo.AcaoAuditoria) MAIS quaisquer ações que já existam mesmo
+        // nos registos de auditoria mas ainda não tenham sido acrescentadas a Dados Fixos (ex.: o
+        // mecanismo automático de AppDbContext.SaveChanges gera nomes como "CriarEscola" para
+        // qualquer tipo de registo, sem precisar que estejam pré-registados) — assim o filtro
+        // cobre sempre tudo o que já aconteceu, mesmo sem manutenção manual em Dados Fixos.
+        var acoesDadosFixos = App.Db.ValoresFixos.Where(v => v.Grupo == GruposValorFixo.AcaoAuditoria && v.Ativo)
+            .OrderBy(v => v.Ordem).Select(v => v.Valor).ToList();
+        var acoesUsadas = App.Db.RegistosAuditoria.Select(r => r.Acao).Distinct().ToList();
+        var todasAsAcoes = acoesDadosFixos.Concat(acoesUsadas).Distinct().OrderBy(a => a).ToList();
+
+        CmbAuditoriaAcao.ItemsSource = new[] { "Todas" }.Concat(todasAsAcoes).ToList();
+        CmbAuditoriaAcao.SelectedIndex = 0;
+
+        var resultadosDadosFixos = App.Db.ValoresFixos.Where(v => v.Grupo == GruposValorFixo.ResultadoAuditoria && v.Ativo)
+            .OrderBy(v => v.Ordem).Select(v => v.Valor).ToList();
+        var resultadosUsados = App.Db.RegistosAuditoria.Select(r => r.Resultado).Distinct().ToList();
+        var todosOsResultados = resultadosDadosFixos.Concat(resultadosUsados).Distinct().OrderBy(r => r).ToList();
+
+        CmbAuditoriaResultado.ItemsSource = new[] { "Todos" }.Concat(todosOsResultados).ToList();
+        CmbAuditoriaResultado.SelectedIndex = 0;
+
+        _carregandoFiltrosAuditoria = false;
+
+        AtualizarGridAuditoria();
+    }
+
+    private void FiltroAuditoriaTexto_Changed(object sender, TextChangedEventArgs e) => FiltroAuditoriaMudou();
+    private void FiltroAuditoriaCombo_Changed(object sender, SelectionChangedEventArgs e) => FiltroAuditoriaMudou();
+    private void FiltroAuditoriaData_Changed(object sender, SelectionChangedEventArgs e) => FiltroAuditoriaMudou();
+
+    private void FiltroAuditoriaMudou()
+    {
+        if (_carregandoFiltrosAuditoria) return;
+        AtualizarGridAuditoria();
+    }
+
+    private void AtualizarAuditoria_Click(object sender, RoutedEventArgs e) => CarregarAuditoria();
+
+    private void LimparFiltrosAuditoria_Click(object sender, RoutedEventArgs e)
+    {
+        _carregandoFiltrosAuditoria = true;
+        TxtAuditoriaPesquisa.Text = "";
+        CmbAuditoriaAcao.SelectedIndex = 0;
+        CmbAuditoriaResultado.SelectedIndex = 0;
+        DpAuditoriaDe.SelectedDate = null;
+        DpAuditoriaAte.SelectedDate = null;
+        _carregandoFiltrosAuditoria = false;
+
+        AtualizarGridAuditoria();
+    }
+
+    private void AtualizarGridAuditoria()
+    {
+        var query = App.Db.RegistosAuditoria.AsQueryable();
+
+        if (CmbAuditoriaAcao.SelectedItem is string acao && acao != "Todas")
+            query = query.Where(r => r.Acao == acao);
+
+        if (CmbAuditoriaResultado.SelectedItem is string resultado && resultado != "Todos")
+            query = query.Where(r => r.Resultado == resultado);
+
+        if (DpAuditoriaDe.SelectedDate is { } de)
+            query = query.Where(r => r.DataHora >= de.Date);
+
+        if (DpAuditoriaAte.SelectedDate is { } ate)
+            query = query.Where(r => r.DataHora < ate.Date.AddDays(1));
+
+        var termo = TxtAuditoriaPesquisa.Text?.Trim();
+        if (!string.IsNullOrWhiteSpace(termo))
+        {
+            query = query.Where(r => r.Utilizador.Contains(termo) ||
+                                      (r.Detalhe != null && r.Detalhe.Contains(termo)) ||
+                                      r.Acao.Contains(termo));
+        }
+
+        GridAuditoria.ItemsSource = query
+            .OrderByDescending(r => r.DataHora)
+            .Take(500) // limite de segurança - evita carregar dezenas de milhares de linhas de uma vez
+            .AsEnumerable()
+            .Select(r => new LinhaAuditoria
+            {
+                DataHora = r.DataHora, Utilizador = r.Utilizador, Acao = r.Acao, Detalhe = r.Detalhe, Resultado = r.Resultado
+            })
+            .ToList();
+    }
 }

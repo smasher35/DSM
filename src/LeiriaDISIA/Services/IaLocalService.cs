@@ -38,6 +38,10 @@ public sealed class IaLocalService : IDisposable
     private StatelessExecutor? _executor;
     private string? _caminhoModeloCarregado;
 
+    /// <summary>Verdadeiro assim que o modelo tiver sido carregado para memória pelo menos uma vez
+    /// nesta sessão da aplicação — usado em Administração → Sistema ("Estado Atual").</summary>
+    public bool EstaCarregado => _executor != null;
+
     private IaLocalService()
     {
     }

@@ -84,6 +84,8 @@ public partial class App : Application
         var main = new Views.MainWindow();
         MainWindow = main;
         main.Show();
+
+        Services.SessaoInatividadeService.Iniciar();
     }
 
     /// <summary>Pasta por omissão onde é guardado um backup automático sempre que a aplicação é encerrada.</summary>

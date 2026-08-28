@@ -796,7 +796,7 @@
             </TabItem>
 
             <!-- ==================== ABA: ESCOLAS DESATIVADAS ==================== -->
-            <TabItem Header="🏫 Escolas Desativadas" Style="{StaticResource AdminTabItem}">
+            <TabItem x:Name="TabEscolasDesativadas" Header="🏫 Escolas Desativadas" Style="{StaticResource AdminTabItem}">
                 <Grid Margin="0,16,0,0">
                     <StackPanel>
                         <TextBlock Text="Reativar Escolas" Style="{StaticResource SectionTitleStyle}" />
@@ -827,7 +827,7 @@
             </TabItem>
 
             <!-- ==================== ABA: ELIMINAR REGISTOS ==================== -->
-            <TabItem Header="🗑️ Eliminar Registos" Style="{StaticResource AdminTabItem}">
+            <TabItem x:Name="TabEliminarRegistos" Header="🗑️ Eliminar Registos" Style="{StaticResource AdminTabItem}">
                 <Grid Margin="0,16,0,0">
                     <StackPanel>
                         <TextBlock Text="Eliminar Registos de Tabelas" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,8" />
@@ -852,6 +852,245 @@
                                     FontWeight="SemiBold" Click="EliminarRegistosSelecionados_Click" />
                         </StackPanel>
                     </StackPanel>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="🔐 Segurança" Style="{StaticResource AdminTabItem}">
+                <Grid Margin="0,16,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" MinWidth="420" />
+                        <ColumnDefinition Width="20" />
+                        <ColumnDefinition Width="*" MinWidth="420" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Política de Palavras-passe" Style="{StaticResource SectionTitleStyle}" FontSize="18" />
+                        <TextBlock TextWrapping="Wrap" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,12"
+                                   Text="Aplica-se à criação/edição de utilizadores em Administração e à alteração da própria palavra-passe." />
+                        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,20">
+                            <StackPanel>
+                                <TextBlock Text="Mínimo de caracteres" FontWeight="SemiBold" />
+                                <TextBox x:Name="TxtPoliticaMinCaracteres" Width="120" HorizontalAlignment="Left" Margin="0,4,0,14" />
+
+                                <CheckBox x:Name="ChkPoliticaMaiuscula" Content="Exigir pelo menos uma letra maiúscula (A-Z)" Margin="0,0,0,8" />
+                                <CheckBox x:Name="ChkPoliticaMinuscula" Content="Exigir pelo menos uma letra minúscula (a-z)" Margin="0,0,0,8" />
+                                <CheckBox x:Name="ChkPoliticaNumero" Content="Exigir pelo menos um número (0-9)" Margin="0,0,0,8" />
+                                <CheckBox x:Name="ChkPoliticaSimbolo" Content="Exigir pelo menos um símbolo (! @ # $ % *)" Margin="0,0,0,14" />
+
+                                <Button Content="Guardar política" Style="{StaticResource AdminButtonGreenDark}"
+                                        Click="GuardarPoliticaPassword_Click" HorizontalAlignment="Left" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Tentativas de Login" Style="{StaticResource SectionTitleStyle}" FontSize="18" />
+                        <TextBlock TextWrapping="Wrap" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,12"
+                                   Text="Após o número de tentativas falhadas indicado, a conta é bloqueada automaticamente e só pode ser reativada por um administrador em Administração → Utilizadores." />
+                        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,20">
+                            <StackPanel>
+                                <TextBlock Text="Número máximo de tentativas (0 = desativado)" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                <TextBox x:Name="TxtTentativasLoginMaximo" Width="120" HorizontalAlignment="Left" Margin="0,4,0,14" />
+                                <Button Content="Guardar" Style="{StaticResource AdminButtonGreenDark}"
+                                        Click="GuardarTentativasLogin_Click" HorizontalAlignment="Left" />
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="Sessão" Style="{StaticResource SectionTitleStyle}" FontSize="18" />
+                        <TextBlock TextWrapping="Wrap" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,12"
+                                   Text="Termina a sessão automaticamente (fecha todas as janelas e volta ao ecrã de login) ao fim do tempo de inatividade indicado, em qualquer parte da aplicação." />
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel>
+                                <CheckBox x:Name="ChkSessaoInatividade" Content="Terminar sessão automaticamente por inatividade" Margin="0,0,0,12" />
+                                <TextBlock Text="Minutos de inatividade" FontWeight="SemiBold" />
+                                <TextBox x:Name="TxtSessaoMinutos" Width="120" HorizontalAlignment="Left" Margin="0,4,0,14" />
+                                <Button Content="Guardar" Style="{StaticResource AdminButtonGreenDark}"
+                                        Click="GuardarSessao_Click" HorizontalAlignment="Left" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+
+            <TabItem x:Name="TabSistema" Header="💻 Sistema" Style="{StaticResource AdminTabItem}">
+                <Grid Margin="0,16,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" MinWidth="420" />
+                        <ColumnDefinition Width="20" />
+                        <ColumnDefinition Width="*" MinWidth="420" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Informação da Aplicação" Style="{StaticResource SectionTitleStyle}" FontSize="18" Margin="0,0,0,12" />
+                        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,20">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="180" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Versão da aplicação" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="TxtVersaoAplicacao" Grid.Column="1" Foreground="{StaticResource BrushPrimary}" FontWeight="SemiBold" />
+                                </Grid>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="180" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Versão do .NET" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="TxtVersaoDotNet" Grid.Column="1" Foreground="{StaticResource BrushPrimary}" FontWeight="SemiBold" />
+                                </Grid>
+                                <Grid Margin="0,0,0,14">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="180" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Sistema operativo" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="TxtSistemaOperativo" Grid.Column="1" Foreground="{StaticResource BrushPrimary}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                </Grid>
+
+                                <TextBlock Text="Diretório de instalação" FontWeight="SemiBold" />
+                                <TextBox x:Name="TxtDiretorioInstalacao" IsReadOnly="True" Margin="0,4,0,10" />
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Content="Abrir no Explorador" Style="{StaticResource AdminButtonBlue}"
+                                            Click="AbrirDiretorioInstalacao_Click" Margin="0,0,8,0" />
+                                    <Button Content="Copiar caminho" Click="CopiarDiretorioInstalacao_Click" Padding="10,6" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="Estado Atual" Style="{StaticResource SectionTitleStyle}" FontSize="18" Margin="0,0,0,12" />
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Modelo de IA" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <Border x:Name="BadgeModeloIa" Grid.Column="1" Style="{StaticResource BadgePillStyle}" HorizontalAlignment="Left">
+                                        <TextBlock x:Name="TxtModeloIa" Style="{StaticResource BadgeTextStyle}" />
+                                    </Border>
+                                </Grid>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Sessão iniciada por" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="TxtSessaoIniciadaPor" Grid.Column="1" TextWrapping="Wrap" />
+                                </Grid>
+                                <Grid Margin="0,0,0,14">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Memória em uso" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="TxtMemoriaEmUso" Grid.Column="1" />
+                                </Grid>
+                                <Button Content="Atualizar" Style="{StaticResource AdminButtonBlue}"
+                                        Click="AtualizarEstadoSistema_Click" HorizontalAlignment="Left" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Diretórios e Espaço em Disco" Style="{StaticResource SectionTitleStyle}" FontSize="18" Margin="0,0,0,12" />
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="Pasta de dados da aplicação" FontWeight="SemiBold" />
+                                <TextBox x:Name="TxtPastaDados" IsReadOnly="True" Margin="0,4,0,10" />
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                                    <Button Content="Abrir no Explorador" Style="{StaticResource AdminButtonBlue}"
+                                            Click="AbrirPastaDados_Click" Margin="0,0,8,0" />
+                                    <Button Content="Copiar caminho" Click="CopiarPastaDados_Click" Padding="10,6" />
+                                </StackPanel>
+
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="170" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Tamanho da pasta de dados" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                    <TextBlock x:Name="TxtTamanhoPastaDados" Grid.Column="1" Foreground="{StaticResource BrushPrimary}" FontWeight="SemiBold" />
+                                </Grid>
+                                <Grid Margin="0,0,0,14">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="170" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Espaço livre em disco" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                    <TextBlock x:Name="TxtEspacoLivre" Grid.Column="1" Foreground="{StaticResource BrushPrimary}" FontWeight="SemiBold" />
+                                </Grid>
+
+                                <Button Content="Atualizar" Style="{StaticResource AdminButtonBlue}"
+                                        Click="AtualizarDiretoriosDisco_Click" HorizontalAlignment="Left" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+
+            <TabItem x:Name="TabAuditoria" Header="📋 Auditoria" Style="{StaticResource AdminTabItem}">
+                <Grid Margin="0,16,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="Auditoria" Style="{StaticResource SectionTitleStyle}" FontSize="18" Margin="0,0,0,12" />
+
+                    <Border Grid.Row="1" Style="{StaticResource CardStyle}" Margin="0,0,0,16">
+                        <StackPanel>
+                            <UniformGrid Columns="4" Rows="1">
+                                <StackPanel Margin="0,0,10,0">
+                                    <TextBlock Text="Pesquisar" FontWeight="SemiBold" />
+                                    <TextBox x:Name="TxtAuditoriaPesquisa" Margin="0,4,0,0" TextChanged="FiltroAuditoriaTexto_Changed" />
+                                </StackPanel>
+                                <StackPanel Margin="0,0,10,0">
+                                    <TextBlock Text="Ação" FontWeight="SemiBold" />
+                                    <ComboBox x:Name="CmbAuditoriaAcao" Margin="0,4,0,0" SelectionChanged="FiltroAuditoriaCombo_Changed" />
+                                </StackPanel>
+                                <StackPanel Margin="0,0,10,0">
+                                    <TextBlock Text="Resultado" FontWeight="SemiBold" />
+                                    <ComboBox x:Name="CmbAuditoriaResultado" Margin="0,4,0,0" SelectionChanged="FiltroAuditoriaCombo_Changed" />
+                                </StackPanel>
+                                <StackPanel>
+                                    <TextBlock Text="De — Até" FontWeight="SemiBold" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                        <DatePicker x:Name="DpAuditoriaDe" Width="130" SelectedDateChanged="FiltroAuditoriaData_Changed" />
+                                        <DatePicker x:Name="DpAuditoriaAte" Width="130" Margin="8,0,0,0" SelectedDateChanged="FiltroAuditoriaData_Changed" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </UniformGrid>
+                            <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                                <Button Content="Limpar filtros" Click="LimparFiltrosAuditoria_Click" Padding="12,6" Margin="0,0,8,0" />
+                                <Button Content="Atualizar" Style="{StaticResource AdminButtonBlue}" Click="AtualizarAuditoria_Click" Padding="12,6" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Row="2" Style="{StaticResource CardStyle}">
+                        <DataGrid x:Name="GridAuditoria" AutoGenerateColumns="False" IsReadOnly="True" CanUserSortColumns="True">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Data/Hora" Binding="{Binding DataHora, StringFormat=dd-MM-yyyy HH:mm:ss}" Width="Auto" />
+                                <DataGridTextColumn Header="Utilizador" Binding="{Binding Utilizador}" Width="Auto" />
+                                <DataGridTextColumn Header="Ação" Binding="{Binding Acao}" Width="Auto" />
+                                <DataGridTextColumn Header="Detalhe" Binding="{Binding Detalhe}" Width="*" />
+                                <DataGridTemplateColumn Header="Resultado" Width="Auto">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border Style="{StaticResource BadgePillStyle}"
+                                                    Background="{Binding CorResultado, Converter={StaticResource HexColorToBrushConverter}}">
+                                                <TextBlock Text="{Binding Resultado}" Style="{StaticResource BadgeTextStyle}" />
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
                 </Grid>
             </TabItem>
 

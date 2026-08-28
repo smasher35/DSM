@@ -31,6 +31,13 @@ public class Usuario
     /// antes de dar acesso normal à aplicação.</summary>
     public bool PrecisaAlterarPassword { get; set; } = false;
 
+    /// <summary>Nº de tentativas de login falhadas consecutivas desde o último login bem-sucedido
+    /// (ou desde a criação da conta). Reposto a 0 sempre que o login tem sucesso. Quando atinge o
+    /// limite configurado em Administração → Segurança, a conta é automaticamente marcada
+    /// <see cref="Ativo"/> = false (ver Views/LoginWindow.xaml.cs) - só um administrador a pode
+    /// reativar depois, em Administração → Utilizadores.</summary>
+    public int TentativasFalhadasConsecutivas { get; set; } = 0;
+
     /// <summary>
     /// Caminho relativo à pasta de avatares, ou null se sem avatar personalizado.
     /// Formato: "avatares/{UserId}.png"

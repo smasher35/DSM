@@ -140,6 +140,15 @@ public static class DbInitializer
         SeedAditivo(GruposValorFixo.EstadoEscola,
             EstadosEscola.Ativa, EstadosEscola.Desativada, EstadosEscola.EmObras);
 
+        // Auditoria: valores iniciais para os dois novos grupos (ver GruposValorFixo.AcaoAuditoria/
+        // ResultadoAuditoria) - lista de referência para os filtros de Administração → Auditoria;
+        // o mecanismo de auditoria automática (ver AppDbContext.SaveChanges) não depende destes
+        // valores estarem aqui para funcionar (regista qualquer Ação nova automaticamente), mas
+        // tê-los pré-semeados torna os filtros úteis desde o primeiro arranque.
+        SeedAditivo(GruposValorFixo.AcaoAuditoria,
+            "Login", "CriarUtilizador", "EditarUtilizador", "EliminarUtilizador", "ReporPassword", "SessaoExpirada");
+        SeedAditivo(GruposValorFixo.ResultadoAuditoria, "Sucesso", "Falha");
+
         // Seed independente (fora do bloco "!db.ValoresFixos.Any()") para que este grupo também
         // seja criado em bases de dados já existentes, que foram criadas antes deste grupo existir.
         if (!db.ValoresFixos.Any(v => v.Grupo == GruposValorFixo.EstadoEquipamento))

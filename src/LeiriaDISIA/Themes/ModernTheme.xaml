@@ -810,13 +810,14 @@
     <Style x:Key="AdminTabItem" TargetType="TabItem">
         <Setter Property="Background" Value="{StaticResource BrushAdminTabBackground}" />
         <Setter Property="Foreground" Value="{StaticResource BrushAdminTabText}" />
-        <Setter Property="Padding" Value="16,8" />
-        <Setter Property="Margin" Value="0,0,4,0" />
+        <Setter Property="Padding" Value="10,7" />
+        <Setter Property="Margin" Value="0,0,2,0" />
+        <Setter Property="FontSize" Value="12.5" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TabItem">
-                    <Border x:Name="BorderTab" Background="{StaticResource BrushAdminTabBackground}" BorderThickness="0" CornerRadius="4,4,0,0" Padding="16,8" TextElement.Foreground="{StaticResource BrushAdminTabText}">
+                    <Border x:Name="BorderTab" Background="{StaticResource BrushAdminTabBackground}" BorderThickness="0" CornerRadius="4,4,0,0" Padding="10,7" TextElement.Foreground="{StaticResource BrushAdminTabText}">
                         <ContentPresenter x:Name="ContentPresenterTab" Content="{TemplateBinding Header}" ContentTemplate="{TemplateBinding HeaderTemplate}" TextElement.Foreground="{StaticResource BrushAdminTabText}" />
                     </Border>
                     <ControlTemplate.Triggers>

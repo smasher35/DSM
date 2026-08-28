@@ -33,6 +33,17 @@ public static class GruposValorFixo
     public const string EstadoIntervencaoEAtividadeDisia = "EstadoIntervencaoEAtividadeDisia";
     public const string EstadoPedidoIntervencao = "EstadoPedidoIntervencao";
 
+    // Auditoria: listas geridas aqui para que um administrador possa acrescentar novos tipos de
+    // Ação/Resultado sem precisar de recompilar a aplicação - ver Models/RegistoAuditoria.cs e
+    // Services/AuditoriaService.cs. Ao contrário da maioria das outras listas (que restringem o
+    // que pode ser escolhido num combo), estas duas são principalmente para preencher os filtros
+    // do ecrã Administração → Auditoria: o mecanismo de auditoria automática (ver
+    // AppDbContext.SaveChanges) regista ações para QUALQUER tipo de registo criado/eliminado,
+    // mesmo que a "Ação" correspondente ainda não esteja aqui listada - a lista serve como
+    // referência/documentação consultável, e para dar nomes amigáveis às ações mais comuns.
+    public const string AcaoAuditoria = "AcaoAuditoria";
+    public const string ResultadoAuditoria = "ResultadoAuditoria";
+
     /// <summary>Todos os grupos, com um rótulo amigável para apresentação no ecrã de Administração.
     /// A lista em si não precisa de estar ordenada — a UI (Administração → Dados Fixos) ordena os
     /// rótulos alfabeticamente ao apresentá-los (ver 5).
@@ -70,7 +81,9 @@ public static class GruposValorFixo
         (CategoriaAtividadeDisia, "Categorias das Atividades DISIA"),
         (CategoriaIntervencao, "Categorias de Intervenção"),
         (EstadoIntervencaoEAtividadeDisia, "Estados das Intervenções / Atividades DISIA"),
-        (EstadoPedidoIntervencao, "Estados dos Pedidos de Intervenção")
+        (EstadoPedidoIntervencao, "Estados dos Pedidos de Intervenção"),
+        (AcaoAuditoria, "Ações de Auditoria"),
+        (ResultadoAuditoria, "Resultados de Auditoria")
     };
 }
 

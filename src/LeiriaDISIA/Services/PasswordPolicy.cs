@@ -1,8 +1,9 @@
 namespace LeiriaDISIA.Services;
 
 /// <summary>
-/// Regras mínimas de segurança para palavras-passe de utilizadores da aplicação:
-/// mínimo 8 caracteres, pelo menos uma maiúscula, uma minúscula, um número e um símbolo.
+/// Regras de segurança para palavras-passe de utilizadores da aplicação — configuráveis em
+/// Administração → Segurança (ver <see cref="AppSettingsService"/>); por omissão, mínimo de 8
+/// caracteres com pelo menos uma maiúscula, uma minúscula, um número e um símbolo.
 /// </summary>
 public static class PasswordPolicy
 {
@@ -14,13 +15,35 @@ public static class PasswordPolicy
         public bool NumeroOk { get; init; }
         public bool SimboloOk { get; init; }
 
-        /// <summary>Número de regras cumpridas (0 a 5), usado para desenhar a barra de força.</summary>
+        /// <summary>Número de regras cumpridas, entre as que estão atualmente ativas em
+        /// Administração → Segurança (ver <see cref="TotalRegrasAtivas"/>) — usado para desenhar a
+        /// barra de força.</summary>
         public int TotalCumpridas =>
-            (ComprimentoOk ? 1 : 0) + (MaiusculaOk ? 1 : 0) + (MinusculaOk ? 1 : 0) +
-            (NumeroOk ? 1 : 0) + (SimboloOk ? 1 : 0);
+            (ComprimentoOk ? 1 : 0) +
+            (AppSettingsService.PoliticaPasswordExigirMaiuscula && MaiusculaOk ? 1 : 0) +
+            (AppSettingsService.PoliticaPasswordExigirMinuscula && MinusculaOk ? 1 : 0) +
+            (AppSettingsService.PoliticaPasswordExigirNumero && NumeroOk ? 1 : 0) +
+            (AppSettingsService.PoliticaPasswordExigirSimbolo && SimboloOk ? 1 : 0);
 
-        /// <summary>Só é considerada válida quando TODAS as regras estão cumpridas.</summary>
-        public bool Valida => ComprimentoOk && MaiusculaOk && MinusculaOk && NumeroOk && SimboloOk;
+        /// <summary>Nº de regras atualmente exigidas (o comprimento conta sempre; as restantes só
+        /// se estiverem ativas em Administração → Segurança) — usado como escala máxima da barra
+        /// de força, para esta continuar a fazer sentido visualmente mesmo que algumas regras
+        /// estejam desativadas.</summary>
+        public static int TotalRegrasAtivas => 1 +
+            (AppSettingsService.PoliticaPasswordExigirMaiuscula ? 1 : 0) +
+            (AppSettingsService.PoliticaPasswordExigirMinuscula ? 1 : 0) +
+            (AppSettingsService.PoliticaPasswordExigirNumero ? 1 : 0) +
+            (AppSettingsService.PoliticaPasswordExigirSimbolo ? 1 : 0);
+
+        /// <summary>Só é considerada válida quando todas as regras ATUALMENTE ATIVAS (ver
+        /// Administração → Segurança) estão cumpridas — uma regra desativada não impede a
+        /// validação, seja qual for o seu resultado.</summary>
+        public bool Valida =>
+            ComprimentoOk &&
+            (!AppSettingsService.PoliticaPasswordExigirMaiuscula || MaiusculaOk) &&
+            (!AppSettingsService.PoliticaPasswordExigirMinuscula || MinusculaOk) &&
+            (!AppSettingsService.PoliticaPasswordExigirNumero || NumeroOk) &&
+            (!AppSettingsService.PoliticaPasswordExigirSimbolo || SimboloOk);
     }
 
     public static Resultado Validar(string? password)
@@ -29,7 +52,7 @@ public static class PasswordPolicy
 
         return new Resultado
         {
-            ComprimentoOk = password.Length >= 8,
+            ComprimentoOk = password.Length >= AppSettingsService.PoliticaPasswordMinCaracteres,
             MaiusculaOk = password.Any(char.IsUpper),
             MinusculaOk = password.Any(char.IsLower),
             NumeroOk = password.Any(char.IsDigit),
@@ -37,13 +60,20 @@ public static class PasswordPolicy
         };
     }
 
-    /// <summary>Cor associada ao nível de força atual (0-5 regras cumpridas), para a barra visual.</summary>
-    public static string CorParaNivel(int totalCumpridas) => totalCumpridas switch
+    /// <summary>Cor associada ao nível de força atual, para a barra visual — a escala acompanha
+    /// <see cref="Resultado.TotalRegrasAtivas"/>, para continuar proporcional mesmo que algumas
+    /// regras estejam desativadas em Administração → Segurança.</summary>
+    public static string CorParaNivel(int totalCumpridas)
     {
-        <= 1 => "#EF4444", // vermelho - muito fraca
-        2 or 3 => "#F59E0B", // laranja - fraca/média
-        4 => "#EAB308", // amarelo - boa
-        5 => "#22C55E", // verde - forte
-        _ => "#E5E7EB"
-    };
+        var maximo = Resultado.TotalRegrasAtivas;
+        var proporcao = maximo == 0 ? 0 : (double)totalCumpridas / maximo;
+
+        return proporcao switch
+        {
+            <= 0.34 => "#EF4444", // vermelho - muito fraca
+            <= 0.67 => "#F59E0B", // laranja - fraca/média
+            < 1.0 => "#EAB308",   // amarelo - boa
+            _ => "#22C55E"        // verde - forte
+        };
+    }
 }

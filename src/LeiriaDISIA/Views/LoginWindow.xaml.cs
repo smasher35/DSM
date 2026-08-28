@@ -50,9 +50,42 @@ public partial class LoginWindow : Window
         }
 
         var utilizador = App.Db.Usuarios.FirstOrDefault(u => u.NomeUtilizador == nomeUtilizador);
-        if (utilizador == null || !utilizador.Ativo ||
-            !PasswordHasher.Validar(password, utilizador.PasswordHash, utilizador.PasswordSalt))
+
+        // Cada motivo de falha é registado em Auditoria com um detalhe diferente (ver
+        // Administração → Auditoria) - "utilizador" no registo é sempre o nome introduzido no
+        // formulário, mesmo quando não corresponde a nenhuma conta real, para se conseguir ver em
+        // auditoria tentativas de login com nomes de utilizador inexistentes.
+        if (utilizador == null)
         {
+            AuditoriaService.Registar("Login", "Falha", "Utilizador não encontrado.", nomeUtilizador);
+            MostrarErro("Utilizador ou palavra-passe inválidos.");
+            return;
+        }
+
+        if (!utilizador.Ativo)
+        {
+            AuditoriaService.Registar("Login", "Falha", "Conta inativa/bloqueada.", nomeUtilizador);
+            MostrarErro("Utilizador ou palavra-passe inválidos.");
+            return;
+        }
+
+        if (!PasswordHasher.Validar(password, utilizador.PasswordHash, utilizador.PasswordSalt))
+        {
+            // Bloqueio automático (Administração → Segurança, "Tentativas de Login") - reutiliza o
+            // campo Ativo já existente (0 = desativado): ao atingir o limite configurado, a conta
+            // fica Inativa e só um administrador a pode reativar, em Administração → Utilizadores.
+            utilizador.TentativasFalhadasConsecutivas++;
+            var limite = AppSettingsService.TentativasLoginMaximo;
+            var detalheFalha = "Password incorreta.";
+
+            if (limite > 0 && utilizador.TentativasFalhadasConsecutivas >= limite)
+            {
+                utilizador.Ativo = false;
+                detalheFalha += $" Conta bloqueada automaticamente após {utilizador.TentativasFalhadasConsecutivas} tentativas falhadas consecutivas.";
+            }
+
+            App.Db.SaveChanges();
+            AuditoriaService.Registar("Login", "Falha", detalheFalha, nomeUtilizador);
             MostrarErro("Utilizador ou palavra-passe inválidos.");
             return;
         }
@@ -71,7 +104,9 @@ public partial class LoginWindow : Window
         }
 
         utilizador.UltimoLogin = DateTime.Now;
+        utilizador.TentativasFalhadasConsecutivas = 0;
         App.Db.SaveChanges();
+        AuditoriaService.Registar("Login", "Sucesso", utilizador: nomeUtilizador);
 
         SessaoAtual.UtilizadorLogado = utilizador;
         DialogResult = true;

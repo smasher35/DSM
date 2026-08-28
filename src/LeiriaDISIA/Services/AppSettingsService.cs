@@ -144,6 +144,64 @@ public static class AppSettingsService
         set { _settings.ModoCompactoAtivo = value; Save(); }
     }
 
+    // ---- Segurança: Política de Palavras-passe (Administração → Segurança) ----
+    // Aplica-se à criação/edição de utilizadores e à alteração da própria password — ver
+    // Services/PasswordPolicy.cs, que passou a ler estes valores em vez de os ter fixos no código.
+
+    public static int PoliticaPasswordMinCaracteres
+    {
+        get => _settings.PoliticaPasswordMinCaracteres;
+        set { _settings.PoliticaPasswordMinCaracteres = value; Save(); }
+    }
+
+    public static bool PoliticaPasswordExigirMaiuscula
+    {
+        get => _settings.PoliticaPasswordExigirMaiuscula;
+        set { _settings.PoliticaPasswordExigirMaiuscula = value; Save(); }
+    }
+
+    public static bool PoliticaPasswordExigirMinuscula
+    {
+        get => _settings.PoliticaPasswordExigirMinuscula;
+        set { _settings.PoliticaPasswordExigirMinuscula = value; Save(); }
+    }
+
+    public static bool PoliticaPasswordExigirNumero
+    {
+        get => _settings.PoliticaPasswordExigirNumero;
+        set { _settings.PoliticaPasswordExigirNumero = value; Save(); }
+    }
+
+    public static bool PoliticaPasswordExigirSimbolo
+    {
+        get => _settings.PoliticaPasswordExigirSimbolo;
+        set { _settings.PoliticaPasswordExigirSimbolo = value; Save(); }
+    }
+
+    // ---- Segurança: Tentativas de Login (Administração → Segurança) ----
+    // Ver Views/LoginWindow.xaml.cs - 0 desativa o bloqueio automático.
+
+    public static int TentativasLoginMaximo
+    {
+        get => _settings.TentativasLoginMaximo;
+        set { _settings.TentativasLoginMaximo = value; Save(); }
+    }
+
+    // ---- Segurança: Sessão / inatividade (Administração → Segurança) ----
+    // Ver Services/SessaoInatividadeService.cs.
+
+    public static bool SessaoTerminarPorInatividade
+    {
+        get => _settings.SessaoTerminarPorInatividade;
+        set { _settings.SessaoTerminarPorInatividade = value; Save(); }
+    }
+
+    public static int SessaoMinutosInatividade
+    {
+        get => _settings.SessaoMinutosInatividade;
+        set { _settings.SessaoMinutosInatividade = value; Save(); }
+    }
+
     /// <summary>
     /// Mensagem da última falha ao gravar as configurações em disco (ex: permissões, disco cheio),
     /// ou null se a última gravação foi bem sucedida. Permite à interface avisar o utilizador em
@@ -212,5 +270,19 @@ public static class AppSettingsService
 
         // Modo Compacto: janelas de edição adaptadas a ecrãs pequenos/portáteis
         public bool ModoCompactoAtivo { get; set; } = false;
+
+        // Segurança: Política de Palavras-passe
+        public int PoliticaPasswordMinCaracteres { get; set; } = 8;
+        public bool PoliticaPasswordExigirMaiuscula { get; set; } = true;
+        public bool PoliticaPasswordExigirMinuscula { get; set; } = true;
+        public bool PoliticaPasswordExigirNumero { get; set; } = true;
+        public bool PoliticaPasswordExigirSimbolo { get; set; } = true;
+
+        // Segurança: Tentativas de Login (0 = bloqueio automático desativado)
+        public int TentativasLoginMaximo { get; set; } = 5;
+
+        // Segurança: Sessão / inatividade
+        public bool SessaoTerminarPorInatividade { get; set; } = false;
+        public int SessaoMinutosInatividade { get; set; } = 15;
     }
 }
