@@ -52,17 +52,25 @@ public partial class DisiaWindow : Window
             var query = App.Db.AtividadesDisia.Include(a => a.Categoria).Where(a => a.Ano == ano).AsQueryable();
             if (mesIndex > 0) query = query.Where(a => a.Mes == mesIndex);
 
+            // A partir daqui a pesquisa por texto livre é feita em memória (LINQ-to-Objects), não
+            // na base de dados: o SQLite/EF Core não consegue traduzir para SQL a sobrecarga
+            // "string.Contains(texto, StringComparison)" usada abaixo (dava erro "could not be
+            // translated" ao pesquisar) — juntar ".ToList()" aqui, logo a seguir aos filtros que a
+            // base de dados já sabe traduzir (Ano/Mês), resolve isso sem perder a pesquisa
+            // insensível a maiúsculas/minúsculas.
+            IEnumerable<AtividadeDisia> resultado = query.ToList();
+
             // Aplicar pesquisa
             var termo = TxtPesquisa?.Text?.Trim();
             if (!string.IsNullOrWhiteSpace(termo))
             {
-                query = query.Where(a =>
+                resultado = resultado.Where(a =>
                     (a.Descricao != null && a.Descricao.Contains(termo, StringComparison.OrdinalIgnoreCase)) ||
                     (a.Local != null && a.Local.Contains(termo, StringComparison.OrdinalIgnoreCase)) ||
                     (a.Categoria != null && a.Categoria.Nome.Contains(termo, StringComparison.OrdinalIgnoreCase)));
             }
 
-            Grid.ItemsSource = query.OrderByDescending(a => a.Data).ToList();
+            Grid.ItemsSource = resultado.OrderByDescending(a => a.Data).ToList();
             AtualizarEstatisticas();
         }
         catch (Exception ex)

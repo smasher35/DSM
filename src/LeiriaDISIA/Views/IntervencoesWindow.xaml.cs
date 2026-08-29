@@ -63,16 +63,24 @@ public partial class IntervencoesWindow : Window
         if (mesIndex > 0) query = query.Where(i => i.Mes == mesIndex);
         if (agrupamentoSel != null && agrupamentoSel.Id != 0) query = query.Where(i => i.AgrupamentoId == agrupamentoSel.Id);
 
+        // A partir daqui a pesquisa por texto livre é feita em memória (LINQ-to-Objects), não na
+        // base de dados: o SQLite/EF Core não consegue traduzir para SQL a sobrecarga
+        // "string.Contains(texto, StringComparison)" usada abaixo (dava erro "could not be
+        // translated" ao pesquisar) — juntar ".ToList()" aqui, logo a seguir aos filtros que a
+        // base de dados já sabe traduzir (Ano/Mês/Agrupamento), resolve isso sem perder a pesquisa
+        // insensível a maiúsculas/minúsculas.
+        IEnumerable<Intervencao> resultado = query.ToList();
+
         // Aplicar pesquisa
         var termo = TxtPesquisa?.Text?.Trim();
         if (!string.IsNullOrWhiteSpace(termo))
         {
-            query = query.Where(i =>
+            resultado = resultado.Where(i =>
                 (i.Escola != null && i.Escola.Nome.Contains(termo, StringComparison.OrdinalIgnoreCase)) ||
                 (i.Descricao != null && i.Descricao.Contains(termo, StringComparison.OrdinalIgnoreCase)));
         }
 
-        Grid.ItemsSource = query.OrderByDescending(i => i.Data).ToList();
+        Grid.ItemsSource = resultado.OrderByDescending(i => i.Data).ToList();
     }
 
     private void Inserir_Click(object sender, RoutedEventArgs e)
