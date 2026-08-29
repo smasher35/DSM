@@ -15,6 +15,9 @@ public partial class PedidosWindow : Window
     public PedidosWindow()
     {
         InitializeComponent();
+        // Perfil Guest (Services/SessaoAtual.PodeEditar): acesso só de leitura a este módulo -
+        // ver Services/PermissoesService.cs.
+        LeiriaDISIA.Services.PermissoesService.AplicarSomenteLeituraSeGuest(BtnInserir);
 
         // (7.1) Legenda dos quadrados de cor da coluna "Estado"
         LegendaEstados.ItemsSource = Enum.GetValues<EstadoPedido>()

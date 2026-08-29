@@ -3,7 +3,15 @@ namespace LeiriaDISIA.Models;
 public enum PerfilUtilizador
 {
     Administrador,
-    Utilizador
+    Utilizador,
+
+    /// <summary>Acesso só de leitura: pode consultar a informação de todos os módulos (Escolas,
+    /// Intervenções, Equipamentos, Pedidos, etc.), mas os botões de inserir/editar/eliminar ficam
+    /// desativados — e, tal como um Utilizador comum, sem acesso nenhum ao menu Administração (ver
+    /// Views/MainWindow.xaml.cs). Pensado para dar acesso de consulta a alguém sem lhe dar
+    /// capacidade de alterar dados - por exemplo, quando a aplicação passar a suportar vários
+    /// utilizadores em simultâneo (ver Services/SessaoAtual.PodeEditar).</summary>
+    Guest
 }
 
 /// <summary>

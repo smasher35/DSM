@@ -21,6 +21,9 @@ public partial class EquipamentosWindow : Window
     public EquipamentosWindow()
     {
         InitializeComponent();
+        // Perfil Guest (Services/SessaoAtual.PodeEditar): acesso só de leitura a este módulo -
+        // ver Services/PermissoesService.cs.
+        LeiriaDISIA.Services.PermissoesService.AplicarSomenteLeituraSeGuest(BtnInserir);
 
         // O cabeçalho (cartões-resumo + gauges + legendas) tem um tamanho natural fixo (não muda
         // com o tamanho do ecrã), pensado para um monitor normal — em ecrãs mais baixos (ex.:

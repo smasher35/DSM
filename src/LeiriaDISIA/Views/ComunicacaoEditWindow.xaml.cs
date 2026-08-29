@@ -17,6 +17,11 @@ public partial class ComunicacaoEditWindow : Window
     public ComunicacaoEditWindow(Comunicacao? comunicacao)
     {
         InitializeComponent();
+
+        // Perfil Guest (Services/SessaoAtual.PodeEditar): não pode criar/editar/eliminar
+        // registos - fecha-se logo a seguir a abrir, com um aviso, em vez de deixar o
+        // formulário aberto só para descobrir mais tarde que não consegue gravar nada.
+        if (LeiriaDISIA.Services.PermissoesService.BloquearAberturaSeGuest(this)) return;
         // 1.2.1: tinge a barra de titulo nativa com um tom azul sobrio, consistente com a
         // identidade da aplicacao - ver Services/TitleBarService.cs. A janela continua nativa;
         // mover, minimizar, maximizar, fechar e o comportamento modal nao sao afetados.

@@ -7,7 +7,7 @@
         <Border DockPanel.Dock="Top" Style="{StaticResource CardStyle}" Padding="14" Margin="0,0,0,16">
             <StackPanel Orientation="Horizontal">
                 <Button Content="🏠 Menu Principal" Style="{StaticResource MenuPrincipalButton}" Click="MenuPrincipal_Click" Margin="0,0,10,0" />
-                <Button Content="➕ Inserir Atividade" Style="{StaticResource PrimaryButton}" Click="Inserir_Click" Margin="0,0,10,0" />
+                <Button x:Name="BtnInserir" Content="➕ Inserir Atividade" Style="{StaticResource PrimaryButton}" Click="Inserir_Click" Margin="0,0,10,0" />
                 <Button Content="📄 Relatório do Módulo" Style="{StaticResource ReportButton}" Click="Relatorio_Click" Margin="0,0,30,0" />
                 <TextBlock Text="Ano:" VerticalAlignment="Center" Margin="0,0,6,0" />
                 <ComboBox x:Name="CmbAno" Width="90" SelectionChanged="Filtro_Changed" Margin="0,0,16,0" VerticalAlignment="Center" />

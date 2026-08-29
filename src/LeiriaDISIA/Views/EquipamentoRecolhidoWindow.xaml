@@ -11,7 +11,7 @@
         <Border DockPanel.Dock="Top" Style="{StaticResource CardStyle}" Padding="14" Margin="0,0,0,16">
             <StackPanel Orientation="Horizontal">
                 <Button Content="🏠 Menu Principal" Style="{StaticResource MenuPrincipalButton}" Click="MenuPrincipal_Click" Margin="0,0,10,0" />
-                <Button Content="➕ Registar Recolha" Style="{StaticResource PrimaryButton}" Click="Inserir_Click" Margin="0,0,10,0" />
+                <Button x:Name="BtnInserir" Content="➕ Registar Recolha" Style="{StaticResource PrimaryButton}" Click="Inserir_Click" Margin="0,0,10,0" />
                 <Button Content="📄 Relatório do Módulo" Style="{StaticResource ReportButton}" Click="Relatorio_Click" Margin="0,0,20,0" />
                 <CheckBox x:Name="ChkHistorico" Content="Mostrar histórico (já entregues)" VerticalAlignment="Center"
                           Checked="ChkHistorico_Changed" Unchecked="ChkHistorico_Changed" Margin="0,0,20,0" />

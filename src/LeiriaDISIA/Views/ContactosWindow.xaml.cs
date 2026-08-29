@@ -15,6 +15,9 @@ public partial class ContactosWindow : Window
     public ContactosWindow()
     {
         InitializeComponent();
+        // Perfil Guest (Services/SessaoAtual.PodeEditar): acesso só de leitura a este módulo -
+        // ver Services/PermissoesService.cs.
+        LeiriaDISIA.Services.PermissoesService.AplicarSomenteLeituraSeGuest(BtnInserir);
         Recarregar();
     }
 

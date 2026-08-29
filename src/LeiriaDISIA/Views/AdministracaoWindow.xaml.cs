@@ -2599,12 +2599,7 @@ public partial class AdministracaoWindow : Window
             if (Directory.Exists(caminho))
                 Process.Start(new ProcessStartInfo(caminho) { UseShellExecute = true });
             else
-            {
-                var startInfo = new ProcessStartInfo("explorer.exe") { UseShellExecute = true };
-                startInfo.ArgumentList.Add("/select,");
-                startInfo.ArgumentList.Add(caminho);
-                Process.Start(startInfo);
-            }
+                Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{caminho}\"") { UseShellExecute = true });
         }
         catch (Exception ex)
         {

@@ -24,6 +24,11 @@ public partial class EscolaEditWindow : Window
     public EscolaEditWindow(Escola? escola, int? agrupamentoPreSelecionado = null)
     {
         InitializeComponent();
+
+        // Perfil Guest (Services/SessaoAtual.PodeEditar): não pode criar/editar/eliminar
+        // registos - fecha-se logo a seguir a abrir, com um aviso, em vez de deixar o
+        // formulário aberto só para descobrir mais tarde que não consegue gravar nada.
+        if (LeiriaDISIA.Services.PermissoesService.BloquearAberturaSeGuest(this)) return;
         // Modo Compacto (Administração → Aparência): em ecrãs pequenos/portáteis, encolhe a
         // janela para caber na área de trabalho disponível - ver Services/JanelaTamanhoHelper.cs.
         // Sem efeito em ecrãs normais/grandes ou com o modo desativado.

@@ -19,6 +19,9 @@ public partial class IntervencoesWindow : Window
     public IntervencoesWindow()
     {
         InitializeComponent();
+        // Perfil Guest (Services/SessaoAtual.PodeEditar): acesso só de leitura a este módulo -
+        // ver Services/PermissoesService.cs.
+        LeiriaDISIA.Services.PermissoesService.AplicarSomenteLeituraSeGuest(BtnInserir);
 
         var anoAtual = DateTime.Today.Year;
         CmbAno.ItemsSource = Enumerable.Range(anoAtual - 3, 6).ToList();

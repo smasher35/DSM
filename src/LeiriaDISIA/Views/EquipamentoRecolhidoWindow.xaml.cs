@@ -32,6 +32,9 @@ public partial class EquipamentoRecolhidoWindow : Window
     public EquipamentoRecolhidoWindow()
     {
         InitializeComponent();
+        // Perfil Guest (Services/SessaoAtual.PodeEditar): acesso só de leitura a este módulo -
+        // ver Services/PermissoesService.cs.
+        LeiriaDISIA.Services.PermissoesService.AplicarSomenteLeituraSeGuest(BtnInserir);
 
         // Legenda do badge de Estado (item 5.2). Estado é texto livre (não enum), tal como
         // acontece com o Estado de Equipamento — por isso itera-se sobre os 4 valores fixos em

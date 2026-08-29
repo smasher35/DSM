@@ -16,6 +16,9 @@ public partial class AgrupamentosWindow : Window
     public AgrupamentosWindow()
     {
         InitializeComponent();
+        // Perfil Guest (Services/SessaoAtual.PodeEditar): acesso só de leitura a este módulo -
+        // ver Services/PermissoesService.cs.
+        LeiriaDISIA.Services.PermissoesService.AplicarSomenteLeituraSeGuest(BtnInserir, BtnEliminarAgrupamento);
         Recarregar();
     }
 
