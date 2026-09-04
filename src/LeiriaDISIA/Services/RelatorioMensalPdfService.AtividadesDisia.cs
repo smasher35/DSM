@@ -55,20 +55,26 @@ public partial class RelatorioService
                 cols.ConstantColumn(65);
             });
 
-            table.Header(h =>
+            // Em vez de table.Header(...) (que renderizaria sempre antes da própria banda da
+            // categoria do primeiro grupo), o cabeçalho de colunas passa a ser uma linha normal,
+            // repetida logo a seguir à banda de cada categoria — a banda do grupo aparece sempre
+            // primeiro, com o cabeçalho de colunas logo a seguir, e repete a cada grupo novo em vez
+            // de só uma vez no topo do documento.
+            void CabecalhoColunas()
             {
-                h.Cell().Element(CellHeaderPadrao).Text("Data").FontSize(7).Bold().FontColor(branco);
-                h.Cell().Element(CellHeaderPadrao).Text("Local").FontSize(7).Bold().FontColor(branco);
-                h.Cell().Element(CellHeaderPadrao).Text("Descrição").FontSize(7).Bold().FontColor(branco);
-                h.Cell().Element(CellHeaderPadrao).AlignCenter().Text("Qtd.").FontSize(7).Bold().FontColor(branco);
-                h.Cell().Element(CellHeaderPadrao).AlignCenter().Text("Estado").FontSize(7).Bold().FontColor(branco);
-            });
+                table.Cell().Element(CellHeaderPadrao).Text("Data").FontSize(7).Bold().FontColor(branco);
+                table.Cell().Element(CellHeaderPadrao).Text("Local").FontSize(7).Bold().FontColor(branco);
+                table.Cell().Element(CellHeaderPadrao).Text("Descrição").FontSize(7).Bold().FontColor(branco);
+                table.Cell().Element(CellHeaderPadrao).AlignCenter().Text("Qtd.").FontSize(7).Bold().FontColor(branco);
+                table.Cell().Element(CellHeaderPadrao).AlignCenter().Text("Estado").FontSize(7).Bold().FontColor(branco);
+            }
 
             var indiceLinha = 0;
             foreach (var grupo in porCategoria)
             {
                 table.Cell().ColumnSpan(5).Element(c => c.Background(corBandaCategoria).Padding(5))
                     .Text(grupo.Key.ToUpperInvariant()).FontSize(9).Bold().FontColor(branco);
+                CabecalhoColunas();
 
                 foreach (var a in grupo.OrderBy(x => x.Data))
                 {

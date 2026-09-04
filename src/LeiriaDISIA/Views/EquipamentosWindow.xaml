@@ -100,11 +100,13 @@
                 </StackPanel>
             </Border>
 
-            <!-- Linha 2 do painel de resumo: gauges com a distribuição percentual do estado de
-                 obsolescência (mesmo controlo/estilo de gauge usado em "Distribuição do Parque de
-                 Equipamento" no Dashboard — ConstruirGaugePercentagem em DashboardView.xaml.cs,
-                 reutilizado aqui tal e qual). -->
-            <Border x:Name="PainelObsolescenciaNormal" Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+            <!-- Linha 2 do painel de resumo: "Distribuição por Obsolescência" (à esquerda) e, a
+                 pedido, "Sistemas Operativos" (à direita, novo) lado a lado — gauges com o mesmo
+                 estilo/controlo usado em "Distribuição do Parque de Equipamento" no Dashboard
+                 (ConstruirGaugePercentagem em DashboardView.xaml.cs), reutilizado aqui tal e qual. -->
+            <UniformGrid Columns="2" Rows="1" Margin="0,0,0,12">
+                <StackPanel Margin="0,0,10,0">
+            <Border x:Name="PainelObsolescenciaNormal" Style="{StaticResource CardStyle}">
                 <StackPanel>
                     <TextBlock Text="Distribuição por Obsolescência" Style="{StaticResource SectionTitleStyle}" FontSize="16" />
                     <TextBlock x:Name="TxtTotalObsolescencia" TextWrapping="Wrap" FontSize="11"
@@ -148,7 +150,7 @@
                  possível em ecrãs pequenos/portáteis. A escolha entre este painel e o normal (acima)
                  é feita uma vez, no construtor (ver EquipamentosWindow.xaml.cs), consoante
                  Services.JanelaCompactaService.Ativo — nunca os dois ao mesmo tempo. -->
-            <Border x:Name="PainelObsolescenciaCompacto" Style="{StaticResource CardStyle}" Margin="0,0,0,12" Visibility="Collapsed">
+            <Border x:Name="PainelObsolescenciaCompacto" Style="{StaticResource CardStyle}" Visibility="Collapsed">
                 <StackPanel>
                     <TextBlock Text="Distribuição por Obsolescência" Style="{StaticResource SectionTitleStyle}" FontSize="14" Margin="0,0,0,8" />
                     <Grid Margin="0,0,0,6">
@@ -213,6 +215,32 @@
                     </Grid>
                 </StackPanel>
             </Border>
+                </StackPanel>
+
+                <!-- Novo: "Sistemas Operativos" — % de equipamento com cada sistema operativo
+                     (computadores de secretária, portáteis, servidores, e qualquer outro
+                     equipamento com o campo "Sistema Operativo" preenchido — ex.: tablets, caso
+                     essa característica venha a ficar disponível para esse tipo). Ao contrário da
+                     Obsolescência (sempre 3 níveis fixos), o nº de sistemas operativos distintos
+                     varia consoante o parque real, por isso os gauges/barras são construídos
+                     dinamicamente em código (ver AtualizarSistemasOperativos em
+                     EquipamentosWindow.xaml.cs) em vez de existirem já fixos aqui no XAML — este
+                     painel único trata tanto o modo normal (gauges) como o Modo Compacto (barras
+                     finas), decidido pelo mesmo Services.JanelaCompactaService.Ativo do construtor.
+                     "UniformGrid" à volta dá-lhe a mesma largura que a coluna da Obsolescência. -->
+                <Border x:Name="PainelSistemasOperativos" Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <TextBlock x:Name="TxtTituloSistemasOperativos" Text="Sistemas Operativos" Style="{StaticResource SectionTitleStyle}" FontSize="16" />
+                        <TextBlock x:Name="TxtTotalSistemasOperativos" TextWrapping="Wrap" FontSize="11"
+                                   Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,10"
+                                   Text="% de equipamento com cada sistema operativo" />
+                        <TextBlock x:Name="TxtSemSistemasOperativos" TextWrapping="Wrap" FontSize="11" FontStyle="Italic"
+                                   Foreground="{StaticResource BrushTextSecondary}" Visibility="Collapsed"
+                                   Text="Nenhum equipamento visível tem o Sistema Operativo preenchido." />
+                        <WrapPanel x:Name="PainelGaugesSistemaOperativo" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
 
             <Border Background="#F1F5F9" CornerRadius="8" Padding="10" Margin="0,0,0,12">
                 <Grid>

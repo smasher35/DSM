@@ -50,14 +50,20 @@ public partial class RelatorioService
                $"educação.");
         Bullet($"Alteração de palavras-passe ({dados.TotalAlteracaoPasswords}).");
 
+        if (dados.TotalUtilizadoresCriados > 0)
+        {
+            Bullet($"Criação de novos utilizadores na plataforma ({dados.TotalUtilizadoresCriados} " +
+                   $"utilizador{(dados.TotalUtilizadoresCriados == 1 ? "" : "es")}).");
+        }
+
         col.Item().PaddingTop(6);
 
-        void ImagemOuPlaceholder(byte[]? imagem, string legenda)
+        void ImagemOuPlaceholder(byte[]? imagem, string legenda, float alturaMaxima = 260)
         {
             if (imagem is { Length: > 0 })
             {
                 col.Item().PaddingBottom(2).Border(1).BorderColor(Colors.Grey.Lighten2).Padding(4)
-                    .AlignCenter().MaxHeight(260).Image(imagem).FitArea();
+                    .AlignCenter().MaxHeight(alturaMaxima).Image(imagem).FitArea();
             }
             else
             {
@@ -71,7 +77,13 @@ public partial class RelatorioService
         }
 
         ImagemOuPlaceholder(dados.ImagemPedidosSiga, "Figura 4 — Pedidos existentes na Plataforma SIGA.");
-        ImagemOuPlaceholder(dados.ImagemWorkflowSiga, "Figura 5 — Workflows da Plataforma SIGA.");
+
+        // A Figura 5 (Workflows) é tipicamente uma captura de ecrã vertical/comprida: partilhando
+        // espaço com a Figura 4 ficava demasiado pequena para ler, e por vezes só a legenda "sobrava"
+        // para a página seguinte, deixando-a quase em branco. Passa agora para uma página própria,
+        // inteira, mantendo a legibilidade.
+        col.Item().PageBreak();
+        ImagemOuPlaceholder(dados.ImagemWorkflowSiga, "Figura 5 — Workflows da Plataforma SIGA.", alturaMaxima: 620);
 
         col.Item().PageBreak();
 

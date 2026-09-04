@@ -49,6 +49,7 @@ public partial class RelatoriosWindow : Window
         TxtTotalTipificacao.Text = "";
         TxtTotalEstadoTickets.Text = "";
         TxtTotalPasswords.Text = "";
+        TxtTotalUtilizadoresCriados.Text = "";
 
         _imagemPedidosSiga = null;
         _imagemWorkflowSiga = null;
@@ -247,6 +248,7 @@ public partial class RelatoriosWindow : Window
         int.TryParse(TxtTotalTipificacao.Text, out var totalTipificacao);
         int.TryParse(TxtTotalEstadoTickets.Text, out var totalEstadoTickets);
         int.TryParse(TxtTotalPasswords.Text, out var totalPasswords);
+        int.TryParse(TxtTotalUtilizadoresCriados.Text, out var totalUtilizadoresCriados);
 
         // Guarda/atualiza os dados complementares deste mês (estatísticas SIGA, imagens e textos de
         // reflexão), para que reabrir o mesmo mês mais tarde já venha tudo preenchido.
@@ -260,6 +262,7 @@ public partial class RelatoriosWindow : Window
         dados.TotalAlteracaoTipificacao = totalTipificacao;
         dados.TotalEstadoTickets = totalEstadoTickets;
         dados.TotalAlteracaoPasswords = totalPasswords;
+        dados.TotalUtilizadoresCriados = totalUtilizadoresCriados;
         dados.ImagemPedidosSiga = _imagemPedidosSiga;
         dados.ImagemWorkflowSiga = _imagemWorkflowSiga;
         dados.TextoBalancoGeral = TxtBalancoGeral.Text;
@@ -286,6 +289,7 @@ public partial class RelatoriosWindow : Window
         int.TryParse(TxtTotalTipificacao.Text, out var totalTipificacao);
         int.TryParse(TxtTotalEstadoTickets.Text, out var totalEstadoTickets);
         int.TryParse(TxtTotalPasswords.Text, out var totalPasswords);
+        int.TryParse(TxtTotalUtilizadoresCriados.Text, out var totalUtilizadoresCriados);
 
         // 2.2/2.4: tal como no botão do PDF, guarda/atualiza primeiro os dados complementares deste
         // mês (estatísticas SIGA, imagens e textos de reflexão) — o Word e o PDF partilham a mesma
@@ -300,6 +304,7 @@ public partial class RelatoriosWindow : Window
         dados.TotalAlteracaoTipificacao = totalTipificacao;
         dados.TotalEstadoTickets = totalEstadoTickets;
         dados.TotalAlteracaoPasswords = totalPasswords;
+        dados.TotalUtilizadoresCriados = totalUtilizadoresCriados;
         dados.ImagemPedidosSiga = _imagemPedidosSiga;
         dados.ImagemWorkflowSiga = _imagemWorkflowSiga;
         dados.TextoBalancoGeral = TxtBalancoGeral.Text;
@@ -319,12 +324,17 @@ public partial class RelatoriosWindow : Window
         try
         {
             var servico = new RelatorioService(App.Db);
-            // 2.4: o Word passou a ser gerado a partir da mesma composição do PDF profissional
-            // (cada página rasterizada e inserida como imagem de página inteira), para ficar com
-            // exatamente a mesma estrutura, dados e aspeto visual do PDF — em vez do antigo Word
-            // simples, que tinha um formato bastante diferente.
-            servico.GerarRelatorioMensalWord(dialog.FileName, ano, mes, TxtAutor.Text, TxtDivisao.Text,
-                TxtTelefone.Text, TxtEmail.Text);
+            // 2.5: voltou a gerar-se o Word com conteúdo nativo (texto real, selecionável e
+            // editável, tabelas, imagens) em vez de rasterizar cada página do PDF como uma imagem de
+            // página inteira — essa abordagem, apesar de visualmente idêntica ao PDF, tornava o
+            // documento inteiro impossível de selecionar ou editar (era só uma sequência de
+            // "fotografias"), e a combinação de uma imagem a ocupar a página toda com uma quebra de
+            // página manual a seguir estava também a criar uma página em branco extra a mais por
+            // secção (ver GerarRelatorioMensalWord, agora sem utilização, mantido apenas para
+            // referência). O Word nativo tem uma estrutura semelhante ao PDF, mas não é uma cópia
+            // visual pixel a pixel — é um documento normal, à parte.
+            servico.GerarRelatorioMensal(ano, mes, TxtAutor.Text, TxtDivisao.Text,
+                TxtTelefone.Text, TxtEmail.Text, dialog.FileName);
 
             LimparImagensSigaAposGeracao(ano, mes);
 
@@ -569,6 +579,26 @@ public partial class RelatoriosWindow : Window
             caminho => new RelatorioService(App.Db).GerarListaAtividadesDisia(caminho, ano));
     }
 
+    // O utilizador não conseguia gerar a Lista de Atividades filtrada por mês (só por ano ou sem
+    // filtro nenhum) — ao contrário do "Resumo por Categoria" ao lado, que já tinha "Mês
+    // Corrente"/"Mês Escolhido". Estes dois botões seguem exatamente o mesmo padrão (mesmo
+    // CmbAno/CmbMes partilhados desta janela — ver comentário em Views/RelatoriosWindow.xaml sobre
+    // "usados nos separadores... nos botões 'Mês Escolhido'"), agora também aqui.
+    private void GerarListaAtividadesDisiaMesCorrente_Click(object sender, RoutedEventArgs e)
+    {
+        var hoje = DateTime.Today;
+        GerarPdf($"Atividades_DISIA_{NomesMeses[hoje.Month - 1]}_{hoje.Year}.pdf",
+            caminho => new RelatorioService(App.Db).GerarListaAtividadesDisia(caminho, hoje.Year, hoje.Month));
+    }
+
+    private void GerarListaAtividadesDisiaMesEscolhido_Click(object sender, RoutedEventArgs e)
+    {
+        var ano = (int)CmbAno.SelectedItem;
+        var mes = CmbMes.SelectedIndex + 1;
+        GerarPdf($"Atividades_DISIA_{NomesMeses[mes - 1]}_{ano}.pdf",
+            caminho => new RelatorioService(App.Db).GerarListaAtividadesDisia(caminho, ano, mes));
+    }
+
     private void GerarListaAtividadesDisiaTodas_Click(object sender, RoutedEventArgs e) =>
         GerarPdf($"Lista_Total_Atividades_DISIA_{DateTime.Today:yyyyMMdd}.pdf",
             caminho => new RelatorioService(App.Db).GerarListaAtividadesDisia(caminho, ano: null));
@@ -599,6 +629,14 @@ public partial class RelatoriosWindow : Window
         GerarPdf($"Resumo_Atividades_DISIA_Categoria_Total_{DateTime.Today:yyyyMMdd}.pdf",
             caminho => new RelatorioService(App.Db).GerarResumoAtividadesDisiaPorCategoria(caminho, ano: null));
 
+    // Item 3.1: mesma lógica do botão equivalente em Equipamento (ver
+    // PesquisaAvancadaEquipamento_Click) — abre uma janela própria em vez de gerar logo o PDF.
+    private void PesquisaAvancadaAtividadeDisia_Click(object sender, RoutedEventArgs e)
+    {
+        var janela = new PesquisaAvancadaAtividadeDisiaWindow { Owner = this };
+        janela.ShowDialog();
+    }
+
     private void GerarListaEquipamento_Click(object sender, RoutedEventArgs e) =>
         GerarPdf($"Lista_Equipamento_Informatico_{DateTime.Today:yyyyMMdd}.pdf",
             caminho => new RelatorioService(App.Db).GerarListaEquipamento(caminho));
@@ -614,6 +652,15 @@ public partial class RelatoriosWindow : Window
     private void GerarListaEquipamentoRecolhido_Click(object sender, RoutedEventArgs e) =>
         GerarPdf($"Lista_Equipamento_Recolhido_{DateTime.Today:yyyyMMdd}.pdf",
             caminho => new RelatorioService(App.Db).GerarListaEquipamentoRecolhido(caminho));
+
+    // Item 2.1: ao contrário dos restantes botões desta janela (que geram logo o PDF via GerarPdf),
+    // este abre uma janela própria — a pesquisa tem vários passos (escolher filtros, pesquisar, ver
+    // uma pré-visualização) que não cabem num botão só.
+    private void PesquisaAvancadaEquipamento_Click(object sender, RoutedEventArgs e)
+    {
+        var janela = new PesquisaAvancadaEquipamentoWindow { Owner = this };
+        janela.ShowDialog();
+    }
 
     private void GerarListaComunicacoes_Click(object sender, RoutedEventArgs e) =>
         GerarPdf($"Lista_Comunicacoes_{DateTime.Today:yyyyMMdd}.pdf",

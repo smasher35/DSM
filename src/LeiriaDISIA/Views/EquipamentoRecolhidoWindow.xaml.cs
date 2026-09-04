@@ -29,6 +29,11 @@ public partial class EquipamentoRecolhidoWindow : Window
 {
     private List<EquipamentoRecolhido> _todos = new();
 
+    /// <summary>Lista atualmente visível na grelha (já com "Mostrar histórico" e a pesquisa
+    /// aplicados) — usada pelo "Relatório do Módulo" para o relatório refletir exatamente o que
+    /// está a ser visto.</summary>
+    private List<EquipamentoRecolhido> _visiveis = new();
+
     public EquipamentoRecolhidoWindow()
     {
         InitializeComponent();
@@ -80,7 +85,7 @@ public partial class EquipamentoRecolhidoWindow : Window
                 r.Estado.Contains(termo, StringComparison.OrdinalIgnoreCase));
         }
 
-        Grid.ItemsSource = resultado.ToList();
+        Grid.ItemsSource = _visiveis = resultado.ToList();
     }
 
     private void Inserir_Click(object sender, RoutedEventArgs e)
@@ -151,6 +156,15 @@ public partial class EquipamentoRecolhidoWindow : Window
 
     private void Relatorio_Click(object sender, RoutedEventArgs e)
     {
+        // (1.1) O relatório do módulo reflete exatamente o que está a ser visto na grelha ("Mostrar
+        // histórico" + pesquisa), em vez de recarregar sempre tudo (ou só os pendentes).
+        if (_visiveis.Count == 0)
+        {
+            MessageBox.Show("Não existe equipamento recolhido a corresponder ao filtro atual para incluir no relatório.",
+                "Sem dados para o relatório", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
         var dialog = new SaveFileDialog
         {
             Title = "Guardar relatório de equipamento recolhido",
@@ -162,7 +176,7 @@ public partial class EquipamentoRecolhidoWindow : Window
         try
         {
             var servico = new LeiriaDISIA.Services.RelatorioService(App.Db);
-            servico.GerarListaEquipamentoRecolhido(dialog.FileName);
+            servico.GerarListaEquipamentoRecolhido(dialog.FileName, _visiveis.Select(r => r.Id).ToList());
 
             var abrir = MessageBox.Show("Relatório PDF gerado com sucesso. Deseja abri-lo agora?",
                 "Concluído", MessageBoxButton.YesNo, MessageBoxImage.Information);

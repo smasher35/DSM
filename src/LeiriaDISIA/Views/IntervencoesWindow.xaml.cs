@@ -16,6 +16,11 @@ public partial class IntervencoesWindow : Window
         "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
     };
 
+    /// <summary>Lista atualmente visível na grelha (já com Ano/Mês/Agrupamento/pesquisa
+    /// aplicados) — usada pelo "Relatório do Módulo" para o relatório refletir exatamente o que
+    /// está a ser visto.</summary>
+    private List<Intervencao> _visiveis = new();
+
     public IntervencoesWindow()
     {
         InitializeComponent();
@@ -83,7 +88,7 @@ public partial class IntervencoesWindow : Window
                 (i.Descricao != null && i.Descricao.Contains(termo, StringComparison.OrdinalIgnoreCase)));
         }
 
-        Grid.ItemsSource = resultado.OrderByDescending(i => i.Data).ToList();
+        Grid.ItemsSource = _visiveis = resultado.OrderByDescending(i => i.Data).ToList();
     }
 
     private void Inserir_Click(object sender, RoutedEventArgs e)
@@ -115,6 +120,15 @@ public partial class IntervencoesWindow : Window
 
     private void Relatorio_Click(object sender, RoutedEventArgs e)
     {
+        // (1.1) O relatório do módulo reflete exatamente o que está a ser visto na grelha
+        // (Ano/Mês/Agrupamento/pesquisa aplicados), em vez de todas as intervenções do ano.
+        if (_visiveis.Count == 0)
+        {
+            MessageBox.Show("Não existem intervenções a corresponder ao filtro atual para incluir no relatório.",
+                "Sem dados para o relatório", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
         var ano = (int?)CmbAno.SelectedItem ?? DateTime.Today.Year;
 
         var dialog = new SaveFileDialog
@@ -128,7 +142,7 @@ public partial class IntervencoesWindow : Window
         try
         {
             var servico = new LeiriaDISIA.Services.RelatorioService(App.Db);
-            servico.GerarListaIntervencoes(dialog.FileName, ano);
+            servico.GerarListaIntervencoes(dialog.FileName, ano, idsFiltrados: _visiveis.Select(i => i.Id).ToList());
 
             var abrir = MessageBox.Show("Relatório PDF gerado com sucesso. Deseja abri-lo agora?",
                 "Concluído", MessageBoxButton.YesNo, MessageBoxImage.Information);

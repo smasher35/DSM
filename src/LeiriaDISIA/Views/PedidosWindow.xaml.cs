@@ -12,6 +12,10 @@ public partial class PedidosWindow : Window
 {
     private List<PedidoIntervencao> _todos = new();
 
+    /// <summary>Lista atualmente visível na grelha (já com a pesquisa aplicada) — usada pelo
+    /// "Relatório do Módulo" para o relatório refletir exatamente o que está a ser visto.</summary>
+    private List<PedidoIntervencao> _visiveis = new();
+
     public PedidosWindow()
     {
         InitializeComponent();
@@ -60,7 +64,7 @@ public partial class PedidosWindow : Window
                 (p.Razao != null && p.Razao.Contains(termo, StringComparison.OrdinalIgnoreCase)));
         }
 
-        Grid.ItemsSource = resultado.ToList();
+        Grid.ItemsSource = _visiveis = resultado.ToList();
     }
 
     private void Inserir_Click(object sender, RoutedEventArgs e)
@@ -88,6 +92,15 @@ public partial class PedidosWindow : Window
 
     private void Relatorio_Click(object sender, RoutedEventArgs e)
     {
+        // (1.1) O relatório do módulo reflete exatamente o que está a ser visto na grelha (pesquisa
+        // aplicada), em vez da lista completa de pedidos.
+        if (_visiveis.Count == 0)
+        {
+            MessageBox.Show("Não existem pedidos a corresponder ao filtro atual para incluir no relatório.",
+                "Sem dados para o relatório", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
         var dialog = new SaveFileDialog
         {
             Title = "Guardar relatório de pedidos de intervenção",
@@ -99,7 +112,7 @@ public partial class PedidosWindow : Window
         try
         {
             var servico = new LeiriaDISIA.Services.RelatorioService(App.Db);
-            servico.GerarListaPedidosIntervencao(dialog.FileName);
+            servico.GerarListaPedidosIntervencao(dialog.FileName, _visiveis.Select(p => p.Id).ToList());
 
             var abrir = MessageBox.Show("Relatório PDF gerado com sucesso. Deseja abri-lo agora?",
                 "Concluído", MessageBoxButton.YesNo, MessageBoxImage.Information);

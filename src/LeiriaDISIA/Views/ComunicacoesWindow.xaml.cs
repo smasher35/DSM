@@ -16,6 +16,11 @@ public partial class ComunicacoesWindow : Window
 {
     private List<Comunicacao> _todas = new();
 
+    /// <summary>Lista atualmente visível na grelha (já com "Apenas não integrados" e a pesquisa
+    /// aplicados) — usada pelo "Relatório do Módulo" para o relatório refletir exatamente o que
+    /// está a ser visto.</summary>
+    private List<Comunicacao> _visiveis = new();
+
     public ComunicacoesWindow()
     {
         InitializeComponent();
@@ -56,7 +61,7 @@ public partial class ComunicacoesWindow : Window
                 c.TipoLigacao.Contains(termo, StringComparison.OrdinalIgnoreCase));
         }
 
-        Grid.ItemsSource = resultado.ToList();
+        Grid.ItemsSource = _visiveis = resultado.ToList();
     }
 
     private void Inserir_Click(object sender, RoutedEventArgs e)
@@ -77,6 +82,15 @@ public partial class ComunicacoesWindow : Window
 
     private void Relatorio_Click(object sender, RoutedEventArgs e)
     {
+        // (1.1) O relatório do módulo reflete exatamente o que está a ser visto na grelha ("Apenas
+        // não integrados" + pesquisa), em vez de todas as comunicações.
+        if (_visiveis.Count == 0)
+        {
+            MessageBox.Show("Não existem comunicações a corresponder ao filtro atual para incluir no relatório.",
+                "Sem dados para o relatório", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
         var dialog = new SaveFileDialog
         {
             Title = "Guardar relatório de comunicações",
@@ -88,7 +102,7 @@ public partial class ComunicacoesWindow : Window
         try
         {
             var servico = new LeiriaDISIA.Services.RelatorioService(App.Db);
-            servico.GerarListaComunicacoes(dialog.FileName);
+            servico.GerarListaComunicacoes(dialog.FileName, _visiveis.Select(c => c.Id).ToList());
 
             var abrir = MessageBox.Show("Relatório PDF gerado com sucesso. Deseja abri-lo agora?",
                 "Concluído", MessageBoxButton.YesNo, MessageBoxImage.Information);

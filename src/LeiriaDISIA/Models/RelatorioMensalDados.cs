@@ -16,6 +16,10 @@ public class RelatorioMensalDados
     public int TotalEstadoTickets { get; set; }
     public int TotalAlteracaoPasswords { get; set; }
 
+    /// <summary>Total de utilizadores criados na plataforma SIGA durante o mês — atividade que, tal
+    /// como as restantes deste bloco, não fica registada em mais nenhum lado da aplicação.</summary>
+    public int TotalUtilizadoresCriados { get; set; }
+
     /// <summary>Capturas de ecrã da plataforma SIGA (lista de pedidos / workflows), anexadas
     /// manualmente todos os meses — guardadas na base de dados para o relatório ficar
     /// autossuficiente e reprodutível sem depender de ficheiros externos.</summary>

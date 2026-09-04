@@ -12,6 +12,10 @@ public partial class ContactosWindow : Window
 {
     private List<Contacto> _todos = new();
 
+    /// <summary>Lista atualmente visível na grelha (já com a pesquisa aplicada) — usada pelo
+    /// "Relatório do Módulo" para o relatório refletir exatamente o que está a ser visto.</summary>
+    private List<Contacto> _visiveis = new();
+
     public ContactosWindow()
     {
         InitializeComponent();
@@ -32,7 +36,7 @@ public partial class ContactosWindow : Window
     private void AplicarFiltro()
     {
         var termo = TxtPesquisa?.Text?.Trim();
-        Grid.ItemsSource = string.IsNullOrWhiteSpace(termo)
+        _visiveis = string.IsNullOrWhiteSpace(termo)
             ? _todos
             : _todos.Where(c =>
                 c.Nome.Contains(termo, StringComparison.OrdinalIgnoreCase) ||
@@ -40,6 +44,7 @@ public partial class ContactosWindow : Window
                 (c.EntidadeExterna?.Contains(termo, StringComparison.OrdinalIgnoreCase) ?? false) ||
                 (c.Funcao?.Contains(termo, StringComparison.OrdinalIgnoreCase) ?? false)
               ).ToList();
+        Grid.ItemsSource = _visiveis;
     }
 
     private void Filtro_Changed(object sender, TextChangedEventArgs e) => AplicarFiltro();
@@ -62,6 +67,15 @@ public partial class ContactosWindow : Window
 
     private void Relatorio_Click(object sender, RoutedEventArgs e)
     {
+        // (1.1) O relatório do módulo reflete exatamente o que está a ser visto na grelha (pesquisa
+        // aplicada), em vez de todos os contactos.
+        if (_visiveis.Count == 0)
+        {
+            MessageBox.Show("Não existem contactos a corresponder ao filtro atual para incluir no relatório.",
+                "Sem dados para o relatório", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
         var dialog = new SaveFileDialog
         {
             Title = "Guardar relatório de contactos",
@@ -73,7 +87,7 @@ public partial class ContactosWindow : Window
         try
         {
             var servico = new LeiriaDISIA.Services.RelatorioService(App.Db);
-            servico.GerarListaContactos(dialog.FileName);
+            servico.GerarListaContactos(dialog.FileName, _visiveis.Select(c => c.Id).ToList());
 
             var abrir = MessageBox.Show("Relatório PDF gerado com sucesso. Deseja abri-lo agora?",
                 "Concluído", MessageBoxButton.YesNo, MessageBoxImage.Information);

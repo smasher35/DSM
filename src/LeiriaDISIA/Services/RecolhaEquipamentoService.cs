@@ -94,6 +94,41 @@ public static class RecolhaEquipamentoService
         App.Db.EquipamentosRecolhidos.Any(r => r.EquipamentoId == equipamentoId && r.DataEntrega == null);
 
     /// <summary>
+    /// Cria, sozinho e sem depender de mais nada, o registo <see cref="EquipamentoRecolhido"/> (já
+    /// no estado "Aguarda Entrega", sem Atividade DISIA associada) para um equipamento gravado
+    /// diretamente com o estado "Aguarda Entrega" em Equipamentos → Inserir/Editar — normalmente
+    /// equipamento novo, que nunca chegou a estar fisicamente na escola, já preparado para a
+    /// primeira entrega.
+    ///
+    /// Existe em separado de <see cref="CriarAtividadeAcompanhamento"/> porque "Aguarda Entrega"
+    /// significa, por definição, "pronto a entregar a uma escola", e é o registo de
+    /// <see cref="EquipamentoRecolhido"/> — não a Atividade DISIA — que faz o equipamento aparecer
+    /// em "Equipamento Recolhido" ao criar uma Intervenção normal para essa escola (ver
+    /// <see cref="Views.IntervencaoEditWindow"/>, que filtra apenas por
+    /// <c>Equipamento.EscolaId</c> e <c>DataEntrega == null</c>) e poder ser entregue com o botão
+    /// "Devolver à Escola" (que exige <see cref="EquipamentoRecolhido.Estado"/> = "Aguarda
+    /// Entrega" — ver <see cref="EquipamentoRecolhido.PodeSerEntregue"/>). Uma Atividade DISIA
+    /// nem sempre faz sentido para este caso (não houve nenhuma reparação a acompanhar), pelo que
+    /// não deve ser obrigatória para o equipamento ficar corretamente rastreável.
+    /// </summary>
+    /// <param name="equipamento">O equipamento já gravado (com Id válido) e já com o estado
+    /// "Aguarda Entrega".</param>
+    public static EquipamentoRecolhido RegistarAguardaEntregaSemAtividade(Equipamento equipamento)
+    {
+        if (equipamento == null) throw new ArgumentNullException(nameof(equipamento));
+
+        var recolha = new EquipamentoRecolhido
+        {
+            EquipamentoId = equipamento.Id,
+            DataRecolha = DateTime.Today,
+            Estado = EstadosRecolha.AguardaEntrega
+        };
+        App.Db.EquipamentosRecolhidos.Add(recolha);
+        App.Db.SaveChanges();
+        return recolha;
+    }
+
+    /// <summary>
     /// Cria uma Atividade DISIA de acompanhamento para um equipamento cujo estado foi definido
     /// diretamente para "Recolhido" ou "Aguarda Entrega" em Equipamentos → Inserir/Editar (ver
     /// <see cref="Views.EquipamentoEditWindow"/>), fora do fluxo normal de recolha via
@@ -103,21 +138,31 @@ public static class RecolhaEquipamentoService
     /// separador "Histórico de Intervenções" e para o mecanismo de "Devolver à Escola" continuar a
     /// funcionar tal como para uma recolha normal.
     ///
-    /// Ambos os registos são gravados numa única chamada a <c>SaveChanges()</c> (a associação é
-    /// feita pela propriedade de navegação, não por um Id já gravado), para nunca poder ficar uma
-    /// Atividade DISIA criada sem o respetivo registo de recolha, ou vice-versa, em caso de falha.
+    /// Quando <paramref name="recolhaExistente"/> é indicado (caso "Aguarda Entrega", em que o
+    /// registo de recolha já foi criado antecipadamente por
+    /// <see cref="RegistarAguardaEntregaSemAtividade"/>, antes mesmo de se perguntar se se quer uma
+    /// Atividade DISIA), a Atividade DISIA criada aqui é associada a esse registo já existente em
+    /// vez de se criar um duplicado. Caso contrário, cria os dois registos juntos, numa única
+    /// chamada a <c>SaveChanges()</c> (a associação é feita pela propriedade de navegação, não por
+    /// um Id já gravado), para nunca poder ficar uma Atividade DISIA criada sem o respetivo
+    /// registo de recolha, ou vice-versa, em caso de falha.
     ///
     /// Quem chama deve validar antes com <see cref="TemRecolhaPendente"/> se já existe uma recolha
-    /// pendente para este equipamento, para nunca duplicar.
+    /// pendente para este equipamento, para nunca duplicar (a não ser que essa recolha pendente
+    /// seja precisamente a passada em <paramref name="recolhaExistente"/>).
     /// </summary>
     /// <param name="equipamento">O equipamento já gravado, com o estado atual já atualizado.</param>
     /// <param name="escola">A escola atualmente associada ao equipamento, se aplicável — passada
     /// explicitamente (em vez de se ler <c>equipamento.Escola</c>) porque essa propriedade de
     /// navegação pode não estar carregada neste ponto.</param>
     /// <param name="estadoEquipamento">O estado atual do equipamento — "Recolhido" ou "Aguarda
-    /// Entrega" (ver <see cref="EstadosEquipamento"/>) — usado para descrever a atividade e para
-    /// decidir o estado inicial do registo de recolha.</param>
-    public static AtividadeDisia CriarAtividadeAcompanhamento(Equipamento equipamento, Escola? escola, string estadoEquipamento)
+    /// Entrega" (ver <see cref="EstadosEquipamento"/>) — usado para descrever a atividade e, quando
+    /// não há <paramref name="recolhaExistente"/>, para decidir o estado inicial do novo registo de
+    /// recolha.</param>
+    /// <param name="recolhaExistente">Registo de recolha já criado a que associar esta Atividade
+    /// DISIA, em vez de criar um novo (opcional).</param>
+    public static AtividadeDisia CriarAtividadeAcompanhamento(Equipamento equipamento, Escola? escola,
+        string estadoEquipamento, EquipamentoRecolhido? recolhaExistente = null)
     {
         if (equipamento == null) throw new ArgumentNullException(nameof(equipamento));
 
@@ -133,6 +178,14 @@ public static class RecolhaEquipamentoService
             Descricao = $"Acompanhamento de equipamento {equipamento.NumeroSerie} (\"{estadoEquipamento}\") em {local}",
             Estado = EstadoIntervencao.EmProgresso
         };
+
+        if (recolhaExistente != null)
+        {
+            recolhaExistente.AtividadeDisia = atividadeDisia; // liga a atividade ao registo já existente
+            App.Db.AtividadesDisia.Add(atividadeDisia);
+            App.Db.SaveChanges();
+            return atividadeDisia;
+        }
 
         // O estado inicial do registo de recolha acompanha o estado com que o equipamento acabou
         // de ser gravado, para os dois ficarem sempre coerentes entre si.

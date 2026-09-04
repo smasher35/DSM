@@ -16,6 +16,10 @@ public partial class DisiaWindow : Window
         "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
     };
 
+    /// <summary>Lista atualmente visível na grelha (já com Ano/Mês/pesquisa aplicados) — usada
+    /// pelo "Relatório do Módulo" para o relatório refletir exatamente o que está a ser visto.</summary>
+    private List<AtividadeDisia> _visiveis = new();
+
     public DisiaWindow()
     {
         InitializeComponent();
@@ -73,7 +77,7 @@ public partial class DisiaWindow : Window
                     (a.Categoria != null && a.Categoria.Nome.Contains(termo, StringComparison.OrdinalIgnoreCase)));
             }
 
-            Grid.ItemsSource = resultado.OrderByDescending(a => a.Data).ToList();
+            Grid.ItemsSource = _visiveis = resultado.OrderByDescending(a => a.Data).ToList();
             AtualizarEstatisticas();
         }
         catch (Exception ex)
@@ -230,6 +234,15 @@ public partial class DisiaWindow : Window
 
     private void Relatorio_Click(object sender, RoutedEventArgs e)
     {
+        // (1.1) O relatório do módulo reflete exatamente o que está a ser visto na grelha
+        // (Ano/Mês/pesquisa aplicados), em vez de todas as atividades do ano selecionado.
+        if (_visiveis.Count == 0)
+        {
+            MessageBox.Show("Não existem atividades a corresponder ao filtro atual para incluir no relatório.",
+                "Sem dados para o relatório", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
         var ano = (int?)CmbAno.SelectedItem ?? DateTime.Today.Year;
 
         var dialog = new SaveFileDialog
@@ -243,7 +256,7 @@ public partial class DisiaWindow : Window
         try
         {
             var servico = new LeiriaDISIA.Services.RelatorioService(App.Db);
-            servico.GerarListaAtividadesDisia(dialog.FileName, ano);
+            servico.GerarListaAtividadesDisia(dialog.FileName, ano, idsFiltrados: _visiveis.Select(a => a.Id).ToList());
 
             var abrir = MessageBox.Show("Relatório PDF gerado com sucesso. Deseja abri-lo agora?",
                 "Concluído", MessageBoxButton.YesNo, MessageBoxImage.Information);

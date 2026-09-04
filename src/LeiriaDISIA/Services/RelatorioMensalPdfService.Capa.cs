@@ -1,3 +1,4 @@
+using System.Globalization;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -17,27 +18,42 @@ public partial class RelatorioService
         var a4 = PageSizes.A4;
         const string corNavy = "#0F2A44";
         const string corTeal = "#2AB7CA";
+        // Azul claro e bem saturado para o título principal — mais "presente"/com mais carácter do
+        // que branco liso, mantendo a coerência com o azul usado no resto do relatório, mas ainda
+        // com bom contraste sobre a faixa navy de fundo.
+        const string corTituloCapa = "#5DADE2";
 
         container.Width(a4.Width).Height(a4.Height).Layers(layers =>
         {
             // Fundo: faixa diagonal escura no topo, branco no meio, faixa diagonal clara no fundo.
-            layers.PrimaryLayer().Svg(size => $"""
-                <svg width="{size.Width}" height="{size.Height}" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="0" y="0" width="{size.Width}" height="{size.Height}" fill="#FFFFFF" />
-                    <polygon points="0,0 {size.Width},0 {size.Width},{size.Height * 0.30} 0,{size.Height * 0.42}" fill="{corNavy}" />
-                    <polygon points="0,{size.Height * 0.42} {size.Width},{size.Height * 0.30} {size.Width},{size.Height * 0.335} 0,{size.Height * 0.455}" fill="{corTeal}" />
-                    <polygon points="0,{size.Height * 0.90} {size.Width},{size.Height * 0.82} {size.Width},{size.Height} 0,{size.Height}" fill="{corNavy}" />
-                    <polygon points="0,{size.Height * 0.885} {size.Width},{size.Height * 0.805} {size.Width},{size.Height * 0.82} 0,{size.Height * 0.90}" fill="{corTeal}" />
-                    <!-- Painel suave por trás do conteúdo: assegura contraste com texto escuro
-                         e destaca o logótipo de fundo branco. -->
-                    <rect x="34" y="{size.Height * 0.48}" width="{size.Width - 68}" height="{size.Height * 0.27}" rx="14" fill="#EAF3F8" stroke="#B9D7E5" stroke-width="1" />
-                </svg>
-                """);
+            layers.PrimaryLayer().Svg(size =>
+            {
+                // Formata todas as coordenadas com CultureInfo.InvariantCulture: a interpolação de
+                // string usa por omissão a cultura atual do sistema, e num Windows configurado em
+                // português (separador decimal ",") um valor como 353.59 seria escrito "353,59" —
+                // o que parte o atributo "points" do SVG (que espera "," a separar X de Y dentro de
+                // cada ponto) e faz as faixas diagonais deixarem de aparecer corretamente, ficando
+                // a capa praticamente em branco por trás do título.
+                string F(double v) => v.ToString(CultureInfo.InvariantCulture);
+
+                return $"""
+                    <svg width="{F(size.Width)}" height="{F(size.Height)}" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="0" y="0" width="{F(size.Width)}" height="{F(size.Height)}" fill="#FFFFFF" />
+                        <polygon points="0,0 {F(size.Width)},0 {F(size.Width)},{F(size.Height * 0.30)} 0,{F(size.Height * 0.42)}" fill="{corNavy}" />
+                        <polygon points="0,{F(size.Height * 0.42)} {F(size.Width)},{F(size.Height * 0.30)} {F(size.Width)},{F(size.Height * 0.335)} 0,{F(size.Height * 0.455)}" fill="{corTeal}" />
+                        <polygon points="0,{F(size.Height * 0.90)} {F(size.Width)},{F(size.Height * 0.82)} {F(size.Width)},{F(size.Height)} 0,{F(size.Height)}" fill="{corNavy}" />
+                        <polygon points="0,{F(size.Height * 0.885)} {F(size.Width)},{F(size.Height * 0.805)} {F(size.Width)},{F(size.Height * 0.82)} 0,{F(size.Height * 0.90)}" fill="{corTeal}" />
+                        <!-- Painel suave por trás do conteúdo: assegura contraste com texto escuro
+                             e destaca o logótipo de fundo branco. -->
+                        <rect x="34" y="{F(size.Height * 0.48)}" width="{F(size.Width - 68)}" height="{F(size.Height * 0.27)}" rx="14" fill="#EAF3F8" stroke="#B9D7E5" stroke-width="1" />
+                    </svg>
+                    """;
+            });
 
             // Título — alinhado ao topo, dentro da faixa escura.
             layers.Layer().AlignTop().Padding(50).Column(col =>
             {
-                col.Item().Text("RELATÓRIO DE ATIVIDADES").FontSize(30).Bold().FontColor(Colors.White);
+                col.Item().Text("RELATÓRIO DE ATIVIDADES").FontSize(30).Bold().FontColor(corTituloCapa);
                 col.Item().PaddingTop(6).Text("DISIA — Divisão de Sistemas de Informação e Aplicações")
                     .FontSize(13).FontColor(Colors.White).Italic();
             });

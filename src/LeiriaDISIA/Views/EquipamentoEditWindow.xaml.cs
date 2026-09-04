@@ -811,9 +811,26 @@ public partial class EquipamentoEditWindow : Window
         // TemRecolhaPendente evita voltar a perguntar ou duplicar a atividade quando já existe uma
         // recolha em curso para este equipamento — cobre tanto o caso de regravar sem alterar o
         // estado (já haveria uma recolha pendente da vez anterior) como o de editar um equipamento
-        // já recolhido por outra via (ex.: através de uma Intervenção).
+        // já recolhido por outra via (ex.: através de uma Intervenção). Avaliado uma única vez aqui
+        // (antes de qualquer registo de recolha automático, já a seguir, poder alterar o
+        // resultado).
+        var jaTinhaRecolhaPendente = RecolhaEquipamentoService.TemRecolhaPendente(equipamento.Id);
+
+        // (3.0) "Aguarda Entrega" significa, por definição, equipamento pronto a entregar a uma
+        // escola — normalmente equipamento novo que nunca chegou a estar fisicamente lá (ex.:
+        // comprado e já preparado para a primeira entrega, sem nenhuma reparação associada). Para
+        // aparecer em "Equipamento Recolhido" ao criar a Intervenção normal de entrega, e poder ser
+        // entregue pelo botão "Devolver à Escola", tem sempre de existir um registo
+        // EquipamentoRecolhido — por isso este é criado já aqui, incondicionalmente, e não só se o
+        // utilizador aceitar a Atividade DISIA a seguir (que pode legitimamente recusar, já que não
+        // houve nenhuma reparação a acompanhar). "Recolhido" continua a depender só dessa escolha,
+        // porque implica sempre algum tipo de reparação/acompanhamento.
+        EquipamentoRecolhido? recolhaAutomatica = null;
+        if (estadoFinal == EstadosEquipamento.AguardaEntrega && !jaTinhaRecolhaPendente)
+            recolhaAutomatica = RecolhaEquipamentoService.RegistarAguardaEntregaSemAtividade(equipamento);
+
         if ((estadoFinal == EstadosEquipamento.Recolhido || estadoFinal == EstadosEquipamento.AguardaEntrega)
-            && !RecolhaEquipamentoService.TemRecolhaPendente(equipamento.Id))
+            && !jaTinhaRecolhaPendente)
         {
             var resposta = MessageBox.Show(
                 $"O equipamento foi guardado com o estado \"{estadoFinal}\". Pretende criar uma Atividade DISIA associada a este equipamento?",
@@ -823,14 +840,14 @@ public partial class EquipamentoEditWindow : Window
             {
                 try
                 {
-                    RecolhaEquipamentoService.CriarAtividadeAcompanhamento(equipamento, escolaSelecionada, estadoFinal);
+                    RecolhaEquipamentoService.CriarAtividadeAcompanhamento(equipamento, escolaSelecionada, estadoFinal, recolhaAutomatica);
                 }
                 catch (Exception ex)
                 {
-                    // O equipamento já está gravado (SaveChanges acima teve sucesso); só a criação
-                    // da atividade falhou, pelo que não há nada a reverter — mostra-se o erro e
-                    // fica-se sem atividade parcial, já que os dois inserts em
-                    // CriarAtividadeAcompanhamento são feitos numa única SaveChanges().
+                    // O equipamento (e, para "Aguarda Entrega", também o registo de recolha) já
+                    // estão gravados; só a criação da Atividade DISIA falhou, pelo que não há nada
+                    // a reverter — mostra-se o erro e fica-se sem atividade, mas o equipamento
+                    // continua corretamente rastreável em Equipamentos Recolhidos.
                     MessageBox.Show(
                         $"O equipamento foi gravado, mas não foi possível criar a Atividade DISIA associada:\n{ex.Message}",
                         "Erro ao criar Atividade DISIA", MessageBoxButton.OK, MessageBoxImage.Error);

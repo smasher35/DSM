@@ -12,6 +12,10 @@ public partial class EquipamentoAbatidoWindow : Window
 {
     private List<EquipamentoAbatido> _todos = new();
 
+    /// <summary>Lista atualmente visível na grelha (já com a pesquisa aplicada) — usada pelo
+    /// "Relatório do Módulo" para o relatório refletir exatamente o que está a ser visto.</summary>
+    private List<EquipamentoAbatido> _visiveis = new();
+
     public EquipamentoAbatidoWindow()
     {
         InitializeComponent();
@@ -47,7 +51,7 @@ public partial class EquipamentoAbatidoWindow : Window
                 (a.EscolaOuLocal != null && a.EscolaOuLocal.Contains(termo, StringComparison.OrdinalIgnoreCase)));
         }
 
-        Grid.ItemsSource = resultado.ToList();
+        Grid.ItemsSource = _visiveis = resultado.ToList();
     }
 
     private void Inserir_Click(object sender, RoutedEventArgs e)
@@ -68,6 +72,15 @@ public partial class EquipamentoAbatidoWindow : Window
 
     private void Relatorio_Click(object sender, RoutedEventArgs e)
     {
+        // (1.1) O relatório do módulo reflete exatamente o que está a ser visto na grelha (pesquisa
+        // aplicada), em vez da lista completa de equipamento abatido.
+        if (_visiveis.Count == 0)
+        {
+            MessageBox.Show("Não existe equipamento abatido a corresponder ao filtro atual para incluir no relatório.",
+                "Sem dados para o relatório", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
         var dialog = new SaveFileDialog
         {
             Title = "Guardar relatório de equipamento abatido",
@@ -79,7 +92,7 @@ public partial class EquipamentoAbatidoWindow : Window
         try
         {
             var servico = new LeiriaDISIA.Services.RelatorioService(App.Db);
-            servico.GerarListaEquipamentoAbatido(dialog.FileName);
+            servico.GerarListaEquipamentoAbatido(dialog.FileName, _visiveis.Select(a => a.Id).ToList());
 
             var abrir = MessageBox.Show("Relatório PDF gerado com sucesso. Deseja abri-lo agora?",
                 "Concluído", MessageBoxButton.YesNo, MessageBoxImage.Information);

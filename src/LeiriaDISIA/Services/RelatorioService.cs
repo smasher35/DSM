@@ -97,8 +97,13 @@ public partial class RelatorioService
             body.AppendChild(p);
         }
 
-        // 2.2: cada frase (terminada em ponto final) vira o seu próprio parágrafo, e todos os
-        // parágrafos de texto corrido ficam justificados — evita blocos de texto longos e compactos.
+        // Reaproveita a mesma lógica de agrupamento de frases em parágrafos usada no PDF
+        // (DividirEmParagrafos — ver Services/RelatorioService.cs), que junta várias frases por
+        // parágrafo até um tamanho-alvo legível em vez de uma frase por parágrafo: um parágrafo de
+        // uma frase só cabe quase sempre numa única linha, e o alinhamento justificado nunca tem
+        // efeito visível numa última/única linha — o texto acabava sempre com "ar" de não
+        // justificado, com espaçamentos a alternar entre maiores/mais pequenos consoante a frase
+        // ficava isolada ou não. Todos os parágrafos de texto corrido ficam justificados.
         void Paragrafo(string texto)
         {
             foreach (var frase in DividirEmParagrafos(texto))
@@ -118,8 +123,12 @@ public partial class RelatorioService
         }
 
         // ---- Capa / cabeçalho ----
+        // Cor de título em azul (mesma família de azul usada na capa do PDF — ver corTituloCapa em
+        // RelatorioMensalPdfService.Capa.cs), em vez de preto simples, para manter a coerência
+        // visual entre os dois formatos.
         body.AppendChild(new Paragraph(new Run(
-            new RunProperties(new Bold(), new FontSize { Val = "36" }),
+            new RunProperties(new Bold(), new DocumentFormat.OpenXml.Wordprocessing.Color { Val = "1F4E79" },
+                new FontSize { Val = "36" }),
             new Text("Relatório de Atividades"))));
         body.AppendChild(new Paragraph(new Run(new Text($"{autor} — {divisao}"))));
         body.AppendChild(new Paragraph(new Run(new Text($"Telefone: {telefone}    Email: {email}"))));
@@ -179,12 +188,23 @@ public partial class RelatorioService
                   $"dos pedidos ({dadosSiga.TotalAlteracaoTipificacao} tickets).");
         ListaItem($"Correção dos estados dos tickets ({dadosSiga.TotalEstadoTickets} tickets).");
         ListaItem($"Alteração de palavras-passe ({dadosSiga.TotalAlteracaoPasswords}).");
+        if (dadosSiga.TotalUtilizadoresCriados > 0)
+        {
+            ListaItem($"Criação de novos utilizadores na plataforma ({dadosSiga.TotalUtilizadoresCriados} " +
+                      $"utilizador{(dadosSiga.TotalUtilizadoresCriados == 1 ? "" : "es")}).");
+        }
         body.AppendChild(new Paragraph());
 
         if (dadosSiga.ImagemPedidosSiga is { Length: > 0 })
             AdicionarImagemCentrada(mainPart, body, dadosSiga.ImagemPedidosSiga, "Figura 1 — Pedidos existentes na Plataforma SIGA.");
         if (dadosSiga.ImagemWorkflowSiga is { Length: > 0 })
-            AdicionarImagemCentrada(mainPart, body, dadosSiga.ImagemWorkflowSiga, "Figura 2 — Workflows da Plataforma SIGA.");
+        {
+            // A Figura 2 (Workflows) é tipicamente uma captura vertical/comprida — tal como no PDF
+            // (ver RelatorioMensalPdfService.Siga.cs), passa a ter página própria em vez de
+            // partilhar espaço com a Figura 1, para não ficar pequena e ilegível.
+            AdicionarImagemCentrada(mainPart, body, dadosSiga.ImagemWorkflowSiga, "Figura 2 — Workflows da Plataforma SIGA.",
+                paginaPropria: true);
+        }
 
         body.AppendChild(new Paragraph(new Break { Type = BreakValues.Page }));
 
@@ -227,8 +247,14 @@ public partial class RelatorioService
     /// <summary>2.2: insere uma imagem centrada na página, seguida de uma legenda centrada por
     /// baixo — usada no relatório Word para as imagens da Plataforma SIGA, mantendo a mesma
     /// disposição visual (imagem + legenda) do relatório PDF. A largura é fixa (16 cm úteis) e a
-    /// altura é calculada a partir das dimensões reais da imagem, para preservar a proporção.</summary>
-    private static void AdicionarImagemCentrada(MainDocumentPart mainPart, Body body, byte[] bytes, string legenda)
+    /// altura é calculada a partir das dimensões reais da imagem, para preservar a proporção.
+    /// Quando <paramref name="paginaPropria"/> é verdadeiro (ex.: a Figura de Workflows, tipicamente
+    /// uma captura vertical/comprida — ver mesma lógica no PDF, RelatorioMensalPdfService.Siga.cs),
+    /// a imagem pode também crescer em altura (até um máximo seguro dentro de uma página A4), em vez
+    /// de ficar sempre limitada à mesma largura fixa das restantes imagens, para não ficar pequena
+    /// e ilegível.</summary>
+    private static void AdicionarImagemCentrada(MainDocumentPart mainPart, Body body, byte[] bytes, string legenda,
+        bool paginaPropria = false)
     {
         var tipoImagem = bytes.Length > 4 && bytes[0] == 0x89 && bytes[1] == 0x50 ? ImagePartType.Png : ImagePartType.Jpeg;
         var imagePart = mainPart.AddImagePart(tipoImagem);
@@ -236,13 +262,26 @@ public partial class RelatorioService
             imagePart.FeedData(stream);
         var relationshipId = mainPart.GetIdOfPart(imagePart);
 
-        const long larguraEmu = 5486400L; // 16 cm úteis, aproximadamente
+        const long larguraMaximaEmu = 5486400L; // 16 cm úteis, aproximadamente
+        // ~23 cm — cabe com folga numa página A4 mesmo com as margens e a legenda por baixo, sem
+        // nunca precisar de mais espaço do que uma única página tem para dar.
+        const long alturaMaximaPaginaPropriaEmu = 8280000L;
+
+        var larguraEmu = larguraMaximaEmu;
         var alturaEmu = larguraEmu;
         try
         {
             using var bitmap = SKBitmap.Decode(bytes);
-            if (bitmap != null && bitmap.Width > 0)
+            if (bitmap != null && bitmap.Width > 0 && bitmap.Height > 0)
+            {
                 alturaEmu = larguraEmu * bitmap.Height / bitmap.Width;
+
+                if (paginaPropria && alturaEmu > alturaMaximaPaginaPropriaEmu)
+                {
+                    alturaEmu = alturaMaximaPaginaPropriaEmu;
+                    larguraEmu = alturaEmu * bitmap.Width / bitmap.Height;
+                }
+            }
         }
         catch
         {
@@ -272,9 +311,16 @@ public partial class RelatorioService
                     ) { Uri = "http://schemas.openxmlformats.org/drawingml/2006/picture" }))
             { DistanceFromTop = 0U, DistanceFromBottom = 0U, DistanceFromLeft = 0U, DistanceFromRight = 0U });
 
-        body.AppendChild(new Paragraph(
-            new ParagraphProperties(new Justification { Val = JustificationValues.Center }),
-            new Run(elemento)));
+        // Quando a imagem fica numa página própria (ver paginaPropria acima), a quebra de página é
+        // colocada como propriedade do PRÓPRIO parágrafo da imagem (PageBreakBefore) em vez de um
+        // parágrafo extra só com uma quebra manual — evita reproduzir o problema já visto no PDF/no
+        // antigo Word rasterizado, em que combinar uma imagem a ocupar quase toda a página com uma
+        // quebra manual a seguir podia originar uma página em branco extra.
+        var propriedadesParagrafoImagem = paginaPropria
+            ? new ParagraphProperties(new PageBreakBefore(), new Justification { Val = JustificationValues.Center })
+            : new ParagraphProperties(new Justification { Val = JustificationValues.Center });
+
+        body.AppendChild(new Paragraph(propriedadesParagrafoImagem, new Run(elemento)));
 
         body.AppendChild(new Paragraph(
             new ParagraphProperties(new Justification { Val = JustificationValues.Center },
@@ -401,7 +447,11 @@ public partial class RelatorioService
     // RELATÓRIO: LISTA TOTAL DE ESCOLAS (PDF - QuestPDF)
     // =========================================================================
 
-    public void GerarListaTotalEscolas(string caminhoDestino, int? agrupamentoId = null)
+    /// <param name="idsFiltrados">Quando indicado, restringe ainda mais o relatório a estas
+    /// escolas — ver nota em <see cref="GerarListaEquipamento"/>. Combinado com
+    /// <paramref name="agrupamentoId"/> apenas para manter o título do documento coerente; quem
+    /// chama normalmente só precisa de indicar um dos dois.</param>
+    public void GerarListaTotalEscolas(string caminhoDestino, int? agrupamentoId = null, IReadOnlyCollection<int>? idsFiltrados = null)
     {
         QuestPDF.Settings.License = LicenseType.Community;
 
@@ -411,6 +461,8 @@ public partial class RelatorioService
 
         if (agrupamentoId.HasValue && agrupamentoId.Value != 0)
             query = query.Where(e => e.AgrupamentoId == agrupamentoId.Value);
+        if (idsFiltrados != null)
+            query = query.Where(e => idsFiltrados.Contains(e.Id));
 
         var escolas = query
             .OrderBy(e => e.Agrupamento == null ? "" : e.Agrupamento.Nome)
@@ -752,35 +804,52 @@ public partial class RelatorioService
         }).GeneratePdf(caminhoDestino);
     }
 
-    /// <summary>2.2 / 2.3: divide um texto longo em vários parágrafos — um por cada frase terminada
-    /// em ponto final — para que os textos de reflexão/descrição não fiquem num único bloco compacto
-    /// e denso, difícil de ler, tanto no PDF como no Word. Preserva quebras de linha já existentes no
-    /// texto original (ex.: "\n" entre secções) como separadores de parágrafo adicionais. Frases
-    /// muito curtas (ex.: abreviaturas antes de maiúsculas) não são tratadas de forma especial — o
-    /// objetivo é legibilidade geral, não uma gramática perfeita.</summary>
+    /// <summary>2.2 / 2.3: divide um texto longo em vários parágrafos — agrupando frases completas
+    /// até perfazer um tamanho médio legível — para que os textos de reflexão/descrição não fiquem
+    /// num único bloco compacto e denso, difícil de ler, tanto no PDF como no Word. Frases muito
+    /// curtas (ex.: abreviaturas antes de maiúsculas) não são tratadas de forma especial — o
+    /// objetivo é legibilidade geral, não uma gramática perfeita.
+    /// NOTA: quaisquer quebras de linha já existentes no texto original são ignoradas (tratadas como
+    /// espaço) em vez de preservadas como separadores de parágrafo — uma tentativa anterior tratava
+    /// uma linha em branco como separador "a sério" e uma quebra de linha isolada como simples
+    /// continuação, mas isso ainda dependia de como a pessoa formatou o texto ao escrevê-lo/editá-lo
+    /// (ex.: uma frase por linha, com ou sem linha em branco a separar cada uma — um hábito comum ao
+    /// rever texto numa caixa multilinha), o que continuava a produzir, em muitos casos reais, um
+    /// parágrafo por frase. Sem agrupamento algum, cada "parágrafo" de uma só frase cabe quase
+    /// sempre numa única linha, e a justificação (.Justify(), usada em todo o lado onde este texto é
+    /// apresentado) nunca tem efeito visível na última/única linha de um parágrafo — dando ainda a
+    /// sensação de espaçamentos verticais "maiores"/"mais pequenos" a alternar sem critério (cada
+    /// quebra de linha do utilizador ganhava o mesmo espaçamento de uma mudança de parágrafo a
+    /// sério). Ignorar sempre as quebras de linha do texto original e agrupar por tamanho garante um
+    /// resultado consistente, independente de como o texto foi formatado ao ser escrito.</summary>
     private static IReadOnlyList<string> DividirEmParagrafos(string texto)
     {
         if (string.IsNullOrWhiteSpace(texto)) return Array.Empty<string>();
 
-        var blocos = texto.Replace("\r\n", "\n").Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        var paragrafos = new List<string>();
+        // Tamanho-alvo (em carateres) a partir do qual um parágrafo fecha, ainda que a meio de mais
+        // frases — suficiente para praticamente garantir 2+ linhas no corpo do relatório (~500pt de
+        // largura útil a 10pt), tornando a justificação visível, sem deixar os parágrafos demasiado
+        // longos.
+        const int tamanhoAlvoParagrafo = 220;
 
-        foreach (var bloco in blocos)
+        // Normaliza todo o texto para uma única "corrente" contínua, substituindo qualquer sequência
+        // de quebras de linha (e espaços/tabs à volta delas) por um único espaço.
+        var textoCorrido = System.Text.RegularExpressions.Regex.Replace(texto, @"\s*\n\s*", " ").Trim();
+
+        var frases = System.Text.RegularExpressions.Regex.Split(textoCorrido, @"(?<=\.)\s+");
+        var paragrafos = new List<string>();
+        var atual = "";
+        foreach (var frase in frases)
         {
-            var frases = System.Text.RegularExpressions.Regex.Split(bloco.Trim(), @"(?<=\.)\s+");
-            var atual = "";
-            foreach (var frase in frases)
+            if (string.IsNullOrWhiteSpace(frase)) continue;
+            atual = string.IsNullOrEmpty(atual) ? frase : atual + " " + frase;
+            if (frase.TrimEnd().EndsWith('.') && atual.Length >= tamanhoAlvoParagrafo)
             {
-                if (string.IsNullOrWhiteSpace(frase)) continue;
-                atual = string.IsNullOrEmpty(atual) ? frase : atual + " " + frase;
-                if (frase.TrimEnd().EndsWith('.'))
-                {
-                    paragrafos.Add(atual.Trim());
-                    atual = "";
-                }
+                paragrafos.Add(atual.Trim());
+                atual = "";
             }
-            if (!string.IsNullOrWhiteSpace(atual)) paragrafos.Add(atual.Trim());
         }
+        if (!string.IsNullOrWhiteSpace(atual)) paragrafos.Add(atual.Trim());
 
         return paragrafos.Count > 0 ? paragrafos : new[] { texto.Trim() };
     }
@@ -966,6 +1035,15 @@ public partial class RelatorioService
     /// de barras distinguem-se pela legenda por baixo de cada categoria. As barras crescem de
     /// baixo para cima (0 na base), tal como num gráfico de barras convencional. O bloco inteiro
     /// (barras + legenda) é mantido junto na mesma página através de <c>ShowEntire()</c>.</summary>
+    /// <summary>Gráfico de barras agrupadas por AGRUPAMENTO (eixo X): cada agrupamento é um grupo,
+    /// e dentro de cada grupo há uma barra por tipo de intervenção, sempre com a mesma cor por tipo
+    /// (função local CorDaCategoria) em todos os grupos. Isto substitui um desenho anterior em que o
+    /// eixo X agrupava por TIPO e a cor também identificava o tipo — nesse caso, quando um tipo só
+    /// tinha intervenções num único agrupamento, não havia forma de perceber, só pelo gráfico, a
+    /// qual dos agrupamentos essa barra pertencia (era preciso ler uma nota à parte com a ordem das
+    /// barras). Agrupar por agrupamento no eixo X resolve isso diretamente: o rótulo por baixo de
+    /// cada grupo já diz a que agrupamento pertence, e a cor (com a legenda) diz a que tipo
+    /// pertence — sem precisar de nenhuma nota adicional.</summary>
     private static void GraficoBarrasAgrupadas(ColumnDescriptor col, string titulo,
         IReadOnlyList<string> series, IReadOnlyList<(string Categoria, IReadOnlyList<int> Valores)> dados,
         IReadOnlyDictionary<string, string>? coresPorCategoria = null)
@@ -994,22 +1072,24 @@ public partial class RelatorioService
 
         col.Item().ShowEntire().Column(bloco =>
         {
-            // ---- Barras: cada categoria com uma barra por série (agrupamento), a crescer de
-            // baixo para cima; todas as barras do mesmo grupo usam a cor da categoria ----
+            // ---- Barras: cada AGRUPAMENTO (eixo X) com uma barra por tipo de intervenção, a
+            // crescer de baixo para cima; cada barra usa a cor do seu tipo (a mesma em todos os
+            // grupos) ----
             bloco.Item().PaddingBottom(8).Border(1).BorderColor(Colors.Grey.Lighten2).Padding(10).Row(row =>
             {
-                foreach (var (categoria, valores) in dados)
+                for (var s = 0; s < series.Count; s++)
                 {
-                    var cor = CorDaCategoria(categoria);
+                    var agrupamento = series[s];
 
                     row.RelativeItem().PaddingHorizontal(3).Column(grupoCol =>
                     {
                         grupoCol.Item().Height(alturaMaxima + alturaRotuloValor).Row(barrasRow =>
                         {
-                            for (var s = 0; s < valores.Count; s++)
+                            foreach (var (categoria, valores) in dados)
                             {
-                                var valor = valores[s];
+                                var valor = s < valores.Count ? valores[s] : 0;
                                 var altura = valor > 0 ? Math.Max(2, alturaMaxima * valor / (float)maiorValor) : 0;
+                                var cor = CorDaCategoria(categoria);
 
                                 barrasRow.RelativeItem().PaddingHorizontal(1).Column(barCol =>
                                 {
@@ -1022,14 +1102,14 @@ public partial class RelatorioService
                                 });
                             }
                         });
-                        grupoCol.Item().PaddingTop(3).AlignCenter().Text(categoria).FontSize(7).Bold().FontColor(Colors.Grey.Darken2);
+                        grupoCol.Item().PaddingTop(3).AlignCenter().Text(agrupamento).FontSize(7).Bold().FontColor(Colors.Grey.Darken2);
                     });
                 }
             });
 
-            // ---- Legenda: correspondência categoria → cor (o foco do gráfico), seguida da
-            // lista de agrupamentos representados nas barras de cada grupo (sem cor própria,
-            // já que a cor identifica a categoria e não o agrupamento) ----
+            // ---- Legenda: correspondência tipo → cor — agora com utilidade direta para ler as
+            // barras dentro de cada agrupamento (antes era sobretudo decorativa, já que a cor no
+            // desenho anterior coincidia com a própria categoria de cada grupo do eixo X) ----
             bloco.Item().AlignCenter().Row(legendaRow =>
             {
                 foreach (var (categoria, _) in dados)
@@ -1039,9 +1119,6 @@ public partial class RelatorioService
                     legendaRow.AutoItem().PaddingRight(10).Text(categoria).FontSize(6.5f).FontColor(Colors.Grey.Darken2);
                 }
             });
-            bloco.Item().PaddingTop(3).AlignCenter()
-                .Text($"Agrupamentos (ordem das barras em cada grupo): {string.Join(", ", series)}")
-                .FontSize(6.5f).Italic().FontColor(Colors.Grey.Darken1);
         });
     }
 
@@ -1049,12 +1126,13 @@ public partial class RelatorioService
     // RELATÓRIO: LISTA DE AGRUPAMENTOS (PDF)
     // =========================================================================
 
-    public void GerarListaAgrupamentos(string caminhoDestino)
+    /// <param name="idsFiltrados">Quando indicado, restringe o relatório apenas a estes
+    /// agrupamentos — ver nota em <see cref="GerarListaEquipamento"/>.</param>
+    public void GerarListaAgrupamentos(string caminhoDestino, IReadOnlyCollection<int>? idsFiltrados = null)
     {
-        var agrupamentos = _db.Agrupamentos
-            .Include(a => a.Escolas)
-            .OrderBy(a => a.Nome)
-            .ToList();
+        var query = _db.Agrupamentos.Include(a => a.Escolas).AsQueryable();
+        if (idsFiltrados != null) query = query.Where(a => idsFiltrados.Contains(a.Id));
+        var agrupamentos = query.OrderBy(a => a.Nome).ToList();
 
         var totalEscolas = agrupamentos.Sum(a => a.TotalEscolas);
         var branco = Colors.White;
@@ -1272,14 +1350,17 @@ public partial class RelatorioService
     /// <paramref name="dataFim"/> forem indicados, filtra por esse período (usado pelos botões
     /// "Mês Corrente" e "Período à Escolha"); caso contrário, usa o filtro por <paramref name="ano"/>
     /// como antes (ou nenhum filtro, para a lista total).</summary>
+    /// <param name="idsFiltrados">Quando indicado, restringe o relatório apenas a estas
+    /// intervenções — ver nota em <see cref="GerarListaEquipamento"/>.</param>
     public void GerarListaIntervencoes(string caminhoDestino, int? ano = null,
-        DateTime? dataInicio = null, DateTime? dataFim = null)
+        DateTime? dataInicio = null, DateTime? dataFim = null, IReadOnlyCollection<int>? idsFiltrados = null)
     {
         var query = _db.Intervencoes
             .Include(i => i.Escola)
             .Include(i => i.Agrupamento)
             .Include(i => i.Categorias).ThenInclude(c => c.Categoria)
             .AsQueryable();
+        if (idsFiltrados != null) query = query.Where(i => idsFiltrados.Contains(i.Id));
 
         var usaPeriodo = dataInicio.HasValue || dataFim.HasValue;
         if (usaPeriodo)
@@ -1659,12 +1740,13 @@ public partial class RelatorioService
     // RELATÓRIO: LISTA DE PEDIDOS DE INTERVENÇÃO (PDF)
     // =========================================================================
 
-    public void GerarListaPedidosIntervencao(string caminhoDestino)
+    /// <param name="idsFiltrados">Quando indicado, restringe o relatório apenas a estes pedidos —
+    /// ver nota em <see cref="GerarListaEquipamento"/>.</param>
+    public void GerarListaPedidosIntervencao(string caminhoDestino, IReadOnlyCollection<int>? idsFiltrados = null)
     {
-        var pedidos = _db.PedidosIntervencao
-            .Include(p => p.Escola)
-            .OrderByDescending(p => p.DataPedido)
-            .ToList();
+        var query = _db.PedidosIntervencao.Include(p => p.Escola).AsQueryable();
+        if (idsFiltrados != null) query = query.Where(p => idsFiltrados.Contains(p.Id));
+        var pedidos = query.OrderByDescending(p => p.DataPedido).ToList();
 
         var pendentes = pedidos.Count(p => p.EstaEmAberto);
         var branco = Colors.White;
@@ -1808,10 +1890,22 @@ public partial class RelatorioService
     // RELATÓRIO: LISTA DE ATIVIDADES DA DISIA (PDF)
     // =========================================================================
 
-    public void GerarListaAtividadesDisia(string caminhoDestino, int? ano = null)
+    /// <param name="mes">Quando indicado juntamente com <paramref name="ano"/>, restringe ainda
+    /// mais o relatório a esse mês em concreto (ex.: botões "Mês Corrente"/"Mês Escolhido" — ver
+    /// Views/RelatoriosWindow.xaml.cs). Sozinho, sem <paramref name="ano"/>, é ignorado — o mesmo
+    /// comportamento já usado em <see cref="GerarResumoAtividadesDisiaPorCategoria"/>.</param>
+    /// <param name="idsFiltrados">Quando indicado, restringe o relatório apenas a estas
+    /// atividades — ver nota em <see cref="GerarListaEquipamento"/>.</param>
+    /// <param name="tituloPersonalizado">Quando indicado, substitui o título por omissão — usado
+    /// pela Pesquisa Avançada de Atividades DISIA (item 3.1).</param>
+    /// <param name="subtituloPersonalizado">Idem, para o subtítulo.</param>
+    public void GerarListaAtividadesDisia(string caminhoDestino, int? ano = null, int? mes = null,
+        IReadOnlyCollection<int>? idsFiltrados = null, string? tituloPersonalizado = null, string? subtituloPersonalizado = null)
     {
         var query = _db.AtividadesDisia.Include(a => a.Categoria).AsQueryable();
-        if (ano is { } anoFiltro) query = query.Where(a => a.Ano == anoFiltro);
+        if (mes is { } mesFiltro && ano is { } anoFiltro2) query = query.Where(a => a.Ano == anoFiltro2 && a.Mes == mesFiltro);
+        else if (ano is { } anoFiltro) query = query.Where(a => a.Ano == anoFiltro);
+        if (idsFiltrados != null) query = query.Where(a => idsFiltrados.Contains(a.Id));
 
         var atividades = query.OrderByDescending(a => a.Data).ToList();
         var totalServicos = atividades.Sum(a => a.Quantidade);
@@ -1824,8 +1918,9 @@ public partial class RelatorioService
             (totalServicos.ToString(), "Total de Serviços Prestados", Colors.Purple.Darken1),
         };
 
-        GerarDocumentoPadrao(caminhoDestino, ano is { } anoTitulo ? $"Atividades da DISIA — {anoTitulo}" : "Lista de Atividades da DISIA",
-            "Atividades desempenhadas pela DISIA fora do âmbito escolar direto (juntas de freguesia, instalações municipais, etc.).",
+        GerarDocumentoPadrao(caminhoDestino,
+            tituloPersonalizado ?? $"Atividades da DISIA — {DescricaoPeriodo(ano, mes)}",
+            subtituloPersonalizado ?? "Atividades desempenhadas pela DISIA fora do âmbito escolar direto (juntas de freguesia, instalações municipais, etc.).",
             atividades.Count, cards, col =>
         {
             if (atividades.Count == 0)
@@ -1953,11 +2048,24 @@ public partial class RelatorioService
     /// subtotais (incluindo detalhe por nível de obsolescência) no final de cada escola e de cada
     /// agrupamento, e um total geral no fim. Equipamento sem escola associada (instalações
     /// municipais, etc.) aparece à parte, em "Outros Locais", no final do documento.</summary>
-    public void GerarListaEquipamento(string caminhoDestino)
+    /// <param name="idsFiltrados">Quando indicado, restringe o relatório apenas a estes
+    /// equipamentos — usado pelo botão "Relatório do Módulo" em Equipamentos, para o relatório
+    /// refletir exatamente a pesquisa/filtro ativo na grelha, em vez do inventário completo.
+    /// <c>null</c> (omitido) mantém o comportamento antigo — usado pelo módulo Relatórios, cujo
+    /// propósito é precisamente o inventário completo, sem filtro nenhum.</param>
+    /// <param name="tituloPersonalizado">Quando indicado, substitui o título por omissão — usado
+    /// pela Pesquisa Avançada de Equipamento (item 2.1) para deixar claro que a lista resulta de
+    /// critérios de pesquisa, não do inventário completo.</param>
+    /// <param name="subtituloPersonalizado">Idem, para o subtítulo — normalmente a descrição dos
+    /// filtros aplicados (ver <see cref="PesquisaAvancadaService.Descrever{T}"/>).</param>
+    public void GerarListaEquipamento(string caminhoDestino, IReadOnlyCollection<int>? idsFiltrados = null,
+        string? tituloPersonalizado = null, string? subtituloPersonalizado = null)
     {
-        var equipamentos = _db.Equipamentos
+        var query = _db.Equipamentos
             .Include(e => e.Escola).ThenInclude(esc => esc!.Agrupamento)
-            .ToList();
+            .AsQueryable();
+        if (idsFiltrados != null) query = query.Where(e => idsFiltrados.Contains(e.Id));
+        var equipamentos = query.ToList();
 
         var obsoletos = equipamentos.Count(e => e.Obsolescencia.Nivel == NivelObsolescencia.Obsoleto);
         var monitorizar = equipamentos.Count(e => e.Obsolescencia.Nivel == NivelObsolescencia.AMonitorizar);
@@ -1996,8 +2104,8 @@ public partial class RelatorioService
             })
             .ToList();
 
-        GerarDocumentoPadrao(caminhoDestino, "Lista de Equipamentos - Inventário",
-            "Inventário de equipamento informático, agrupado por Agrupamento e Escola, com classificação de obsolescência (ver Administração → Obsolescência).",
+        GerarDocumentoPadrao(caminhoDestino, tituloPersonalizado ?? "Lista de Equipamentos - Inventário",
+            subtituloPersonalizado ?? "Inventário de equipamento informático, agrupado por Agrupamento e Escola, com classificação de obsolescência (ver Administração → Obsolescência).",
             equipamentos.Count, cards, col =>
         {
             if (equipamentos.Count == 0)
@@ -2018,16 +2126,23 @@ public partial class RelatorioService
                     cols.ConstantColumn(70);
                 });
 
-                table.Header(h =>
+                // Em vez de table.Header(...) — que renderiza sempre antes de qualquer conteúdo do
+                // corpo da tabela, incluindo a própria banda "AGRUPAMENTO:" do primeiro grupo — o
+                // cabeçalho de colunas passa a ser desenhado como uma linha normal, repetida logo a
+                // seguir à banda de cada agrupamento (função local reaproveitada nos dois sítios
+                // onde uma secção começa: por agrupamento e em "Outros Locais"). Isto garante que a
+                // banda do grupo aparece sempre primeiro, com o cabeçalho de colunas logo a seguir
+                // — e tem como vantagem extra repetir o cabeçalho a cada grupo novo, e não só uma
+                // vez no topo do documento inteiro.
+                void CabecalhoColunas()
                 {
-                    h.Cell().Element(CellHeaderPadrao).Text("Cód. GEPE").FontSize(7).Bold().FontColor(branco);
-                    h.Cell().Element(CellHeaderPadrao).Text("Tipo").FontSize(7).Bold().FontColor(branco);
-                    h.Cell().Element(CellHeaderPadrao).Text("Marca/Modelo").FontSize(7).Bold().FontColor(branco);
-                    h.Cell().Element(CellHeaderPadrao).Text("Localização").FontSize(7).Bold().FontColor(branco);
-                    h.Cell().Element(CellHeaderPadrao).AlignCenter().Text("Estado").FontSize(7).Bold().FontColor(branco);
-                    h.Cell().Element(CellHeaderPadrao).AlignCenter().Text("Obsolescência").FontSize(6.5f).Bold().FontColor(branco);
-                });
-
+                    table.Cell().Element(CellHeaderPadrao).Text("Cód. GEPE").FontSize(7).Bold().FontColor(branco);
+                    table.Cell().Element(CellHeaderPadrao).Text("Tipo").FontSize(7).Bold().FontColor(branco);
+                    table.Cell().Element(CellHeaderPadrao).Text("Marca/Modelo").FontSize(7).Bold().FontColor(branco);
+                    table.Cell().Element(CellHeaderPadrao).Text("Localização").FontSize(7).Bold().FontColor(branco);
+                    table.Cell().Element(CellHeaderPadrao).AlignCenter().Text("Estado").FontSize(7).Bold().FontColor(branco);
+                    table.Cell().Element(CellHeaderPadrao).AlignCenter().Text("Obsolescência").FontSize(6.5f).Bold().FontColor(branco);
+                }
                 var indiceLinha = 0;
 
                 string ResumoNiveis(IReadOnlyList<Equipamento> itens)
@@ -2042,6 +2157,7 @@ public partial class RelatorioService
                 {
                     table.Cell().ColumnSpan(6).Element(c => c.Background(corBandaAgrupamento).Padding(5))
                         .Text($"AGRUPAMENTO: {agr.Agrupamento}").FontSize(9).Bold().FontColor(branco);
+                    CabecalhoColunas();
 
                     foreach (var esc in agr.Escolas)
                     {
@@ -2080,6 +2196,7 @@ public partial class RelatorioService
                 {
                     table.Cell().ColumnSpan(6).Element(c => c.Background(corBandaAgrupamento).Padding(5))
                         .Text("OUTROS LOCAIS (NÃO ESCOLARES)").FontSize(9).Bold().FontColor(branco);
+                    CabecalhoColunas();
 
                     foreach (var eq in semEscola)
                     {
@@ -2201,12 +2318,13 @@ public partial class RelatorioService
     // RELATÓRIO: LISTA DE EQUIPAMENTO ABATIDO (PDF)
     // =========================================================================
 
-    public void GerarListaEquipamentoAbatido(string caminhoDestino)
+    /// <param name="idsFiltrados">Quando indicado, restringe o relatório apenas a estes registos —
+    /// ver nota em <see cref="GerarListaEquipamento"/>.</param>
+    public void GerarListaEquipamentoAbatido(string caminhoDestino, IReadOnlyCollection<int>? idsFiltrados = null)
     {
-        var abatidos = _db.EquipamentosAbatidos
-            .Include(a => a.Equipamento)
-            .OrderByDescending(a => a.DataAbate)
-            .ToList();
+        var query = _db.EquipamentosAbatidos.Include(a => a.Equipamento).AsQueryable();
+        if (idsFiltrados != null) query = query.Where(a => idsFiltrados.Contains(a.Id));
+        var abatidos = query.OrderByDescending(a => a.DataAbate).ToList();
 
         var branco = Colors.White;
         var corFundoAlternado = Colors.Grey.Lighten5;
@@ -2277,12 +2395,13 @@ public partial class RelatorioService
     // RELATÓRIO: LISTA DE EQUIPAMENTO RECOLHIDO (PDF)
     // =========================================================================
 
-    public void GerarListaEquipamentoRecolhido(string caminhoDestino)
+    /// <param name="idsFiltrados">Quando indicado, restringe o relatório apenas a estes registos —
+    /// ver nota em <see cref="GerarListaEquipamento"/>.</param>
+    public void GerarListaEquipamentoRecolhido(string caminhoDestino, IReadOnlyCollection<int>? idsFiltrados = null)
     {
-        var recolhidos = _db.EquipamentosRecolhidos
-            .Include(r => r.Equipamento).ThenInclude(e => e!.Escola)
-            .OrderByDescending(r => r.DataRecolha)
-            .ToList();
+        var query = _db.EquipamentosRecolhidos.Include(r => r.Equipamento).ThenInclude(e => e!.Escola).AsQueryable();
+        if (idsFiltrados != null) query = query.Where(r => idsFiltrados.Contains(r.Id));
+        var recolhidos = query.OrderByDescending(r => r.DataRecolha).ToList();
 
         var pendentes = recolhidos.Count(r => !r.EstaEntregue);
         var branco = Colors.White;
@@ -2350,12 +2469,13 @@ public partial class RelatorioService
     // RELATÓRIO: LISTA DE LIGAÇÕES DE COMUNICAÇÕES (PDF)
     // =========================================================================
 
-    public void GerarListaComunicacoes(string caminhoDestino)
+    /// <param name="idsFiltrados">Quando indicado, restringe o relatório apenas a estas
+    /// comunicações — ver nota em <see cref="GerarListaEquipamento"/>.</param>
+    public void GerarListaComunicacoes(string caminhoDestino, IReadOnlyCollection<int>? idsFiltrados = null)
     {
-        var ligacoes = _db.Comunicacoes
-            .Include(c => c.Escola)
-            .OrderBy(c => c.Escola!.Nome)
-            .ToList();
+        var query = _db.Comunicacoes.Include(c => c.Escola).AsQueryable();
+        if (idsFiltrados != null) query = query.Where(c => idsFiltrados.Contains(c.Id));
+        var ligacoes = query.OrderBy(c => c.Escola!.Nome).ToList();
 
         var integradas = ligacoes.Count(c => c.Integrado);
         var branco = Colors.White;
@@ -2492,12 +2612,13 @@ public partial class RelatorioService
     // RELATÓRIO: LISTA DE CONTACTOS (PDF)
     // =========================================================================
 
-    public void GerarListaContactos(string caminhoDestino)
+    /// <param name="idsFiltrados">Quando indicado, restringe o relatório apenas a estes
+    /// contactos — ver nota em <see cref="GerarListaEquipamento"/>.</param>
+    public void GerarListaContactos(string caminhoDestino, IReadOnlyCollection<int>? idsFiltrados = null)
     {
-        var contactos = _db.Contactos
-            .Include(c => c.Escola)
-            .OrderBy(c => c.Escola == null ? "" : c.Escola.Nome).ThenBy(c => c.Nome)
-            .ToList();
+        var query = _db.Contactos.Include(c => c.Escola).AsQueryable();
+        if (idsFiltrados != null) query = query.Where(c => idsFiltrados.Contains(c.Id));
+        var contactos = query.OrderBy(c => c.Escola == null ? "" : c.Escola.Nome).ThenBy(c => c.Nome).ToList();
 
         var branco = Colors.White;
         var corFundoAlternado = Colors.Grey.Lighten5;

@@ -12,6 +12,11 @@ public partial class EscolasWindow : Window
 {
     private List<Escola> _todas = new();
 
+    /// <summary>Lista atualmente visível na grelha (já com Agrupamento + pesquisa aplicados) —
+    /// usada pelo "Relatório do Módulo" para o relatório refletir exatamente o que está a ser
+    /// visto (antes só considerava o filtro de Agrupamento, ignorando a pesquisa por texto).</summary>
+    private List<Escola> _visiveis = new();
+
     public EscolasWindow()
     {
         InitializeComponent();
@@ -56,7 +61,7 @@ public partial class EscolasWindow : Window
                 (e.NomeAlternativo?.Contains(termo, StringComparison.OrdinalIgnoreCase) ?? false));
         }
 
-        Grid.ItemsSource = resultado.ToList();
+        Grid.ItemsSource = _visiveis = resultado.ToList();
     }
 
     private void Filtro_Changed(object sender, SelectionChangedEventArgs e) => AplicarFiltro();
@@ -80,9 +85,18 @@ public partial class EscolasWindow : Window
 
     private void Relatorio_Click(object sender, RoutedEventArgs e)
     {
-        // (4.1) O relatório deve refletir apenas o que está a ser visualizado: se houver um
-        // agrupamento selecionado no filtro, o relatório é gerado só para esse agrupamento;
-        // se o filtro estiver em "(Todos os agrupamentos)", mantém-se o relatório de todas as escolas.
+        // (1.1/4.1) O relatório deve refletir apenas o que está a ser visualizado: mantém o título
+        // e o nome de ficheiro a refletirem o agrupamento selecionado (quando aplicável), mas passa
+        // também a lista completa de IDs atualmente visíveis, para a pesquisa por texto (que antes
+        // era ignorada aqui) ser igualmente respeitada, e para poder bloquear a geração se o filtro
+        // não corresponder a nenhuma escola.
+        if (_visiveis.Count == 0)
+        {
+            MessageBox.Show("Não existem escolas a corresponder ao filtro atual para incluir no relatório.",
+                "Sem dados para o relatório", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
         var agrupamentoSelecionado = CmbFiltroAgrupamento?.SelectedItem as Agrupamento;
         var filtrado = agrupamentoSelecionado is not null && agrupamentoSelecionado.Id != 0;
 
@@ -101,7 +115,8 @@ public partial class EscolasWindow : Window
         try
         {
             var servico = new LeiriaDISIA.Services.RelatorioService(App.Db);
-            servico.GerarListaTotalEscolas(dialog.FileName, filtrado ? agrupamentoSelecionado!.Id : null);
+            servico.GerarListaTotalEscolas(dialog.FileName, filtrado ? agrupamentoSelecionado!.Id : null,
+                _visiveis.Select(esc => esc.Id).ToList());
 
             var abrir = MessageBox.Show("Relatório PDF gerado com sucesso. Deseja abri-lo agora?",
                 "Concluído", MessageBoxButton.YesNo, MessageBoxImage.Information);

@@ -198,6 +198,11 @@ public static class SchemaUpgrade
         // outro motivo de desativação.
         AdicionarColunaSeNaoExistir(conexao, "Usuarios", "TentativasFalhadasConsecutivas", "INTEGER NOT NULL DEFAULT 0");
 
+        // Relatório Mensal — Plataforma SIGA: além da tipificação, estado de tickets e passwords já
+        // existentes, faltava contemplar a criação de utilizadores (ver Views/RelatoriosWindow.xaml,
+        // bloco "Plataforma SIGA — dados do mês").
+        AdicionarColunaSeNaoExistir(conexao, "RelatoriosMensaisDados", "TotalUtilizadoresCriados", "INTEGER NOT NULL DEFAULT 0");
+
         CriarRegistosAuditoriaSePreciso(conexao);
 
         CriarPlanoRotaSePreciso(conexao);
@@ -654,6 +659,7 @@ public static class SchemaUpgrade
                 ""TotalAlteracaoTipificacao"" INTEGER NOT NULL DEFAULT 0,
                 ""TotalEstadoTickets"" INTEGER NOT NULL DEFAULT 0,
                 ""TotalAlteracaoPasswords"" INTEGER NOT NULL DEFAULT 0,
+                ""TotalUtilizadoresCriados"" INTEGER NOT NULL DEFAULT 0,
                 ""ImagemPedidosSiga"" BLOB NULL,
                 ""ImagemWorkflowSiga"" BLOB NULL,
                 ""TextoBalancoGeral"" TEXT NULL,

@@ -54,7 +54,16 @@ public partial class RelatorioService
     /// (<see cref="ComposeDocumentoMensal"/>, os mesmos dados da aplicação) e rasteriza cada página
     /// exatamente como sai no PDF, inserindo depois cada página como uma imagem de página inteira
     /// num documento Word — a abordagem mais simples e mais fiel para "gerar um PDF e converter
-    /// para Word" sem depender de nenhuma biblioteca externa de conversão PDF→Word.</summary>
+    /// para Word" sem depender de nenhuma biblioteca externa de conversão PDF→Word.
+    ///
+    /// 2.5: SEM UTILIZAÇÃO ATUAL — o botão "Gerar Relatório Mensal (.docx)" (ver
+    /// Views/RelatoriosWindow.xaml.cs, GerarMensal_Click) voltou a usar
+    /// <see cref="RelatorioService.GerarRelatorioMensal"/> (conteúdo nativo do Word), porque este
+    /// método, ao inserir cada página como uma "fotografia" de página inteira, produzia um
+    /// documento totalmente impossível de selecionar ou editar (não havia texto real nenhum), e a
+    /// combinação de uma imagem a ocupar a página toda com uma quebra de página manual a seguir
+    /// estava a originar uma página em branco extra a mais por secção. Mantido apenas para
+    /// referência/eventual reutilização futura — não apagar sem ponderar se ainda é preciso.</summary>
     public void GerarRelatorioMensalWord(string caminhoDestino, int ano, int mes,
         string autor, string divisao, string telefone, string email)
     {
@@ -214,9 +223,9 @@ public partial class RelatorioService
             .ToList();
         var categoriasDoMes = porCategoria.Select(c => c.Categoria).ToList();
         // Cor própria por categoria (a mesma usada em toda a aplicação — ver
-        // CategoriaIntervencao.CorHex e Views/CategoriasIntervencaoWindow.xaml), para que o
-        // gráfico "Tipos de Intervenção por Agrupamento" tenha uma cor fixa por tipo de
-        // intervenção, e não por agrupamento — a categoria é o foco visual do gráfico.
+        // CategoriaIntervencao.CorHex e Views/CategoriasIntervencaoWindow.xaml): no gráfico "Tipos
+        // de Intervenção por Agrupamento", o eixo X agrupa por AGRUPAMENTO e cada tipo mantém
+        // sempre a mesma cor dentro de cada grupo — ver GraficoBarrasAgrupadas.
         var coresPorCategoria = _db.CategoriasIntervencao
             .ToDictionary(c => c.Nome, c => c.CorHex, StringComparer.OrdinalIgnoreCase);
         var cruzamentoTipoAgrupamento = categoriasDoMes.Select(cat => (

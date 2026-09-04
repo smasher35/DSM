@@ -13,6 +13,10 @@ public partial class AgrupamentosWindow : Window
     private Agrupamento? _selecionado;
     private List<Agrupamento> _todos = new();
 
+    /// <summary>Lista atualmente visível na grelha (já com a pesquisa aplicada) — usada pelo
+    /// "Relatório do Módulo" para o relatório refletir exatamente o que está a ser visto.</summary>
+    private List<Agrupamento> _visiveis = new();
+
     public AgrupamentosWindow()
     {
         InitializeComponent();
@@ -46,7 +50,7 @@ public partial class AgrupamentosWindow : Window
                 (a.Nome != null && a.Nome.Contains(termo, StringComparison.OrdinalIgnoreCase)));
         }
 
-        Grid.ItemsSource = resultado.ToList();
+        Grid.ItemsSource = _visiveis = resultado.ToList();
     }
 
     private void Grid_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -150,6 +154,15 @@ public partial class AgrupamentosWindow : Window
 
     private void Relatorio_Click(object sender, RoutedEventArgs e)
     {
+        // (1.1) O relatório do módulo reflete exatamente o que está a ser visto na grelha
+        // (pesquisa aplicada), em vez de todos os agrupamentos.
+        if (_visiveis.Count == 0)
+        {
+            MessageBox.Show("Não existem agrupamentos a corresponder ao filtro atual para incluir no relatório.",
+                "Sem dados para o relatório", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
         var dialog = new SaveFileDialog
         {
             Title = "Guardar relatório de agrupamentos",
@@ -161,7 +174,7 @@ public partial class AgrupamentosWindow : Window
         try
         {
             var servico = new LeiriaDISIA.Services.RelatorioService(App.Db);
-            servico.GerarListaAgrupamentos(dialog.FileName);
+            servico.GerarListaAgrupamentos(dialog.FileName, _visiveis.Select(a => a.Id).ToList());
 
             var abrir = MessageBox.Show("Relatório PDF gerado com sucesso. Deseja abri-lo agora?",
                 "Concluído", MessageBoxButton.YesNo, MessageBoxImage.Information);
