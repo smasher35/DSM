@@ -9,7 +9,9 @@
                 <Button Content="🏠 Menu Principal" Style="{StaticResource MenuPrincipalButton}" Click="MenuPrincipal_Click" Margin="0,0,10,0" />
                 <Button x:Name="BtnInserir" Content="➕ Inserir Pedido" Style="{StaticResource PrimaryButton}" Click="Inserir_Click" Margin="0,0,10,0" />
                 <Button Content="🗺️ Planear Rota" Style="{StaticResource ReportButton}" Click="PlanearRota_Click" Margin="0,0,10,0" Background="#FF6423F7" />
-                <Button Content="📄 Relatório do Módulo" Style="{StaticResource ReportButton}" Click="Relatorio_Click" Margin="0,0,30,0" />
+                <Button Content="📄 Relatório do Módulo" Style="{StaticResource ReportButton}" Click="Relatorio_Click" Margin="0,0,20,0" />
+                <CheckBox x:Name="ChkMostrarConcluidos" Content="Mostrar concluídos/cancelados" VerticalAlignment="Center"
+                          Checked="ChkMostrarConcluidos_Changed" Unchecked="ChkMostrarConcluidos_Changed" Margin="0,0,20,0" />
                 <TextBox x:Name="TxtPesquisa" Style="{StaticResource SearchTextBox}" Width="280" TextChanged="Filtro_TextChanged"
                          ToolTip="Pesquisar por escola, agrupamento ou razão" />
                 <TextBlock Text="Pedidos de Intervenção" FontSize="22" FontWeight="Bold"

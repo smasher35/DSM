@@ -801,7 +801,17 @@ public partial class EquipamentoEditWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Não foi possível gravar o equipamento:\n{ex.Message}",
+            // EF Core's DbUpdateException.Message é sempre o mesmo texto genérico ("An error
+            // occurred while saving the entity changes. See the inner exception for details.") —
+            // a causa real (ex.: violação de uma restrição UNIQUE/NOT NULL na base de dados) vem
+            // sempre na InnerException, por vezes vários níveis abaixo. Percorre a cadeia toda até
+            // à causa raiz, para o utilizador (e quem for corrigir o problema a seguir) ver
+            // logo o motivo real, em vez de só "See the inner exception for details" sem essa
+            // informação em lado nenhum.
+            var causaRaiz = ex;
+            while (causaRaiz.InnerException != null) causaRaiz = causaRaiz.InnerException;
+
+            MessageBox.Show($"Não foi possível gravar o equipamento:\n{causaRaiz.Message}",
                 "Erro ao gravar", MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }

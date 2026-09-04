@@ -502,8 +502,10 @@ public partial class RelatoriosWindow : Window
 
     private void GerarResumoIntervencoesPorAgrupamentoMesEscolhido_Click(object sender, RoutedEventArgs e)
     {
-        var ano = (int)CmbAno.SelectedItem;
-        var mes = CmbMes.SelectedIndex + 1;
+        var escolha = EscolherMesWindow.Perguntar(this, CmbAno?.SelectedItem as int?, CmbMes != null ? CmbMes.SelectedIndex + 1 : null);
+        if (escolha == null) return;
+        var (ano, mes) = escolha.Value;
+
         GerarPdf($"Resumo_Intervencoes_Agrupamento_{NomesMeses[mes - 1]}_{ano}.pdf",
             caminho => new RelatorioService(App.Db).GerarResumoIntervencoesPorAgrupamento(caminho, ano, mes));
     }
@@ -528,8 +530,10 @@ public partial class RelatoriosWindow : Window
 
     private void GerarResumoIntervencoesPorCategoriaMesEscolhido_Click(object sender, RoutedEventArgs e)
     {
-        var ano = (int)CmbAno.SelectedItem;
-        var mes = CmbMes.SelectedIndex + 1;
+        var escolha = EscolherMesWindow.Perguntar(this, CmbAno?.SelectedItem as int?, CmbMes != null ? CmbMes.SelectedIndex + 1 : null);
+        if (escolha == null) return;
+        var (ano, mes) = escolha.Value;
+
         GerarPdf($"Resumo_Intervencoes_Categoria_{NomesMeses[mes - 1]}_{ano}.pdf",
             caminho => new RelatorioService(App.Db).GerarResumoIntervencoesPorCategoria(caminho, ano, mes));
     }
@@ -554,8 +558,10 @@ public partial class RelatoriosWindow : Window
 
     private void GerarResumoTipoAgrupamentoMesEscolhido_Click(object sender, RoutedEventArgs e)
     {
-        var ano = (int)CmbAno.SelectedItem;
-        var mes = CmbMes.SelectedIndex + 1;
+        var escolha = EscolherMesWindow.Perguntar(this, CmbAno?.SelectedItem as int?, CmbMes != null ? CmbMes.SelectedIndex + 1 : null);
+        if (escolha == null) return;
+        var (ano, mes) = escolha.Value;
+
         GerarPdf($"Resumo_Tipo_Agrupamento_{NomesMeses[mes - 1]}_{ano}.pdf",
             caminho => new RelatorioService(App.Db).GerarResumoIntervencoesPorTipoAgrupamento(caminho, ano, mes));
     }
@@ -593,8 +599,10 @@ public partial class RelatoriosWindow : Window
 
     private void GerarListaAtividadesDisiaMesEscolhido_Click(object sender, RoutedEventArgs e)
     {
-        var ano = (int)CmbAno.SelectedItem;
-        var mes = CmbMes.SelectedIndex + 1;
+        var escolha = EscolherMesWindow.Perguntar(this, CmbAno?.SelectedItem as int?, CmbMes != null ? CmbMes.SelectedIndex + 1 : null);
+        if (escolha == null) return;
+        var (ano, mes) = escolha.Value;
+
         GerarPdf($"Atividades_DISIA_{NomesMeses[mes - 1]}_{ano}.pdf",
             caminho => new RelatorioService(App.Db).GerarListaAtividadesDisia(caminho, ano, mes));
     }
@@ -619,8 +627,10 @@ public partial class RelatoriosWindow : Window
 
     private void GerarResumoAtividadesDisiaPorCategoriaMesEscolhido_Click(object sender, RoutedEventArgs e)
     {
-        var ano = (int)CmbAno.SelectedItem;
-        var mes = CmbMes.SelectedIndex + 1;
+        var escolha = EscolherMesWindow.Perguntar(this, CmbAno?.SelectedItem as int?, CmbMes != null ? CmbMes.SelectedIndex + 1 : null);
+        if (escolha == null) return;
+        var (ano, mes) = escolha.Value;
+
         GerarPdf($"Resumo_Atividades_DISIA_Categoria_{NomesMeses[mes - 1]}_{ano}.pdf",
             caminho => new RelatorioService(App.Db).GerarResumoAtividadesDisiaPorCategoria(caminho, ano, mes));
     }

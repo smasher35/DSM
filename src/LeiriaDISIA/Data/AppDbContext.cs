@@ -215,8 +215,20 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<Equipamento>()
             .HasIndex(e => e.NumeroSerie).IsUnique();
+        // Nº de Inventário (GEPE) fica frequentemente por preencher em equipamento novo — o Nº
+        // de série/GEPE só costuma ser atribuído mais tarde. A validação em
+        // EquipamentoEditWindow.Guardar_Click já ignora deliberadamente valores em branco na
+        // verificação de duplicados ("numeroInventario != \"\" && ..."), mas até agora o índice
+        // UNIQUE aqui não tinha essa mesma exceção: assim que um segundo equipamento tentava
+        // gravar-se também com o campo em branco, a base de dados rejeitava-o (violação da
+        // restrição UNIQUE), com um erro genérico ("An error occurred while saving the entity
+        // changes...") que escondia a causa real. HasFilter (índice parcial) alinha o índice com
+        // a mesma exceção já pretendida pela validação da aplicação: só impede duplicados quando
+        // o valor está de facto preenchido. Ver também SchemaUpgrade.cs para bases de dados já
+        // existentes, onde este índice já tinha sido criado sem o filtro.
         modelBuilder.Entity<Equipamento>()
-            .HasIndex(e => e.NumeroInventario).IsUnique();
+            .HasIndex(e => e.NumeroInventario).IsUnique()
+            .HasFilter("\"NumeroInventario\" IS NOT NULL AND \"NumeroInventario\" != ''");
 
         modelBuilder.Entity<Equipamento>()
             .HasOne(e => e.Escola)

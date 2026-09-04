@@ -55,6 +55,15 @@ public partial class PedidosWindow : Window
     {
         IEnumerable<PedidoIntervencao> resultado = _todos;
 
+        // Por omissão, só mostra os pedidos que ainda precisam de atenção (EstaEmAberto: Pendente,
+        // Em Andamento, Em Espera) — os já Concluídos/Cancelados deixam de aparecer assim que
+        // mudam para esse estado, para não se acumularem na lista e dificultarem ver o que
+        // realmente falta resolver. O checkbox "Mostrar concluídos/cancelados" reverte isto,
+        // mostrando tudo (mesmo critério "EstaEmAberto" já usado noutros sítios da aplicação,
+        // ex.: contagem "Em Aberto" nos relatórios de Pedidos).
+        if (ChkMostrarConcluidos?.IsChecked != true)
+            resultado = resultado.Where(p => p.EstaEmAberto);
+
         var termo = TxtPesquisa?.Text?.Trim();
         if (!string.IsNullOrWhiteSpace(termo))
         {
@@ -66,6 +75,8 @@ public partial class PedidosWindow : Window
 
         Grid.ItemsSource = _visiveis = resultado.ToList();
     }
+
+    private void ChkMostrarConcluidos_Changed(object sender, RoutedEventArgs e) => AplicarFiltro();
 
     private void Inserir_Click(object sender, RoutedEventArgs e)
     {

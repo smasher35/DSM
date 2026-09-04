@@ -206,6 +206,38 @@ public static class SchemaUpgrade
         CriarRegistosAuditoriaSePreciso(conexao);
 
         CriarPlanoRotaSePreciso(conexao);
+
+        // Equipamento: o índice único de "Número de Inventário" passou a ser parcial (só impede
+        // duplicados quando o campo está de facto preenchido) — ver comentário completo em
+        // AppDbContext.OnModelCreating. Sem isto, bases de dados já existentes ficavam com o
+        // índice antigo (incondicional), e o EnsureCreated do EF Core não o substitui sozinho por
+        // já existir uma tabela/índice com esse nome.
+        TornarIndiceNumeroInventarioParcial(conexao);
+    }
+
+    /// <summary>Ver comentário em AppDbContext.OnModelCreating sobre o índice único de
+    /// "Número de Inventário" ter passado a ser parcial. Substitui sempre o índice
+    /// "IX_Equipamentos_NumeroInventario" pela versão parcial (com WHERE) — seguro e sem custo
+    /// repetir isto em cada arranque da aplicação, já que fica sempre no mesmo estado correto no
+    /// final, quer o índice anterior fosse o antigo (incondicional) ou já a versão parcial.</summary>
+    private static void TornarIndiceNumeroInventarioParcial(SqliteConnection conexao)
+    {
+        if (!TabelaExiste(conexao, "Equipamentos")) return;
+
+        using (var cmd = conexao.CreateCommand())
+        {
+            cmd.CommandText = "DROP INDEX IF EXISTS \"IX_Equipamentos_NumeroInventario\"";
+            cmd.ExecuteNonQuery();
+        }
+
+        using (var cmd = conexao.CreateCommand())
+        {
+            cmd.CommandText = """
+                CREATE UNIQUE INDEX "IX_Equipamentos_NumeroInventario" ON "Equipamentos"("NumeroInventario")
+                    WHERE "NumeroInventario" IS NOT NULL AND "NumeroInventario" != ''
+                """;
+            cmd.ExecuteNonQuery();
+        }
     }
 
     /// <summary>Ver <see cref="Models.RegistoAuditoria"/>. Numa base de dados nova, o EnsureCreated
