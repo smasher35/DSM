@@ -196,7 +196,62 @@ Utilizador criado por omissão na primeira execução: **admin / admin123**
 
 ---
 
-## 10. Notas finais
+## 10. Configuração da API de Planeamento de Rotas
+
+A funcionalidade de Planeamento de Rotas (geocodificação e cálculo de distâncias
+rodoviárias) requer uma chave de API do **OpenRouteService**.
+
+**⚠️ IMPORTANTE:** Consulte o ficheiro [SECURITY.md](SECURITY.md) para informações
+detalhadas sobre gestão segura de credenciais de API.
+
+### Obter uma chave de API (gratuita)
+
+1. Aceder a https://openrouteservice.org/dev/#/signup
+2. Criar uma conta e gerar uma chave de API
+3. A conta gratuita permite até 2.500 pedidos por dia (suficiente para o uso
+   normal da aplicação)
+
+### Configurar a chave no sistema
+
+A chave deve ser definida como variável de ambiente de sistema (`DISIA_ORS_API_KEY`)
+**em cada computador onde a aplicação vai correr**.
+
+**Opção 1: Via linha de comandos (requer privilégios de Administrador)**
+
+1. Abrir uma linha de comandos como Administrador
+2. Executar (substituindo `SUA_CHAVE_AQUI` pela chave real):
+   ```
+   setx DISIA_ORS_API_KEY "SUA_CHAVE_AQUI" /M
+   ```
+3. Reiniciar a aplicação para que a nova variável seja reconhecida
+
+**Opção 2: Via interface gráfica do Windows**
+
+1. Painel de Controlo → Sistema → Definições avançadas do sistema
+2. Variáveis de Ambiente → Variáveis do sistema → Nova
+3. Nome: `DISIA_ORS_API_KEY`
+4. Valor: a chave obtida no OpenRouteService
+5. Reiniciar a aplicação
+
+### Segurança
+
+**IMPORTANTE:** A chave de API é um segredo e **nunca deve ser incluída em
+código-fonte, ficheiros de configuração versionados, ou artefactos de compilação**.
+
+- O ficheiro `install_api.txt` contém apenas um placeholder e instruções
+- Este ficheiro está incluído no `.gitignore` para evitar commits acidentais
+  de chaves reais
+- Se uma chave for comprometida (exposta publicamente), deve ser imediatamente
+  revogada no portal do OpenRouteService e substituída por uma nova
+
+Sem a chave configurada, a aplicação continua a funcionar normalmente, mas as
+funcionalidades de geocodificação e planeamento de rotas ficam indisponíveis
+(a aplicação mostra uma mensagem clara ao utilizador quando tenta usar essas
+funcionalidades).
+
+---
+
+## 11. Notas finais
 
 - O ficheiro `disia.db` (SQLite) fica em `%LOCALAPPDATA%\LeiriaDISIA\`.
   Convém incluir este ficheiro no plano de cópias de segurança do posto de
