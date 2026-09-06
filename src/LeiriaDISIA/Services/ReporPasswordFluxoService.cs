@@ -83,14 +83,21 @@ public class ReporPasswordFluxoService
                 var assunto = Uri.EscapeDataString("As suas credenciais temporárias de acesso - Gestão DISIA");
                 var corpo = Uri.EscapeDataString(
                     $"Boa tarde, {usuario.NomeCompleto},\n\nEm anexo encontra o documento com a sua password temporária de acesso à Gestão DISIA.\n\nCumprimentos,\nDISIA");
-                Process.Start(new ProcessStartInfo
+                var mailtoUrl = $"mailto:{Uri.EscapeDataString(usuario.Email)}?subject={assunto}&body={corpo}";
+                if (Uri.TryCreate(mailtoUrl, UriKind.Absolute, out var uri) && uri.Scheme == "mailto")
                 {
-                    FileName = $"mailto:{usuario.Email}?subject={assunto}&body={corpo}",
-                    UseShellExecute = true
-                });
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = uri.AbsoluteUri,
+                        UseShellExecute = true
+                    });
+                }
             }
 
-            Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{caminhoPdf}\"") { UseShellExecute = true });
+            var explorerStartInfo = new ProcessStartInfo("explorer.exe") { UseShellExecute = true };
+            explorerStartInfo.ArgumentList.Add("/select,");
+            explorerStartInfo.ArgumentList.Add(caminhoPdf);
+            Process.Start(explorerStartInfo);
         }
         catch
         {
