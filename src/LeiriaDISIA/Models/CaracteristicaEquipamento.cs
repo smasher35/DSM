@@ -80,6 +80,28 @@ public class EquipamentoCaracteristicaValor
 }
 
 /// <summary>
+/// Equivalente de <see cref="EquipamentoCaracteristicaValor"/>, mas para um "modelo base" (ver
+/// Models/ModeloEquipamento.cs) em vez de uma unidade concreta de equipamento — guarda os valores
+/// preenchidos, para um modelo, das características adicionais definidas pelo administrador (o
+/// mesmo painel dinâmico "Características Adicionais" já usado em Inserir/Editar Equipamento — ver
+/// Views/ModelosEquipamentoWindow.xaml.cs). Ao escolher esse modelo em Inserir/Editar Equipamento,
+/// estes valores são copiados para os mesmos campos dinâmicos aí, tal como as restantes
+/// características do modelo — ver Views/EquipamentoEditWindow.xaml.cs, UsarModelo_Click.
+/// </summary>
+public class ModeloEquipamentoCaracteristicaValor
+{
+    public int Id { get; set; }
+
+    public int ModeloEquipamentoId { get; set; }
+    public ModeloEquipamento? ModeloEquipamento { get; set; }
+
+    public int CaracteristicaEquipamentoId { get; set; }
+    public CaracteristicaEquipamento? CaracteristicaEquipamento { get; set; }
+
+    public string? Valor { get; set; }
+}
+
+/// <summary>
 /// (1.4) Um dos valores pré-definidos (opcionais) de uma lista de sugestão para uma característica
 /// específica adicional — geridos em Administração → Dados Fixos → Tipos de Equipamento → "Gerir
 /// Características deste Grupo..." → "Gerir Valores desta Característica...", à semelhança do que já

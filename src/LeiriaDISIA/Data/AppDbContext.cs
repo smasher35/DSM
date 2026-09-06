@@ -21,6 +21,8 @@ public class AppDbContext : DbContext
     public DbSet<SubCategoriaIntervencao> SubCategoriasIntervencao => Set<SubCategoriaIntervencao>();
     public DbSet<IntervencaoCategoria> IntervencaoCategorias => Set<IntervencaoCategoria>();
     public DbSet<Equipamento> Equipamentos => Set<Equipamento>();
+    public DbSet<ModeloEquipamento> ModelosEquipamento => Set<ModeloEquipamento>();
+    public DbSet<ModeloEquipamentoCaracteristicaValor> ModeloEquipamentoCaracteristicaValores => Set<ModeloEquipamentoCaracteristicaValor>();
     public DbSet<EquipamentoAbatido> EquipamentosAbatidos => Set<EquipamentoAbatido>();
     public DbSet<EquipamentoRecolhido> EquipamentosRecolhidos => Set<EquipamentoRecolhido>();
     public DbSet<IntervencaoEquipamento> IntervencaoEquipamentos => Set<IntervencaoEquipamento>();

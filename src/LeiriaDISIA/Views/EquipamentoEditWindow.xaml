@@ -72,6 +72,14 @@
                     <TextBlock Text="Tipo de Equipamento" FontWeight="SemiBold" />
                     <ComboBox x:Name="CmbTipo" IsEditable="True" Margin="0,4,0,10" Padding="6,5"
                               SelectionChanged="CmbTipo_SelectionChanged" LostFocus="CmbTipo_LostFocus" />
+                    <!-- Catálogo de "modelos base" reutilizáveis (Tipo/Marca/Modelo/características)
+                         — ver Models/ModeloEquipamento.cs. Começa desativado pela mesma razão das
+                         combos dependentes de "Tipo de Memória"/"Tipo de Disco" mais abaixo: só faz
+                         sentido escolher um modelo depois de saber o Tipo (é o que filtra a lista) —
+                         ver AtualizarBotaoUsarModelo em Views/EquipamentoEditWindow.xaml.cs. -->
+                    <Button x:Name="BtnUsarModelo" Content="📋 Usar Modelo..." Click="UsarModelo_Click"
+                            Margin="0,0,0,10" HorizontalAlignment="Stretch" IsEnabled="False"
+                            ToolTip="Escolher um modelo já criado para preencher Marca, Modelo e características automaticamente" />
 
                     <TextBlock Text="Marca" FontWeight="SemiBold" />
                     <TextBox x:Name="TxtMarca" Margin="0,4,0,10" Padding="6,5" CharacterCasing="Upper" />

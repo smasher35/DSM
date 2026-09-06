@@ -480,4 +480,10 @@ public partial class EquipamentosWindow : Window
         var janela = new FolhaInventarioWindow { Owner = this };
         janela.ShowDialog();
     }
+
+    private void ModelosEquipamento_Click(object sender, RoutedEventArgs e)
+    {
+        var janela = new ModelosEquipamentoWindow { Owner = this };
+        janela.ShowDialog();
+    }
 }

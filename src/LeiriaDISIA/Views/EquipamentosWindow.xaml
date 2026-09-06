@@ -10,7 +10,9 @@
                 <Button Content="🏠 Menu Principal" Style="{StaticResource MenuPrincipalButton}" Click="MenuPrincipal_Click" Margin="0,0,10,0" />
                 <Button x:Name="BtnInserir" Content="➕ Inserir Equipamento" Style="{StaticResource PrimaryButton}" Click="Inserir_Click" Margin="0,0,10,0" />
                 <Button Content="📄 Relatório do Módulo" Style="{StaticResource ReportButton}" Click="Relatorio_Click" Margin="0,0,10,0" />
-                <Button Content="🗒️ Folha de Inventário" Style="{StaticResource ReportButton}" Click="FolhaInventario_Click" Margin="0,0,30,0" Background="#FF6423F7" />
+                <Button Content="🗒️ Folha de Inventário" Style="{StaticResource ReportButton}" Click="FolhaInventario_Click" Margin="0,0,10,0" Background="#FF6423F7" />
+                <Button Content="📋 Modelos de Equipamento" Click="ModelosEquipamento_Click" Margin="0,0,30,0"
+                        ToolTip="Catálogo de modelos base (Marca, Modelo e características) para reutilizar ao inserir equipamento igual" />
                 <TextBox x:Name="TxtPesquisa" Style="{StaticResource SearchTextBox}" Width="280" TextChanged="Filtro_Changed"
                          ToolTip="Pesquisar por nº de série, inventário, tipo, marca ou escola" />
                 <TextBlock Text="Equipamentos Informáticos" FontSize="22" FontWeight="Bold"

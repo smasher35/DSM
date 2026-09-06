@@ -480,8 +480,90 @@ public partial class EquipamentoEditWindow : Window
         AtualizarObsolescencia();
     }
 
+    /// <summary>Abre o seletor de "modelos base" (ver Models/ModeloEquipamento.cs e
+    /// Views/SelecionarModeloWindow.xaml.cs), já filtrado ao Tipo escolhido acima — o próprio
+    /// botão só fica ativo depois de haver um Tipo escolhido (ver AtualizarGruposVisiveis), pela
+    /// mesma razão das combos dependentes de "Tipo de Memória"/"Tipo de Disco". Escolhido um
+    /// modelo, copia Marca/Modelo e as suas características para o formulário — os campos
+    /// próprios desta unidade em concreto (Nº de Série, Nº de Inventário, Escola, Aquisição,
+    /// Estado, Observações) não são tocados, continuam a preencher-se à mão como até aqui.</summary>
+    private void UsarModelo_Click(object sender, RoutedEventArgs e)
+    {
+        var tipo = CmbTipo.Text;
+        if (string.IsNullOrWhiteSpace(tipo)) return;
+
+        var todosOsModelos = App.Db.ModelosEquipamento.ToList();
+        var modelo = SelecionarModeloWindow.Perguntar(this, tipo, todosOsModelos);
+        if (modelo == null) return;
+
+        TxtMarca.Text = modelo.Marca;
+        TxtModelo.Text = modelo.Modelo;
+
+        CmbProcessador.Text = modelo.Processador;
+        TxtFamiliaProcessador.Text = modelo.FamiliaProcessador;
+
+        // Mesma ordem (pai → AtualizarOpcoesDependentes → filho) já usada ao carregar um
+        // equipamento existente (ver mais abaixo) — definir o Text de uma combo dependente antes
+        // de recarregar as suas opções arrisca perdê-lo, já que AtualizarOpcoesDependentes também
+        // decide se a combo fica ativa ou não a partir do valor atual da combo-pai.
+        CmbTipoMemoria.Text = modelo.TipoMemoria;
+        AtualizarOpcoesDependentes(CmbTipoMemoria, CmbMemoriaGB, "Tipo de Memória");
+        CmbMemoriaGB.Text = modelo.QuantidadeMemoriaGB?.ToString();
+
+        CmbTipoDisco.Text = modelo.TipoDisco;
+        AtualizarOpcoesDependentes(CmbTipoDisco, CmbTamanhoDisco, "Tipo de Disco");
+        CmbTamanhoDisco.Text = modelo.TamanhoDiscoGB?.ToString();
+
+        CmbSistemaOperativo.Text = modelo.SistemaOperativo;
+
+        CmbPolegadas.Text = modelo.PolegadasMonitor?.ToString();
+        CmbTipoPainel.Text = modelo.TipoPainelMonitor;
+        CmbResolucaoMonitor.Text = modelo.ResolucaoMonitor;
+
+        CmbTipoImpressora.Text = modelo.TipoImpressora;
+        ChkImpressaoCor.IsChecked = modelo.ImpressaoCor;
+        CmbLigacaoImpressora.Text = modelo.LigacaoImpressora;
+
+        CmbNumeroPortas.Text = modelo.NumeroPortas?.ToString();
+        CmbVelocidadeRede.Text = modelo.VelocidadeRede;
+        ChkGerivel.IsChecked = modelo.Gerivel;
+
+        CmbResolucaoCamera.Text = modelo.ResolucaoCamera;
+        CmbTipoCamera.Text = modelo.TipoCamera;
+        ChkVisaoNoturna.IsChecked = modelo.VisaoNoturna;
+
+        CmbLuminosidade.Text = modelo.LuminosidadeLumens?.ToString();
+        CmbResolucaoProjetor.Text = modelo.ResolucaoProjetor;
+
+        TxtEspecificacoesAdicionais.Text = modelo.EspecificacoesAdicionais;
+
+        // Características adicionais definidas pelo administrador (ver
+        // AtualizarCaracteristicasAdicionais/_camposCaracteristicasAdicionais mais abaixo) — os
+        // campos dinâmicos já têm de estar construídos a esta altura para o Tipo atual, já que o
+        // próprio botão "Usar Modelo..." só fica ativo depois de haver um Tipo escolhido (o que já
+        // desencadeia essa construção). Só é preciso encontrar o campo de cada característica pelo
+        // mesmo Id e preencher o valor gravado no modelo.
+        var valoresAdicionais = App.Db.ModeloEquipamentoCaracteristicaValores
+            .Where(v => v.ModeloEquipamentoId == modelo.Id)
+            .ToDictionary(v => v.CaracteristicaEquipamentoId, v => v.Valor);
+
+        foreach (var (caracteristicaId, valor) in valoresAdicionais)
+        {
+            if (!_camposCaracteristicasAdicionais.TryGetValue(caracteristicaId, out var campo)) continue;
+            switch (campo)
+            {
+                case TextBox caixa: caixa.Text = valor; break;
+                case ComboBox combo: combo.Text = valor; break;
+            }
+        }
+
+        AtualizarObsolescencia();
+    }
+
     private void AtualizarGruposVisiveis(string? tipo)
     {
+        BtnUsarModelo.IsEnabled = !string.IsNullOrWhiteSpace(tipo);
+
         GrupoComputador.Visibility = Oculto(true);
         GrupoMonitor.Visibility = Oculto(true);
         GrupoImpressora.Visibility = Oculto(true);

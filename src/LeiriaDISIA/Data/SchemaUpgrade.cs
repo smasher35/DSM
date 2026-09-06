@@ -229,6 +229,83 @@ public static class SchemaUpgrade
         // depois da primeira vez.
         RecalcularAnoMesAPartirDaData(conexao, "Intervencoes");
         RecalcularAnoMesAPartirDaData(conexao, "AtividadesDisia");
+
+        CriarModelosEquipamentoSePreciso(conexao);
+        CriarModeloEquipamentoCaracteristicaValoresSePreciso(conexao);
+    }
+
+    /// <summary>Valores das características adicionais (definidas pelo administrador) preenchidos
+    /// para um "modelo base" — ver Models/ModeloEquipamentoCaracteristicaValor.cs. Índice único
+    /// (ModeloEquipamentoId, CaracteristicaEquipamentoId): cada característica só pode ter um valor
+    /// por modelo, tal como já acontece para EquipamentoCaracteristicaValores.</summary>
+    private static void CriarModeloEquipamentoCaracteristicaValoresSePreciso(SqliteConnection conexao)
+    {
+        if (TabelaExiste(conexao, "ModeloEquipamentoCaracteristicaValores")) return;
+
+        using (var cmd = conexao.CreateCommand())
+        {
+            cmd.CommandText = """
+                CREATE TABLE "ModeloEquipamentoCaracteristicaValores" (
+                    "Id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    "ModeloEquipamentoId" INTEGER NOT NULL,
+                    "CaracteristicaEquipamentoId" INTEGER NOT NULL,
+                    "Valor" TEXT NULL
+                )
+                """;
+            cmd.ExecuteNonQuery();
+        }
+
+        using (var cmdIndice = conexao.CreateCommand())
+        {
+            cmdIndice.CommandText = """
+                CREATE UNIQUE INDEX "IX_ModeloEquipamentoCaracteristicaValores_ModeloEquipamentoId_CaracteristicaEquipamentoId"
+                    ON "ModeloEquipamentoCaracteristicaValores"("ModeloEquipamentoId", "CaracteristicaEquipamentoId")
+                """;
+            cmdIndice.ExecuteNonQuery();
+        }
+    }
+
+    /// <summary>Catálogo de "modelos base" de equipamento reutilizáveis (Tipo/Marca/Modelo/
+    /// características) — ver Models/ModeloEquipamento.cs para a explicação completa. Espelha os
+    /// mesmos tipos de coluna já usados na tabela Equipamentos para os mesmos campos.</summary>
+    private static void CriarModelosEquipamentoSePreciso(SqliteConnection conexao)
+    {
+        if (TabelaExiste(conexao, "ModelosEquipamento")) return;
+
+        using var cmd = conexao.CreateCommand();
+        cmd.CommandText = """
+            CREATE TABLE "ModelosEquipamento" (
+                "Id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                "Tipo" TEXT NOT NULL,
+                "Nome" TEXT NULL,
+                "Marca" TEXT NULL,
+                "Modelo" TEXT NULL,
+                "Ativo" INTEGER NOT NULL DEFAULT 1,
+                "Processador" TEXT NULL,
+                "FamiliaProcessador" TEXT NULL,
+                "TipoMemoria" TEXT NULL,
+                "QuantidadeMemoriaGB" INTEGER NULL,
+                "TipoDisco" TEXT NULL,
+                "TamanhoDiscoGB" INTEGER NULL,
+                "SistemaOperativo" TEXT NULL,
+                "PolegadasMonitor" REAL NULL,
+                "TipoPainelMonitor" TEXT NULL,
+                "ResolucaoMonitor" TEXT NULL,
+                "TipoImpressora" TEXT NULL,
+                "ImpressaoCor" INTEGER NULL,
+                "LigacaoImpressora" TEXT NULL,
+                "NumeroPortas" INTEGER NULL,
+                "VelocidadeRede" TEXT NULL,
+                "Gerivel" INTEGER NULL,
+                "ResolucaoCamera" TEXT NULL,
+                "VisaoNoturna" INTEGER NULL,
+                "TipoCamera" TEXT NULL,
+                "LuminosidadeLumens" INTEGER NULL,
+                "ResolucaoProjetor" TEXT NULL,
+                "EspecificacoesAdicionais" TEXT NULL
+            )
+            """;
+        cmd.ExecuteNonQuery();
     }
 
     private static void RecalcularAnoMesAPartirDaData(SqliteConnection conexao, string tabela)
