@@ -97,12 +97,30 @@
     </Style>
 
     <!-- ComboBox -->
+    <!-- Cores para uma combo desativada (IsEnabled=False) — equivalente escuro de
+         ComboBoxBackgroundDisabled/ComboBoxBorderBrushDisabled no ModernTheme.xaml (que usa tons
+         claros, errados para este tema); aqui um cinzento mais escuro e discreto do que
+         BrushInputBackground, para se notar claramente a diferença sobre o fundo escuro. -->
+    <SolidColorBrush x:Key="ComboBoxBackgroundDisabled" Color="#2E2E2E" />
+    <SolidColorBrush x:Key="ComboBoxBorderBrushDisabled" Color="#333333" />
+
     <Style TargetType="ComboBox">
         <Setter Property="Background" Value="{StaticResource BrushInputBackground}" />
         <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}" />
         <Setter Property="BorderBrush" Value="{StaticResource BrushBorder}" />
         <Setter Property="Padding" Value="8" />
         <Setter Property="BorderThickness" Value="1" />
+        <Style.Triggers>
+            <!-- Ver comentário equivalente em ModernTheme.xaml — mesma razão (Opacity garante que
+                 se nota o estado desativado, independentemente do template nativo do ComboBox
+                 respeitar ou não os Setters de Background/BorderBrush). -->
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Background" Value="{StaticResource ComboBoxBackgroundDisabled}" />
+                <Setter Property="BorderBrush" Value="{StaticResource ComboBoxBorderBrushDisabled}" />
+                <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}" />
+                <Setter Property="Opacity" Value="0.6" />
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <!-- CheckBox -->

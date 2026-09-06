@@ -65,7 +65,12 @@ public partial class PesquisaAvancadaAtividadeDisiaWindow : Window
         var cmbCampo = new ComboBox { Width = 240, Margin = new Thickness(0, 0, 8, 0), ItemsSource = _campos };
         var cmbComparador = new ComboBox { Width = 90, Margin = new Thickness(0, 0, 8, 0) };
         var txtValor = new TextBox { Width = 170, Margin = new Thickness(0, 0, 8, 0), VerticalContentAlignment = VerticalAlignment.Center };
-        var btnRemover = new Button { Content = "✕", Width = 28, ToolTip = "Remover este filtro" };
+        var btnRemover = new Button
+        {
+            Content = "🗑️", Width = 32, Padding = new Thickness(2),
+            Style = (Style)FindResource("AdminButtonRose"),
+            ToolTip = "Remover este filtro"
+        };
 
         var painel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 8) };
         painel.Children.Add(cmbCampo);

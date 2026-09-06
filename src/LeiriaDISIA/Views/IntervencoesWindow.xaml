@@ -23,16 +23,100 @@
             </StackPanel>
         </Border>
 
-        <!-- Grid com linhas Auto (legendas) + "*" (DataGrid) + Auto (dica), em vez de StackPanel,
-             para a lista de intervenções ocupar sempre todo o espaço livre até ao fundo da janela
-             (mesmo padrão do módulo Atividades DISIA — ver Views/DisiaWindow.xaml). -->
+        <!-- Grid com linhas Auto (resumo + legendas) + "*" (DataGrid) + Auto (dica), em vez de
+             StackPanel, para a lista de intervenções ocupar sempre todo o espaço livre até ao
+             fundo da janela (mesmo padrão do módulo Atividades DISIA — ver Views/DisiaWindow.xaml). -->
         <Grid>
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
-            <Grid Grid.Row="0" Margin="0,0,0,12">
+
+            <!-- "Categoria/Agrupamento/Escola mais intervencionada do ano" — reage ao Ano
+                 escolhido no filtro acima (não ao Mês/Agrupamento/pesquisa: mostra sempre o ano
+                 inteiro escolhido, para se conseguir ver o panorama anual independentemente do que
+                 estiver filtrado na grelha por baixo) — ver AtualizarResumoIntervencoes em
+                 IntervencoesWindow.xaml.cs. Três cartões lado a lado, mesmo padrão do destaque
+                 "mais intervencionado" do módulo Equipamento Informático (ver
+                 Views/EquipamentosWindow.xaml), para aproveitar a largura disponível. Cada cartão
+                 tem a sua própria visibilidade: só aparece quando há pelo menos uma intervenção
+                 nesse ano (ou, no caso do agrupamento, quando alguma intervenção do ano tem
+                 agrupamento associado). -->
+            <UniformGrid Grid.Row="0" Columns="3" Rows="1" Margin="0,0,0,12">
+                <Border x:Name="PainelCategoriaMaisIntervencionada" Background="#FDECEC" CornerRadius="8" Padding="10" Margin="0,0,10,0" Visibility="Collapsed">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🔧" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center" />
+                            <TextBlock Text="Categoria mais intervencionada do ano" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock x:Name="TxtCategoriaMaisIntervencionada" Margin="0,4,0,0" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <Border x:Name="PainelAgrupamentoMaisIntervencionadoAno" Background="#FDECEC" CornerRadius="8" Padding="10" Margin="0,0,10,0" Visibility="Collapsed">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🏘️" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center" />
+                            <TextBlock Text="Agrupamento mais intervencionado do ano" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock x:Name="TxtAgrupamentoMaisIntervencionadoAno" Margin="0,4,0,0" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <Border x:Name="PainelEscolaMaisIntervencionadaAno" Background="#FDECEC" CornerRadius="8" Padding="10" Visibility="Collapsed">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🏫" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center" />
+                            <TextBlock Text="Escola mais intervencionada do ano" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock x:Name="TxtEscolaMaisIntervencionadaAno" Margin="0,4,0,0" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+
+            <!-- "Intervenções por Categoria" — Total Anual (mesmo Ano do filtro acima) e Mês
+                 Corrente (sempre o mês atual, DateTime.Today — não o Mês escolhido no filtro
+                 acima, para ficar sempre "o que se passou este mês", tal como os cartões
+                 equivalentes do Dashboard). % de cada categoria sobre o total de
+                 categorias-em-intervenções do período (uma intervenção pode ter mais do que uma
+                 categoria — ver Intervencao.Categorias — por isso a soma das percentagens não
+                 corresponde ao nº de intervenções, mas sim ao nº de categorias registadas).
+                 Gauges (modo normal) ou barras finas (Modo Compacto) construídos dinamicamente em
+                 código — ver AtualizarGaugesCategoria em IntervencoesWindow.xaml.cs — mesmo
+                 mecanismo de "Sistemas Operativos"/"Armazenamento" no módulo Equipamento
+                 Informático. -->
+            <UniformGrid Grid.Row="1" Columns="2" Rows="1" Margin="0,0,0,12">
+                <Border Style="{StaticResource CardStyle}" Margin="0,0,10,0">
+                    <StackPanel>
+                        <TextBlock Text="Intervenções por Categoria — Total Anual" Style="{StaticResource SectionTitleStyle}" FontSize="16" />
+                        <TextBlock x:Name="TxtTotalCategoriaAno" TextWrapping="Wrap" FontSize="11"
+                                   Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,10"
+                                   Text="% de cada categoria sobre o total do ano" />
+                        <TextBlock x:Name="TxtSemCategoriaAno" TextWrapping="Wrap" FontSize="11" FontStyle="Italic"
+                                   Foreground="{StaticResource BrushTextSecondary}" Visibility="Collapsed"
+                                   Text="Nenhuma intervenção com categoria registada este ano." />
+                        <WrapPanel x:Name="PainelGaugesCategoriaAno" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Intervenções por Categoria — Mês Corrente" Style="{StaticResource SectionTitleStyle}" FontSize="16" />
+                        <TextBlock x:Name="TxtTotalCategoriaMes" TextWrapping="Wrap" FontSize="11"
+                                   Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,10"
+                                   Text="% de cada categoria sobre o total do mês corrente" />
+                        <TextBlock x:Name="TxtSemCategoriaMes" TextWrapping="Wrap" FontSize="11" FontStyle="Italic"
+                                   Foreground="{StaticResource BrushTextSecondary}" Visibility="Collapsed"
+                                   Text="Nenhuma intervenção com categoria registada este mês." />
+                        <WrapPanel x:Name="PainelGaugesCategoriaMes" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+
+            <Grid Grid.Row="2" Margin="0,0,0,12">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="16" />
@@ -76,7 +160,7 @@
                 </Border>
             </Grid>
 
-            <Border Grid.Row="1" Style="{StaticResource CardStyle}">
+            <Border Grid.Row="3" Style="{StaticResource CardStyle}">
                 <DataGrid x:Name="Grid" CanUserSortColumns="True" MouseDoubleClick="Grid_MouseDoubleClick"
                           RowHeight="NaN" MinRowHeight="34" RowStyle="{StaticResource DataGridRowClickableStyle}">
                     <DataGrid.Columns>
@@ -126,7 +210,7 @@
                     </DataGrid.Columns>
                 </DataGrid>
             </Border>
-            <TextBlock Grid.Row="2" Text="💡 Duplo-clique numa intervenção para ver/editar detalhes ou imprimir o relatório em PDF."
+            <TextBlock Grid.Row="4" Text="💡 Duplo-clique numa intervenção para ver/editar detalhes ou imprimir o relatório em PDF."
                        FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,8,0,0" />
         </Grid>
     </DockPanel>

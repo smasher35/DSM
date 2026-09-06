@@ -485,6 +485,14 @@ public partial class DashboardView : UserControl
         KpiTotalAno.Text = resumo.TotalIntervencoesAnoCorrente.ToString();
         KpiTotalMes.Text = resumo.TotalIntervencoesMesCorrente.ToString();
         KpiTotalGlobal.Text = resumo.TotalIntervencoesGlobal.ToString();
+        // Diagnóstico temporário (ver comentário completo em DashboardService.Gerar): se o total
+        // histórico e o do ano corrente não baterem certo, o tooltip deste cartão mostra
+        // exatamente qual(is) intervenção(ões) está(ão) a ser contada(s) numa mas não na outra —
+        // em vez de continuar a adivinhar a causa às cegas. Fica vazio (sem tooltip) assim que os
+        // dois totais voltarem a bater certo.
+        CardFhd_TotalGlobal.ToolTip = resumo.IntervencoesForaDoAnoCorrente.Count > 0
+            ? "Não contam para \"ano corrente\":\n" + string.Join("\n", resumo.IntervencoesForaDoAnoCorrente)
+            : null;
         KpiAgrupamentos.Text = resumo.TotalAgrupamentos.ToString();
         KpiEscolas.Text = resumo.TotalEscolas.ToString();
         KpiPendentes.Text = resumo.PedidosNaoConcluidos.ToString();

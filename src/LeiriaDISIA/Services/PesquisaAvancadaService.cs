@@ -249,7 +249,10 @@ public static class PesquisaAvancadaService
         var sugLuminosidade = ValoresCaracteristicaEmbutida(db, grpProjetor, "Luminosidade (Lumens)", "2000", "3000", "4000", "5000", "6000");
         var sugResolucaoProjetor = ValoresCaracteristicaEmbutida(db, grpProjetor, "Resolução", "1280x800", "1920x1080", "3840x2160");
         var sugTipoImpressora = ValoresCaracteristicaEmbutida(db, grpImpressora, "Tipo de Impressora", "Laser", "Tinta");
-        var sugLigacaoImpressora = ValoresAtivos(db, GruposValorFixo.LigacaoImpressora, "USB", "Rede", "WiFi");
+        // Mesma correção que em EquipamentoEditWindow.xaml.cs: lê agora da característica "Tipo de
+        // Ligação" (onde o administrador realmente gere isto), não da lista genérica antiga, para
+        // a pesquisa avançada mostrar sempre os mesmos valores sugeridos do formulário de equipamento.
+        var sugLigacaoImpressora = ValoresCaracteristicaEmbutida(db, grpImpressora, "Tipo de Ligação", "USB", "Rede", "WiFi");
         var sugEstado = ValoresAtivos(db, GruposValorFixo.EstadoEquipamento,
             EstadosEquipamento.EmServico, EstadosEquipamento.Recolhido, EstadosEquipamento.EmReparacao,
             EstadosEquipamento.Reparado, EstadosEquipamento.AguardaEntrega, EstadosEquipamento.EmArmazem, EstadosEquipamento.Abatido);

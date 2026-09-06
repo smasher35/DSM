@@ -213,6 +213,37 @@ public static class SchemaUpgrade
         // índice antigo (incondicional), e o EnsureCreated do EF Core não o substitui sozinho por
         // já existir uma tabela/índice com esse nome.
         TornarIndiceNumeroInventarioParcial(conexao);
+
+        // (Intervencoes/AtividadesDisia) "Ano"/"Mes" são campos desnormalizados a partir de "Data"
+        // (guardados à parte só para facilitar agrupar/filtrar por ano ou mês sem ter de extrair a
+        // data em cada consulta) — nada garante que se mantenham sempre sincronizados com "Data" se
+        // alguma vez um registo for criado ou alterado por um caminho que atualize "Data" sem
+        // também recalcular "Ano"/"Mes" (ex.: uma ferramenta de correção direta à base de dados, ou
+        // uma importação mais antiga). Quando isso acontece, o registo passa a ser contado no
+        // ano/mês errado em relatórios e no dashboard — foi exatamente isto que causou a diferença
+        // entre "Intervenções (total histórico)" e "Intervenções (ano corrente)" no Dashboard
+        // (ver Services/DashboardService.cs) quando, apesar de a base de dados só ter intervenções
+        // de um único ano, os dois totais não batiam certo. Este passo corrige sempre os dois
+        // campos a partir de "Data" (a fonte de verdade) em qualquer registo onde não coincidam —
+        // seguro e sem custo repetir em cada arranque, já que deixa de haver nada para corrigir
+        // depois da primeira vez.
+        RecalcularAnoMesAPartirDaData(conexao, "Intervencoes");
+        RecalcularAnoMesAPartirDaData(conexao, "AtividadesDisia");
+    }
+
+    private static void RecalcularAnoMesAPartirDaData(SqliteConnection conexao, string tabela)
+    {
+        if (!TabelaExiste(conexao, tabela)) return;
+
+        using var cmd = conexao.CreateCommand();
+        cmd.CommandText = $"""
+            UPDATE "{tabela}"
+            SET "Ano" = CAST(strftime('%Y', "Data") AS INTEGER),
+                "Mes" = CAST(strftime('%m', "Data") AS INTEGER)
+            WHERE "Ano" != CAST(strftime('%Y', "Data") AS INTEGER)
+               OR "Mes" != CAST(strftime('%m', "Data") AS INTEGER)
+            """;
+        cmd.ExecuteNonQuery();
     }
 
     /// <summary>Ver comentário em AppDbContext.OnModelCreating sobre o índice único de

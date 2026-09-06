@@ -64,14 +64,15 @@ public static class GruposValorFixo
     /// para a migração automática (uma única vez) dos valores já configurados por um administrador
     /// — ver DbInitializer.MigrarCaracteristicasFixasEmbutidas.
     ///
-    /// (12) <see cref="TipoImpressora"/> sofreu a mesma migração, para o grupo "Impressora" —
-    /// deixou de aparecer aqui por essa razão. A constante mantém-se só pelo mesmo motivo dos
-    /// grupos acima (migração automática). <see cref="LigacaoImpressora"/> não foi afetada e
-    /// continua a ser uma lista genérica de Dados Fixos normal.</summary>
+    /// (12/13) <see cref="TipoImpressora"/> e <see cref="LigacaoImpressora"/> sofreram a mesma
+    /// migração, para o grupo "Impressora" — deixaram de aparecer aqui pela mesma razão. As
+    /// constantes mantêm-se só pelo mesmo motivo dos grupos acima (migração automática). A combo
+    /// "Ligação" de Inserir/Editar Equipamento passou a ler da característica "Tipo de Ligação"
+    /// (ver EquipamentoEditWindow.xaml.cs) — antes continuava ligada a este grupo, pelo que um
+    /// valor acrescentado em Características Específicas nunca aparecia lá.</summary>
     public static readonly (string Grupo, string Rotulo)[] Todos =
     {
         (TipoEquipamento, "Tipos de Equipamento"),
-        (LigacaoImpressora, "Ligações de Impressora"),
         (StatusAbate, "Status de Abate"),
         (TipoEscola, "Tipos de Escola"),
         (EstadoEscola, "Estados de Escola"),

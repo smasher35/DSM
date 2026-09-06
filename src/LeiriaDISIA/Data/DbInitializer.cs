@@ -414,14 +414,33 @@ public static class DbInitializer
         // como já acontece para Computador/Rede/Câmara/Monitor/Projetor acima — geridas em
         // Administração → Dados Fixos → Tipos de Equipamento → Impressora, e visível no formulário
         // de Inserir/Editar Equipamento através de ValoresCaracteristicaEmbutida (ver
-        // EquipamentoEditWindow.xaml.cs). "Ligação da Impressora" (USB/Rede/WiFi) não faz parte
-        // deste pedido e continua a vir da lista genérica GruposValorFixo.LigacaoImpressora.
+        // EquipamentoEditWindow.xaml.cs).
+        //
+        // (13) "Ligação da Impressora" (USB/Rede/WiFi) tinha ficado de fora deste pedido
+        // inicialmente e continuava a vir da lista genérica GruposValorFixo.LigacaoImpressora —
+        // isto criava um problema real: um administrador que geria "Tipo de Ligação" em
+        // Características Específicas (pensando, razoavelmente, que era o mesmo sítio de
+        // "Tipo de Impressora" ao lado) via os valores que acrescentava (ex.: "USB e WIFI") nunca
+        // aparecerem no formulário de equipamento, porque a combo continuava ligada à lista antiga,
+        // nunca à característica. Migra-se agora da mesma forma que as restantes.
         if (!db.CaracteristicasEquipamento.Any(c => c.GrupoCaracteristicas == GruposCaracteristicasEquipamento.Impressora && c.Nome == "Tipo de Impressora"))
         {
             const string grupo = GruposCaracteristicasEquipamento.Impressora;
 
             var idTipoImpressora = CriarCaracteristica(grupo, "Tipo de Impressora", 0);
             CriarOpcoes(idTipoImpressora, ValoresAntigos(GruposValorFixo.TipoImpressora, new[] { "Laser", "Tinta" }));
+        }
+
+        // Só cria se ainda não existir NENHUMA característica "Tipo de Ligação" neste grupo — em
+        // instalações (como esta) onde o próprio administrador já a tinha criado manualmente em
+        // Características Específicas antes desta migração existir, não duplica; nas restantes,
+        // migra os valores já configurados na lista genérica antiga, tal como as migrações acima.
+        if (!db.CaracteristicasEquipamento.Any(c => c.GrupoCaracteristicas == GruposCaracteristicasEquipamento.Impressora && c.Nome == "Tipo de Ligação"))
+        {
+            const string grupo = GruposCaracteristicasEquipamento.Impressora;
+
+            var idTipoLigacao = CriarCaracteristica(grupo, "Tipo de Ligação", 1);
+            CriarOpcoes(idTipoLigacao, ValoresAntigos(GruposValorFixo.LigacaoImpressora, new[] { "USB", "Rede", "WiFi" }));
         }
     }
 

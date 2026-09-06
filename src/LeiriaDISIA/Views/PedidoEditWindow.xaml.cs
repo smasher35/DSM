@@ -26,6 +26,12 @@ public partial class PedidoEditWindow : Window
         // mover, minimizar, maximizar, fechar e o comportamento modal nao sao afetados.
         SourceInitialized += (_, _) => TitleBarService.AplicarCorSobria(this);
 
+        // A janela usa SizeToContent="Height" (ver XAML) para caber sempre o conteúdo sem esconder
+        // os botões "Cancelar"/"Guardar" — trava-se aqui esse crescimento no limite da área de
+        // trabalho disponível, para nunca ultrapassar o ecrã (com o ScrollViewer interno do XAML
+        // como rede de segurança nesse caso).
+        MaxHeight = SystemParameters.WorkArea.Height - 24;
+
         _existente = pedido;
 
         _todasEscolas = App.Db.Escolas.Include(e => e.Agrupamento).Where(e => e.Estado != EstadosEscola.Desativada).OrderBy(e => e.Nome).ToList();

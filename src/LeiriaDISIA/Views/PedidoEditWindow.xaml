@@ -1,10 +1,22 @@
 <Window x:Class="LeiriaDISIA.Views.PedidoEditWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Pedido de Intervenção" Height="737" Width="900" MinHeight="620" MinWidth="800"
+        Title="Pedido de Intervenção" SizeToContent="Height" Width="900" MinHeight="620" MinWidth="800"
         WindowStartupLocation="CenterOwner"
         Background="{StaticResource BrushBackground}">
-    <ScrollViewer Margin="24,20,34,20" VerticalScrollBarVisibility="Auto">
+    <!-- Height passou de fixo (737) para SizeToContent — mesma razão e mesmo padrão de
+         EquipamentoEditWindow.xaml (ver comentário lá): os botões "Cancelar"/"Guardar" deixam de
+         poder ficar escondidos fora da área visível. MaxHeight (definido em código, em
+         PedidoEditWindow.xaml.cs) trava o crescimento no limite do ecrã disponível. O ScrollViewer
+         passa a envolver só o conteúdo (título + campos + botão "Criar Intervenção"), não os
+         botões finais — antes envolvia tudo. -->
+    <Grid Margin="24,20,34,20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
         <StackPanel>
             <TextBlock x:Name="TxtTitulo" Text="Novo Pedido de Intervenção" Style="{StaticResource SectionTitleStyle}"
                        FontSize="18" Margin="0,0,0,16" />
@@ -89,15 +101,18 @@
                     Background="#22C55E" Foreground="White" Padding="10,8" HorizontalAlignment="Left" />
             <TextBlock Text="Ao registar a intervenção correspondente, este pedido passa automaticamente a 'Concluído'."
                        FontSize="11" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" Margin="0,6,0,0" />
-
-            <!-- Cancelar/Guardar na última linha, tal como em todas as outras janelas de
-                 inserir/editar (ex.: EscolaEditWindow, EquipamentoEditWindow), para manter a
-                 coerência visual — o botão "Criar Intervenção" (ação secundária, específica
-                 deste ecrã) fica acima, junto à sua nota explicativa. -->
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
-                <Button Content="Cancelar" Click="Cancelar_Click" Margin="0,0,8,0" />
-                <Button Content="Guardar" Style="{StaticResource PrimaryButton}" Click="Guardar_Click" />
-            </StackPanel>
         </StackPanel>
-    </ScrollViewer>
+        </ScrollViewer>
+
+        <!-- Cancelar/Guardar — fora do ScrollViewer acima, para ficar sempre visível no fundo da
+             janela independentemente do tamanho do conteúdo rolável (ver comentário no topo do
+             ficheiro). Tal como em todas as outras janelas de inserir/editar (ex.: EscolaEditWindow,
+             EquipamentoEditWindow), para manter a coerência visual — o botão "Criar Intervenção"
+             (ação secundária, específica deste ecrã) fica acima, dentro da área rolável, junto à
+             sua nota explicativa. -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+            <Button Content="Cancelar" Click="Cancelar_Click" Margin="0,0,8,0" />
+            <Button Content="Guardar" Style="{StaticResource PrimaryButton}" Click="Guardar_Click" />
+        </StackPanel>
+    </Grid>
 </Window>

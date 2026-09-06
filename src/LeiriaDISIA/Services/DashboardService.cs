@@ -14,6 +14,14 @@ public class DashboardResumo
     public int TotalIntervencoesAnoCorrente { get; set; }
     public int TotalIntervencoesMesCorrente { get; set; }
     public int TotalIntervencoesGlobal { get; set; }
+
+    /// <summary>Diagnóstico para quando TotalIntervencoesGlobal não bate certo com
+    /// TotalIntervencoesAnoCorrente (ex.: 163 vs 162) — lista cada intervenção válida (não
+    /// cancelada) cuja Data.Year não é o ano corrente, com Id/Data/Escola, para se conseguir
+    /// identificar exatamente qual (ou quais) é a diferença sem precisar de abrir a base de dados
+    /// diretamente. Mostrado como tooltip no cartão "Intervenções (total histórico)" do Dashboard
+    /// quando não está vazia — ver DashboardView.xaml.cs.</summary>
+    public List<string> IntervencoesForaDoAnoCorrente { get; set; } = new();
     public int PedidosPendentes { get; set; }
 
     /// <summary>Total de pedidos de intervenção "não concluídos", ou seja, a soma dos pedidos
@@ -165,7 +173,12 @@ public class DashboardService
         var totalComputadoresSecretaria = todosOsTipos.Count(t => string.Equals(t, "Computador de Secretária", StringComparison.OrdinalIgnoreCase));
         var totalPortateis = todosOsTipos.Count(t => string.Equals(t, "Portátil", StringComparison.OrdinalIgnoreCase));
         var totalSwitches = todosOsTipos.Count(t => string.Equals(t, "Switch", StringComparison.OrdinalIgnoreCase));
-        var totalAccessPoints = todosOsTipos.Count(t => string.Equals(t, "Access Point", StringComparison.OrdinalIgnoreCase));
+        // "Access Point" usa Contains em vez de igualdade exata pela mesma razão já corrigida em
+        // Views/EquipamentosWindow.xaml.cs: o tipo configurado em Dados Fixos pode legitimamente
+        // ter texto adicional a seguir (ex.: "Access Points / Antena", tal como está configurado
+        // nesta instalação) — com igualdade exata, este total ficava sempre a 0, mesmo havendo
+        // equipamento desse tipo.
+        var totalAccessPoints = todosOsTipos.Count(t => t != null && t.Contains("Access Point", StringComparison.OrdinalIgnoreCase));
         var totalImpressoras = todosOsTipos.Count(t => string.Equals(t, "Impressora", StringComparison.OrdinalIgnoreCase));
 
         var recolhidosPendentesTipos = _db.EquipamentosRecolhidos
@@ -205,9 +218,16 @@ public class DashboardService
                 p.Estado == EstadoPedido.Pendente ||
                 p.Estado == EstadoPedido.EmEspera ||
                 p.Estado == EstadoPedido.EmAndamento),
-            TotalIntervencoesGlobal = intervencoesValidas.Count(),
-            TotalIntervencoesAnoCorrente = intervencoesValidas.Count(i => i.Ano == ano),
-            TotalIntervencoesMesCorrente = intervencoesValidas.Count(i => i.Ano == hoje.Year && i.Mes == hoje.Month),
+            TotalIntervencoesGlobal = intervencoesValidas.Count(),            // "Ano"/"Mes" nas queries abaixo usam sempre Data.Year/Data.Month, nunca os campos
+            // desnormalizados Intervencao.Ano/Intervencao.Mes diretamente — mesmo depois de
+            // corrigidos numa migração (ver SchemaUpgrade.RecalcularAnoMesAPartirDaData), continuar
+            // a usá-los aqui deixava o resultado dependente de esses campos terem sido sempre bem
+            // sincronizados a partir de Data em CADA sítio que grava uma Intervencao, incluindo
+            // caminhos futuros que se esqueçam de o fazer. Usar Data.Year/Data.Month elimina esse
+            // risco de vez: o EF Core traduz para SQL a apontar sempre para a mesma coluna Data que
+            // já é a fonte de verdade, nunca podendo divergir dela.
+            TotalIntervencoesAnoCorrente = intervencoesValidas.Count(i => i.Data.Year == ano),
+            TotalIntervencoesMesCorrente = intervencoesValidas.Count(i => i.Data.Year == hoje.Year && i.Data.Month == hoje.Month),
             TotalComputadores = totalComputadores,
             TotalComputadoresRecolhidos = computadoresRecolhidosPendentes,
             TotalEquipamentoGeral = todosOsTipos.Count,
@@ -229,6 +249,32 @@ public class DashboardService
                 a.Estado == EstadoIntervencao.EmProgresso ||
                 a.Estado == EstadoIntervencao.EmEspera)
         };
+
+        // Diagnóstico: TotalIntervencoesGlobal (todas as válidas) e TotalIntervencoesAnoCorrente
+        // (Data.Year == ano, acima) continuam a não bater certo (ex.: 163 vs 162) mesmo depois de
+        // deixar de depender dos campos desnormalizados Ano/Mes — o que descarta esses campos como
+        // causa. Em vez de continuar a tentar adivinhar a causa às cegas, identifica-se aqui
+        // exatamente QUAL intervenção fica de fora, por subtração de conjuntos de Ids (não
+        // "Data.Year != ano" diretamente): em SQL, uma comparação com um valor NULL nunca dá
+        // verdadeiro nem em "=" nem em "!=", por isso, se a causa for uma "Data" nula/inválida
+        // nessa linha (a explicação mais plausível agora, já que sobreviveu a duas trocas de
+        // critério de comparação sem mudar nada), "!=" também não a apanharia — a subtração de
+        // conjuntos apanha sempre, seja qual for a causa real. A projeção abaixo lê só Id/Descrição
+        // /Escola, nunca "Data" diretamente, para não arriscar uma exceção ao ler uma "Data"
+        // inválida dessa linha.
+        var idsTodasValidas = intervencoesValidas.Select(i => i.Id).ToHashSet();
+        var idsDoAnoCorrente = intervencoesValidas.Where(i => i.Data.Year == ano).Select(i => i.Id).ToHashSet();
+        var idsForaDoAnoCorrente = idsTodasValidas.Except(idsDoAnoCorrente).ToList();
+
+        if (idsForaDoAnoCorrente.Count > 0)
+        {
+            resumo.IntervencoesForaDoAnoCorrente = _db.Intervencoes
+                .Where(i => idsForaDoAnoCorrente.Contains(i.Id))
+                .Select(i => new { i.Id, i.Descricao, EscolaNome = i.Escola != null ? i.Escola.Nome : null })
+                .ToList()
+                .Select(x => $"Id {x.Id}: \"{x.Descricao}\" — Escola: {x.EscolaNome ?? "(sem escola)"}")
+                .ToList();
+        }
 
         // Agrupamento mais intervencionado de sempre
         var porAgrupamentoGlobal = intervencoesValidas
@@ -254,8 +300,8 @@ public class DashboardService
 
         // Intervenções por mês (ano corrente)
         var porMes = intervencoesValidas
-            .Where(i => i.Ano == ano)
-            .GroupBy(i => i.Mes)
+            .Where(i => i.Data.Year == ano)
+            .GroupBy(i => i.Data.Month)
             .Select(g => new { Mes = g.Key, Total = g.Count() })
             .ToDictionary(g => g.Mes, g => g.Total);
 
@@ -277,13 +323,13 @@ public class DashboardService
             var total = _db.IntervencaoCategorias.Count(ic =>
                 ic.CategoriaIntervencaoId == cat.Id &&
                 ic.Intervencao!.Estado != EstadoIntervencao.Cancelada &&
-                ic.Intervencao.Ano == hoje.Year && ic.Intervencao.Mes == hoje.Month);
+                ic.Intervencao.Data.Year == hoje.Year && ic.Intervencao.Data.Month == hoje.Month);
             resumo.IntervencoesPorCategoriaMesCorrente.Add((cat.Nome, total, cat.CorHex));
         }
 
         // Intervenções por agrupamento - mês corrente
         var porAgrupamentoMes = intervencoesValidas
-            .Where(i => i.Ano == hoje.Year && i.Mes == hoje.Month)
+            .Where(i => i.Data.Year == hoje.Year && i.Data.Month == hoje.Month)
             .GroupBy(i => i.AgrupamentoId)
             .Select(g => new { AgrupamentoId = g.Key, Total = g.Count() })
             .ToList();
@@ -299,7 +345,7 @@ public class DashboardService
 
         // Intervenções por agrupamento - ano corrente
         var porAgrupamentoAno = intervencoesValidas
-            .Where(i => i.Ano == ano)
+            .Where(i => i.Data.Year == ano)
             .GroupBy(i => i.AgrupamentoId)
             .Select(g => new { AgrupamentoId = g.Key, Total = g.Count() })
             .ToList();
@@ -349,14 +395,14 @@ public class DashboardService
 
         PreencherCategoriaPorAgrupamento(
             resumo.IntervencoesPorAgrupamentoAnoCorrente,
-            _db.IntervencaoCategorias.Where(ic => ic.Intervencao!.Estado != EstadoIntervencao.Cancelada && ic.Intervencao.Ano == ano),
+            _db.IntervencaoCategorias.Where(ic => ic.Intervencao!.Estado != EstadoIntervencao.Cancelada && ic.Intervencao.Data.Year == ano),
             resumo.AgrupamentosAbreviaturasAno, out var legendaAno, resumo.IntervencoesPorCategoriaEAgrupamentoAno);
         resumo.LegendaAgrupamentosAno = legendaAno;
 
         PreencherCategoriaPorAgrupamento(
             resumo.IntervencoesPorAgrupamentoMesCorrente,
             _db.IntervencaoCategorias.Where(ic => ic.Intervencao!.Estado != EstadoIntervencao.Cancelada &&
-                ic.Intervencao.Ano == hoje.Year && ic.Intervencao.Mes == hoje.Month),
+                ic.Intervencao.Data.Year == hoje.Year && ic.Intervencao.Data.Month == hoje.Month),
             resumo.AgrupamentosAbreviaturasMes, out var legendaMes, resumo.IntervencoesPorCategoriaEAgrupamentoMes);
         resumo.LegendaAgrupamentosMes = legendaMes;
 

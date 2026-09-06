@@ -32,6 +32,20 @@ public static class JanelaTamanhoHelper
         var larguraDisponivel = area.Width - Margem;
         var alturaDisponivel = area.Height - Margem;
 
+        // Janelas com SizeToContent="Height" (ex.: EquipamentoEditWindow, para crescer conforme o
+        // Tipo de Equipamento escolhido tem mais ou menos campos) calculam a própria altura durante
+        // o layout, não a partir de um valor fixo no XAML — Height fica a NaN até essa altura ser
+        // calculada, e isto é chamado antes disso (logo a seguir a InitializeComponent()), pelo que
+        // a comparação abaixo não conseguiria ler nem ajustar a altura corretamente. Nesses casos,
+        // passa-se para tamanho fixo (Manual) já aqui, usando MinHeight como referência — mais
+        // conservador do que o valor final que o conteúdo pediria, mas suficiente para o Modo
+        // Compacto continuar a funcionar (encolher se preciso) em vez de simplesmente não atuar.
+        if (janela.SizeToContent is SizeToContent.Height or SizeToContent.WidthAndHeight)
+        {
+            janela.SizeToContent = SizeToContent.Manual;
+            janela.Height = janela.MinHeight;
+        }
+
         var precisaAjuste = janela.Width > larguraDisponivel || janela.Height > alturaDisponivel;
         if (!precisaAjuste) return;
 

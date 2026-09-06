@@ -1,14 +1,28 @@
 <Window x:Class="LeiriaDISIA.Views.EquipamentoEditWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Equipamento Informático" Height="773" Width="1607" WindowStartupLocation="CenterOwner"
+        Title="Equipamento Informático" SizeToContent="Height" Width="1607" WindowStartupLocation="CenterOwner"
         Background="{StaticResource BrushBackground}" MinHeight="640" MinWidth="1280">
-    <ScrollViewer Margin="24" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="*" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
+    <!-- Height passou de fixo (773) para SizeToContent — cresce para caber sempre todo o
+         conteúdo (ex.: Access Points/Antena, o tipo com mais campos de características
+         específicas — Norma Wifi, Frequência, Velocidade, Nº de Antenas, Clientes em Simultâneo —
+         chegava a empurrar os botões "Cancelar"/"Guardar" para fora da área visível, obrigando a
+         percorrer a janela toda, incluindo a coluna do Histórico à direita, só para os alcançar).
+         MaxHeight (definido em código, em EquipamentoEditWindow.xaml.cs) trava o crescimento no
+         limite do ecrã disponível — sem isso, em ecrãs mais pequenos a janela podia crescer para
+         lá do visível. A estrutura muda também: o ScrollViewer passa a envolver só a área de
+         conteúdo (formulário + Histórico), não os botões — antes envolvia tudo, incluindo os
+         próprios botões, que por isso "desapareciam" com o resto do conteúdo ao rolar. Assim, os
+         botões ficam sempre visíveis no fundo da janela, com scroll interno só na área de
+         conteúdo, para o raro caso de mesmo o limite do ecrã não chegar. -->
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" MinWidth="700" />
                 <ColumnDefinition Width="24" />
@@ -16,7 +30,7 @@
             </Grid.ColumnDefinitions>
 
             <!-- Coluna esquerda: formulário (título + campos) -->
-            <Grid Grid.Row="0" Grid.Column="0">
+            <Grid Grid.Column="0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
@@ -47,7 +61,7 @@
                             <ColumnDefinition Width="8" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <TextBox x:Name="TxtNumeroSerie" Grid.Column="0" Padding="6,5" />
+                        <TextBox x:Name="TxtNumeroSerie" Grid.Column="0" Padding="6,5" CharacterCasing="Upper" />
                         <Button Grid.Column="2" Content="🎲 Gerar" Click="GerarNumeroSerie_Click" Padding="10,5"
                                 ToolTip="Gerar um número de série padrão, para usar quando o equipamento não tem um número de série visível/legível" />
                     </Grid>
@@ -60,10 +74,10 @@
                               SelectionChanged="CmbTipo_SelectionChanged" LostFocus="CmbTipo_LostFocus" />
 
                     <TextBlock Text="Marca" FontWeight="SemiBold" />
-                    <TextBox x:Name="TxtMarca" Margin="0,4,0,10" Padding="6,5" />
+                    <TextBox x:Name="TxtMarca" Margin="0,4,0,10" Padding="6,5" CharacterCasing="Upper" />
 
                     <TextBlock Text="Modelo" FontWeight="SemiBold" />
-                    <TextBox x:Name="TxtModelo" Margin="0,4,0,0" Padding="6,5" />
+                    <TextBox x:Name="TxtModelo" Margin="0,4,0,0" Padding="6,5" CharacterCasing="Upper" />
                 </StackPanel>
 
                 <!-- Coluna 2: Características específicas (consoante o Tipo escolhido) -->
@@ -94,8 +108,11 @@
                                     <TextBlock Text="Memória (GB)" FontWeight="SemiBold" />
                                     <!-- Dados Fixos v2: caixa dependente de "Tipo de Memória" — as opções mudam
                                          consoante o tipo escolhido à esquerda (ex.: DDR4 → 4/8/16/32 GB). Continua a
-                                         gravar um número simples em Equipamento.QuantidadeMemoriaGB, tal como antes. -->
-                                    <ComboBox x:Name="CmbMemoriaGB" IsEditable="True" Margin="4,4,0,0" />
+                                         gravar um número simples em Equipamento.QuantidadeMemoriaGB, tal como antes.
+                                         Começa desativada (IsEnabled) — só faz sentido escolher isto depois de saber
+                                         o Tipo de Memória; AtualizarOpcoesDependentes reativa-a assim que esse campo
+                                         tiver um valor (ver Views/EquipamentoEditWindow.xaml.cs). -->
+                                    <ComboBox x:Name="CmbMemoriaGB" IsEditable="True" Margin="4,4,0,0" IsEnabled="False" />
                                 </StackPanel>
                             </Grid>
 
@@ -111,8 +128,9 @@
                                 <StackPanel Grid.Column="1">
                                     <TextBlock Text="Tamanho do Disco (GB)" FontWeight="SemiBold" />
                                     <!-- Dados Fixos v2: caixa dependente de "Tipo de Disco", pelo mesmo mecanismo da
-                                         Memória acima. Continua a gravar em Equipamento.TamanhoDiscoGB, como antes. -->
-                                    <ComboBox x:Name="CmbTamanhoDisco" IsEditable="True" Margin="4,4,0,0" />
+                                         Memória acima. Continua a gravar em Equipamento.TamanhoDiscoGB, como antes.
+                                         Começa desativada pela mesma razão (ver comentário em CmbMemoriaGB acima). -->
+                                    <ComboBox x:Name="CmbTamanhoDisco" IsEditable="True" Margin="4,4,0,0" IsEnabled="False" />
                                 </StackPanel>
                             </Grid>
 
@@ -309,17 +327,9 @@
 
             </Grid>
 
-            <!-- Rodapé com ações — ocupa toda a largura da janela (incluindo a coluna do
-                 histórico), para ficar coerente com as restantes janelas de edição da aplicação. -->
-            <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal"
-                        HorizontalAlignment="Right" Margin="0,20,0,0">
-                <Button Content="Cancelar" Click="Cancelar_Click" Margin="0,0,8,0" Padding="16,8" />
-                <Button Content="Guardar" Style="{StaticResource PrimaryButton}" Click="Guardar_Click" Padding="16,8" />
-            </StackPanel>
-
             <!-- Coluna direita: Histórico de Intervenções (só visível ao editar um equipamento já
                  existente), posicionado ao lado do formulário para facilitar a consulta (modo paisagem) -->
-            <StackPanel x:Name="PainelHistorico" Grid.Row="0" Grid.Column="2">
+            <StackPanel x:Name="PainelHistorico" Grid.Column="2">
                 <TextBlock Text="Histórico de Intervenções" FontWeight="Bold" Foreground="{StaticResource BrushTextSecondary}"
                            FontSize="11" Margin="0,0,0,8" />
                 <TextBlock Text="Todas as intervenções já registadas para este equipamento (no local ou por recolha)."
@@ -334,6 +344,16 @@
                     </DataGrid.Columns>
                 </DataGrid>
             </StackPanel>
-        </Grid>
-    </ScrollViewer>
+            </Grid>
+        </ScrollViewer>
+
+        <!-- Rodapé com ações — fora do ScrollViewer acima, para ficar sempre visível no fundo da
+             janela independentemente do tamanho do conteúdo rolável (ver comentário no topo do
+             ficheiro). Ocupa toda a largura da janela (incluindo a coluna do histórico), para
+             ficar coerente com as restantes janelas de edição da aplicação. -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+            <Button Content="Cancelar" Click="Cancelar_Click" Margin="0,0,8,0" Padding="16,8" />
+            <Button Content="Guardar" Style="{StaticResource PrimaryButton}" Click="Guardar_Click" Padding="16,8" />
+        </StackPanel>
+    </Grid>
 </Window>

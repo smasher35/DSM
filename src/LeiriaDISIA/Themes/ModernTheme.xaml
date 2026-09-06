@@ -172,6 +172,19 @@
                 <Setter Property="BorderBrush" Value="{StaticResource BrushInputBorderFoco}" />
                 <Setter Property="BorderThickness" Value="1.8" />
             </Trigger>
+            <!-- ComboBoxBackgroundDisabled/ComboBoxBorderBrushDisabled já existiam definidas mais
+                 acima, mas nunca tinham sido usadas em lado nenhum — sem este trigger, uma combo
+                 desativada (IsEnabled=False) ficava visualmente quase igual a uma ativada,
+                 dependente só do template nativo do Windows para indicar o estado, o que nem
+                 sempre é claramente visível. A Opacity reforça isto de forma independente do
+                 template (afeta sempre TUDO dentro da combo — fundo, texto, seta), para nunca
+                 depender de o template respeitar ou não os Setters de Background/BorderBrush. -->
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Background" Value="{StaticResource ComboBoxBackgroundDisabled}" />
+                <Setter Property="BorderBrush" Value="{StaticResource ComboBoxBorderBrushDisabled}" />
+                <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}" />
+                <Setter Property="Opacity" Value="0.6" />
+            </Trigger>
         </Style.Triggers>
     </Style>
 

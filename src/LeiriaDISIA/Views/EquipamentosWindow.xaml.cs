@@ -11,7 +11,7 @@ using Microsoft.Win32;
 // referência nua a "Grid" resolve sempre para esse controlo (o campo gerado pelo x:Name), nunca
 // para o tipo, mesmo em métodos estáticos (CS0120: "An object reference is required..."). Alias
 // próprio para poder continuar a usar o painel de layout Grid em código (ver
-// ConstruirBarraSistemaOperativo) sem qualificar o nome completo em cada utilização.
+// ConstruirBarraDistribuicao) sem qualificar o nome completo em cada utilização.
 using WpfGrid = System.Windows.Controls.Grid;
 
 namespace LeiriaDISIA.Views;
@@ -27,9 +27,9 @@ public partial class EquipamentosWindow : Window
 
     /// <summary>Capturado uma única vez no construtor (ver Services.JanelaCompactaService) — usado
     /// tanto para a escolha original entre os painéis Normal/Compacto da Obsolescência como, agora,
-    /// pelo painel "Sistemas Operativos" (que decide sozinho, em código, entre gauges e barras finas
-    /// — ver AtualizarSistemasOperativos), já que este é único e não tem uma versão Compacta
-    /// separada no XAML.</summary>
+    /// pelas secções de distribuição dinâmica ("Sistemas Operativos", "Armazenamento" — cada uma
+    /// decide sozinha, em código, entre gauges e barras finas, ver AtualizarDistribuicaoPorCampo),
+    /// já que estas são únicas e não têm uma versão Compacta separada no XAML.</summary>
     private bool _modoCompacto;
 
     public EquipamentosWindow()
@@ -68,7 +68,7 @@ public partial class EquipamentosWindow : Window
 
     private void Recarregar()
     {
-        _todos = App.Db.Equipamentos.Include(e => e.Escola).OrderByDescending(e => e.Id).ToList();
+        _todos = App.Db.Equipamentos.Include(e => e.Escola).ThenInclude(esc => esc!.Agrupamento).OrderByDescending(e => e.Id).ToList();
         AplicarFiltro();
     }
 
@@ -109,7 +109,11 @@ public partial class EquipamentosWindow : Window
         TxtTotalGeral.Text = visiveis.Count.ToString();
         TxtTotalSecretaria.Text = visiveis.Count(e => TipoEquivale(e.Tipo, "Computador de Secretária")).ToString();
         TxtTotalPortateis.Text = visiveis.Count(e => TipoEquivale(e.Tipo, "Portátil")).ToString();
-        TxtTotalAccessPoints.Text = visiveis.Count(e => TipoEquivale(e.Tipo, "Access Point")).ToString();
+        // "Access Point" usa Contains em vez de TipoEquivale (igualdade exata) porque o tipo
+        // configurado em Dados Fixos pode legitimamente ter texto adicional a seguir (ex.: "Access
+        // Points / Antena", tal como está configurado nesta instalação) — com igualdade exata, este
+        // cartão ficava sempre a 0, mesmo havendo equipamento desse tipo visível na grelha por baixo.
+        TxtTotalAccessPoints.Text = visiveis.Count(e => TipoContem(e.Tipo, "Access Point")).ToString();
         TxtTotalSwitches.Text = visiveis.Count(e => TipoEquivale(e.Tipo, "Switch")).ToString();
 
         AtualizarMaisIntervencionado(visiveis);
@@ -143,45 +147,53 @@ public partial class EquipamentosWindow : Window
         AtualizarBarraCompacta(ColBarraMonitorizarCheia, ColBarraMonitorizarVazia, TxtBarraMonitorizar, totalMonitorizar, total);
         AtualizarBarraCompacta(ColBarraObsoletoCheia, ColBarraObsoletoVazia, TxtBarraObsoleto, totalObsoleto, total);
 
-        AtualizarSistemasOperativos(visiveis);
+        AtualizarDistribuicaoPorCampo(visiveis, e => e.SistemaOperativo,
+            PainelGaugesSistemaOperativo, TxtTotalSistemasOperativos, TxtSemSistemasOperativos, "cada sistema operativo");
+        AtualizarDistribuicaoPorCampo(visiveis, e => e.TipoDisco,
+            PainelGaugesArmazenamento, TxtTotalArmazenamento, TxtSemArmazenamento, "cada tipo de armazenamento");
     }
 
-    /// <summary>Cores usadas, por ordem, para os gauges/barras de "Sistemas Operativos" — ao
-    /// contrário da Obsolescência (sempre 3 níveis fixos, com cores fixas), o nº de sistemas
-    /// operativos distintos varia consoante o parque real, por isso não há uma cor "própria" de
-    /// cada um: usa-se sempre a próxima cor desta paleta, pela ordem em que aparecem (do mais para
-    /// o menos comum — ver AtualizarSistemasOperativos), com "Outros" a ficar sempre em cinzento.
-    /// Mesmos tons já usados noutros gráficos com categorias dinâmicas na aplicação (ver
-    /// PaletaCategorias em Services/RelatorioService.cs).</summary>
-    private static readonly string[] PaletaSistemasOperativos =
+    /// <summary>Cores usadas, por ordem, para os gauges/barras de distribuição dinâmica (Sistemas
+    /// Operativos, Armazenamento, ...) — ao contrário da Obsolescência (sempre 3 níveis fixos, com
+    /// cores fixas), o nº de valores distintos varia consoante o parque real, por isso não há uma
+    /// cor "própria" de cada valor: usa-se sempre a próxima cor desta paleta, pela ordem em que
+    /// aparecem (do mais para o menos comum), com "Outros" a ficar sempre em cinzento. Mesmos tons
+    /// já usados noutros gráficos com categorias dinâmicas na aplicação (ver PaletaCategorias em
+    /// Services/RelatorioService.cs).</summary>
+    private static readonly string[] PaletaDistribuicaoDinamica =
     {
         "#1D4ED8", "#D97706", "#15803D", "#B91C1C", "#7E22CE", "#0F766E", "#BE185D", "#0369A1"
     };
 
-    /// <summary>Agrupa o equipamento visível pelo campo "Sistema Operativo" (computadores de
-    /// secretária, portáteis, servidores, e qualquer outro equipamento em que esse campo esteja
-    /// preenchido) e desenha um gauge — ou, em Modo Compacto, uma barra fina — por cada sistema
-    /// operativo encontrado, com a % sobre o total de equipamento COM sistema operativo preenchido
-    /// (não sobre o total geral de equipamento visível, que incluiria monitores, impressoras, etc.,
-    /// para os quais este campo nunca se aplica e que por isso diluiriam as percentagens sem
-    /// necessidade). Para não sobrecarregar o painel com sistemas operativos residuais (ex.: uma
-    /// única máquina com uma versão antiga já fora de uso), só os 6 mais comuns aparecem
-    /// individualmente — o resto (se houver) é somado num único "Outros".
+    /// <summary>Agrupa o equipamento visível pelo valor devolvido por <paramref name="obterValor"/>
+    /// (ex.: Sistema Operativo, Tipo de Disco) e desenha um gauge — ou, em Modo Compacto, uma barra
+    /// fina — por cada valor distinto encontrado, com a % sobre o total de equipamento COM esse
+    /// campo preenchido (não sobre o total geral de equipamento visível, que incluiria equipamento
+    /// para o qual o campo nunca se aplica — ex.: um monitor não tem Sistema Operativo nem Tipo de
+    /// Disco — e que por isso diluiria as percentagens sem necessidade). Para não sobrecarregar o
+    /// painel com valores residuais (ex.: um único disco de um tipo raro já fora de uso), só os 6
+    /// mais comuns aparecem individualmente — o resto (se houver) é somado num único "Outros".
     ///
-    /// Ao contrário da Obsolescência (sempre 3 níveis fixos, já declarados no XAML), o número de
-    /// sistemas operativos distintos varia consoante o parque real, por isso os gauges/barras são
-    /// construídos aqui, dinamicamente, em vez de existirem já fixos no XAML.</summary>
-    private void AtualizarSistemasOperativos(List<Equipamento> visiveis)
+    /// Partilhado entre "Sistemas Operativos" e "Armazenamento" (ver chamadas em
+    /// AtualizarResumo) — parametrizado pelo campo a extrair e pelos controlos de destino, em vez
+    /// de duas cópias quase iguais deste método. Ao contrário da Obsolescência (sempre 3 níveis
+    /// fixos, já declarados no XAML), o número de valores distintos varia consoante o parque real,
+    /// por isso os gauges/barras são construídos aqui, dinamicamente, em vez de existirem já fixos
+    /// no XAML.</summary>
+    private void AtualizarDistribuicaoPorCampo(List<Equipamento> visiveis, Func<Equipamento, string?> obterValor,
+        WrapPanel painelDestino, TextBlock txtTotal, TextBlock txtSemDados, string descricaoCampo)
     {
         const int maximoIndividual = 6;
 
-        var comSistemaOperativo = visiveis
-            .Where(e => !string.IsNullOrWhiteSpace(e.SistemaOperativo))
+        var comValor = visiveis
+            .Select(obterValor)
+            .Where(v => !string.IsNullOrWhiteSpace(v))
+            .Select(v => v!.Trim())
             .ToList();
-        var total = comSistemaOperativo.Count;
+        var total = comValor.Count;
 
-        var grupos = comSistemaOperativo
-            .GroupBy(e => e.SistemaOperativo!.Trim())
+        var grupos = comValor
+            .GroupBy(v => v)
             .Select(g => (Nome: g.Key, Total: g.Count()))
             .OrderByDescending(g => g.Total)
             .ToList();
@@ -194,22 +206,22 @@ public partial class EquipamentosWindow : Window
             grupos = principais;
         }
 
-        TxtTotalSistemasOperativos.Text = total == 0
-            ? "% de equipamento com cada sistema operativo (sem equipamento a apresentar)"
-            : $"% de equipamento com cada sistema operativo ({total} equipamentos)";
+        txtTotal.Text = total == 0
+            ? $"% de equipamento com {descricaoCampo} (sem equipamento a apresentar)"
+            : $"% de equipamento com {descricaoCampo} ({total} equipamentos)";
 
-        TxtSemSistemasOperativos.Visibility = total == 0 ? Visibility.Visible : Visibility.Collapsed;
+        txtSemDados.Visibility = total == 0 ? Visibility.Visible : Visibility.Collapsed;
 
-        PainelGaugesSistemaOperativo.Children.Clear();
+        painelDestino.Children.Clear();
 
         for (var i = 0; i < grupos.Count; i++)
         {
             var (nome, parcela) = grupos[i];
-            var cor = nome == "Outros" ? "#9CA3AF" : PaletaSistemasOperativos[i % PaletaSistemasOperativos.Length];
+            var cor = nome == "Outros" ? "#9CA3AF" : PaletaDistribuicaoDinamica[i % PaletaDistribuicaoDinamica.Length];
 
             if (_modoCompacto)
             {
-                PainelGaugesSistemaOperativo.Children.Add(ConstruirBarraSistemaOperativo(nome, parcela, total, cor));
+                painelDestino.Children.Add(ConstruirBarraDistribuicao(nome, parcela, total, cor));
             }
             else
             {
@@ -231,17 +243,17 @@ public partial class EquipamentosWindow : Window
                     Text = $"{parcela} / {total}", FontSize = 11, HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
                     Foreground = (Brush)FindResource("BrushTextSecondary")
                 });
-                PainelGaugesSistemaOperativo.Children.Add(painel);
+                painelDestino.Children.Add(painel);
             }
         }
     }
 
-    /// <summary>Constrói uma linha "nome + barra fina + x/total" para o Modo Compacto de "Sistemas
-    /// Operativos" — mesmo estilo visual das barras finas já usadas na versão compacta da
-    /// Obsolescência (ver PainelObsolescenciaCompacto no XAML), mas montada em código porque o
-    /// número de sistemas operativos é dinâmico (ali são sempre 3 barras fixas, declaradas no
-    /// XAML).</summary>
-    private static WpfGrid ConstruirBarraSistemaOperativo(string nome, int parcela, int total, string corHex)
+    /// <summary>Constrói uma linha "nome + barra fina + x/total" para o Modo Compacto das secções
+    /// de distribuição dinâmica ("Sistemas Operativos", "Armazenamento") — mesmo estilo visual das
+    /// barras finas já usadas na versão compacta da Obsolescência (ver PainelObsolescenciaCompacto
+    /// no XAML), mas montada em código porque o número de valores distintos é dinâmico (ali são
+    /// sempre 3 barras fixas, declaradas no XAML).</summary>
+    private static WpfGrid ConstruirBarraDistribuicao(string nome, int parcela, int total, string corHex)
     {
         var linha = new WpfGrid { Width = 260, Margin = new Thickness(0, 0, 0, 6) };
         linha.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
@@ -302,6 +314,12 @@ public partial class EquipamentosWindow : Window
     private static bool TipoEquivale(string? tipo, string alvo) =>
         !string.IsNullOrWhiteSpace(tipo) && tipo.Equals(alvo, StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>Variante de <see cref="TipoEquivale"/> que verifica se o Tipo CONTÉM o trecho
+    /// indicado, em vez de ser exatamente igual — usada para tipos cujo nome configurado em Dados
+    /// Fixos pode legitimamente incluir texto adicional (ex.: "Access Points / Antena").</summary>
+    private static bool TipoContem(string? tipo, string trecho) =>
+        !string.IsNullOrWhiteSpace(tipo) && tipo.Contains(trecho, StringComparison.OrdinalIgnoreCase);
+
     /// <summary>Encontra, dentro da lista visível, o equipamento com mais intervenções somando as
     /// mesmas duas fontes já usadas no contador individual "Nº de Vezes Intervencionado" de cada
     /// equipamento (ver EquipamentoEditWindow.xaml.cs → CarregarHistoricoIntervencoes): intervenções
@@ -327,26 +345,73 @@ public partial class EquipamentosWindow : Window
             .Select(g => new { EquipamentoId = g.Key, Total = g.Count() })
             .ToDictionary(x => x.EquipamentoId, x => x.Total);
 
-        var maisIntervencionado = visiveis
-            .Select(e => new
-            {
-                Equipamento = e,
-                Total = porLocal.GetValueOrDefault(e.Id) + porRecolha.GetValueOrDefault(e.Id)
-            })
+        // Total de intervenções por equipamento — não inclui nenhuma restrição de data (todos os
+        // anos, sempre) — usado apenas para o destaque do EQUIPAMENTO em concreto, que só pode
+        // contar intervenções com esse equipamento associado (é isso que está a comparar).
+        var totalPorEquipamento = visiveis
+            .Select(e => new { Equipamento = e, Total = porLocal.GetValueOrDefault(e.Id) + porRecolha.GetValueOrDefault(e.Id) })
             .Where(x => x.Total > 0)
-            .OrderByDescending(x => x.Total)
-            .FirstOrDefault();
+            .ToList();
 
-        if (maisIntervencionado == null)
+        if (totalPorEquipamento.Count == 0)
         {
             PainelMaisIntervencionado.Visibility = Visibility.Collapsed;
             return;
         }
 
         PainelMaisIntervencionado.Visibility = Visibility.Visible;
+
+        var maisIntervencionado = totalPorEquipamento.OrderByDescending(x => x.Total).First();
         var eq = maisIntervencionado.Equipamento;
-        var vezes = maisIntervencionado.Total == 1 ? "1 intervenção" : $"{maisIntervencionado.Total} intervenções";
-        TxtMaisIntervencionado.Text = $" {eq.NumeroSerie} — {eq.Tipo} ({eq.Escola?.Nome ?? "sem escola associada"}) — {vezes}";
+        var vezesEquipamento = maisIntervencionado.Total == 1 ? "1 intervenção" : $"{maisIntervencionado.Total} intervenções";
+        TxtMaisIntervencionado.Text = $"{eq.NumeroSerie} — {eq.Tipo} ({eq.Escola?.Nome ?? "sem escola associada"}) — {vezesEquipamento}";
+
+        // Escola/Agrupamento com mais equipamentos intervencionados: soma o total já calculado
+        // acima por equipamento (porLocal + porRecolha), agrupado por escola/agrupamento — não
+        // conta equipamentos distintos, soma mesmo o total de intervenções em equipamento: uma
+        // intervenção que tenha tocado em 10 computadores diferentes nessa escola conta 10 (porque
+        // é isso que fica registado em Intervencao → Equipamentos dessa intervenção), e um mesmo
+        // equipamento intervencionado em 5 visitas distintas também conta 5. Só entram equipamentos
+        // com intervenções associadas (o mesmo "totalPorEquipamento" já filtrado acima) — por isso
+        // esta contagem é sempre só sobre EQUIPAMENTO, nunca sobre intervenções gerais sem nenhum
+        // equipamento associado.
+        var escolaMaisIntervencionada = totalPorEquipamento
+            .Where(x => x.Equipamento.EscolaId != null)
+            .GroupBy(x => x.Equipamento.EscolaId!.Value)
+            .Select(g => new { Escola = g.First().Equipamento.Escola!, Total = g.Sum(x => x.Total) })
+            .OrderByDescending(x => x.Total)
+            .FirstOrDefault();
+
+        if (escolaMaisIntervencionada != null)
+        {
+            var vezesEscola = escolaMaisIntervencionada.Total == 1 ? "1 equipamento intervencionado" : $"{escolaMaisIntervencionada.Total} equipamentos intervencionados";
+            TxtEscolaMaisIntervencionada.Text = $"{escolaMaisIntervencionada.Escola.Nome} — {vezesEscola}";
+            PainelEscolaMaisIntervencionada.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            PainelEscolaMaisIntervencionada.Visibility = Visibility.Collapsed;
+        }
+
+        // Agrupamento com mais equipamentos intervencionados: idem, agora agrupado pelo
+        // agrupamento da escola de cada equipamento.
+        var agrupamentoMaisIntervencionado = totalPorEquipamento
+            .Where(x => x.Equipamento.Escola?.AgrupamentoId != null)
+            .GroupBy(x => x.Equipamento.Escola!.AgrupamentoId!.Value)
+            .Select(g => new { Agrupamento = g.First().Equipamento.Escola!.Agrupamento!, Total = g.Sum(x => x.Total) })
+            .OrderByDescending(x => x.Total)
+            .FirstOrDefault();
+
+        if (agrupamentoMaisIntervencionado != null)
+        {
+            var vezesAgrupamento = agrupamentoMaisIntervencionado.Total == 1 ? "1 equipamento intervencionado" : $"{agrupamentoMaisIntervencionado.Total} equipamentos intervencionados";
+            TxtAgrupamentoMaisIntervencionado.Text = $"{agrupamentoMaisIntervencionado.Agrupamento.Nome} — {vezesAgrupamento}";
+            PainelAgrupamentoMaisIntervencionado.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            PainelAgrupamentoMaisIntervencionado.Visibility = Visibility.Collapsed;
+        }
     }
 
     private void Filtro_Changed(object sender, TextChangedEventArgs e) => AplicarFiltro();

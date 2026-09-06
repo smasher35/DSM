@@ -83,28 +83,63 @@
                 </Border>
             </UniformGrid>
 
-            <!-- Indicador "equipamento com mais intervenções" — junta o histórico no local
-                 (IntervencaoEquipamentos) com o de recolha (EquipamentosRecolhidos), exatamente
-                 as duas fontes já somadas no campo "Nº de Vezes Intervencionado" de cada
-                 equipamento (ver EquipamentoEditWindow.xaml.cs → CarregarHistoricoIntervencoes),
-                 para apontar qual equipamento tem justificado mais atenção/substituição. Só
-                 aparece quando há pelo menos uma intervenção registada, para não mostrar uma
-                 frase vazia/sem sentido numa base de dados nova. -->
-            <Border x:Name="PainelMaisIntervencionado" Background="#FDECEC" CornerRadius="8" Padding="10" Margin="0,0,0,12" Visibility="Collapsed">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="🔧" FontSize="14" Margin="0,0,8,0" VerticalAlignment="Center" />
-                    <TextBlock VerticalAlignment="Center">
-                        <Run Text="Equipamento com mais intervenções:" FontWeight="SemiBold" />
-                        <Run x:Name="TxtMaisIntervencionado" Text="" />
-                    </TextBlock>
-                </StackPanel>
-            </Border>
+            <!-- Indicador "equipamento/escola/agrupamento com mais equipamentos intervencionados" —
+                 junta o histórico no local (IntervencaoEquipamentos) com o de recolha
+                 (EquipamentosRecolhidos) — ver AtualizarMaisIntervencionado. Os três níveis usam
+                 sempre a mesma base (intervenções/recolhas por EQUIPAMENTO, nunca intervenções
+                 gerais sem equipamento associado — estamos no módulo Equipamentos), só agregada de
+                 forma diferente: o total da escola/agrupamento é a SOMA dos totais de cada
+                 equipamento (não a contagem de equipamentos distintos) — uma intervenção que tenha
+                 tocado em 10 computadores diferentes nessa escola conta 10, porque é isso que fica
+                 registado em Intervencao → Equipamentos dessa intervenção. Três cartões lado a lado
+                 (em vez de três linhas empilhadas) para aproveitar a largura disponível, tal como a
+                 linha de gauges por baixo. Cada cartão tem a sua própria visibilidade: só aparece
+                 quando há pelo menos uma intervenção registada a esse nível, para não mostrar uma
+                 frase vazia/sem sentido numa base de dados nova (ou, no caso de escola/agrupamento,
+                 quando não há nenhuma escola/agrupamento identificável no equipamento visível). -->
+            <UniformGrid Columns="3" Rows="1" Margin="0,0,0,12">
+                <Border x:Name="PainelMaisIntervencionado" Background="#FDECEC" CornerRadius="8" Padding="10" Margin="0,0,10,0" Visibility="Collapsed">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🔧" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center" />
+                            <TextBlock Text="Equipamento com mais intervenções" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock Margin="0,4,0,0" TextWrapping="Wrap">
+                            <Run x:Name="TxtMaisIntervencionado" Text="" />
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
 
-            <!-- Linha 2 do painel de resumo: "Distribuição por Obsolescência" (à esquerda) e, a
-                 pedido, "Sistemas Operativos" (à direita, novo) lado a lado — gauges com o mesmo
-                 estilo/controlo usado em "Distribuição do Parque de Equipamento" no Dashboard
+                <Border x:Name="PainelEscolaMaisIntervencionada" Background="#FDECEC" CornerRadius="8" Padding="10" Margin="0,0,10,0" Visibility="Collapsed">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🏫" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center" />
+                            <TextBlock Text="Escola com mais equipamentos intervencionados" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock Margin="0,4,0,0" TextWrapping="Wrap">
+                            <Run x:Name="TxtEscolaMaisIntervencionada" Text="" />
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <Border x:Name="PainelAgrupamentoMaisIntervencionado" Background="#FDECEC" CornerRadius="8" Padding="10" Visibility="Collapsed">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🏘️" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center" />
+                            <TextBlock Text="Agrupamento com mais equipamentos intervencionados" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock Margin="0,4,0,0" TextWrapping="Wrap">
+                            <Run x:Name="TxtAgrupamentoMaisIntervencionado" Text="" />
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+
+            <!-- Linha 2 do painel de resumo: "Distribuição por Obsolescência", "Sistemas
+                 Operativos" e "Armazenamento" lado a lado — gauges com o mesmo estilo/controlo
+                 usado em "Distribuição do Parque de Equipamento" no Dashboard
                  (ConstruirGaugePercentagem em DashboardView.xaml.cs), reutilizado aqui tal e qual. -->
-            <UniformGrid Columns="2" Rows="1" Margin="0,0,0,12">
+            <UniformGrid Columns="3" Rows="1" Margin="0,0,0,12">
                 <StackPanel Margin="0,0,10,0">
             <Border x:Name="PainelObsolescenciaNormal" Style="{StaticResource CardStyle}">
                 <StackPanel>
@@ -217,18 +252,18 @@
             </Border>
                 </StackPanel>
 
-                <!-- Novo: "Sistemas Operativos" — % de equipamento com cada sistema operativo
+                <!-- "Sistemas Operativos" — % de equipamento com cada sistema operativo
                      (computadores de secretária, portáteis, servidores, e qualquer outro
                      equipamento com o campo "Sistema Operativo" preenchido — ex.: tablets, caso
                      essa característica venha a ficar disponível para esse tipo). Ao contrário da
                      Obsolescência (sempre 3 níveis fixos), o nº de sistemas operativos distintos
                      varia consoante o parque real, por isso os gauges/barras são construídos
-                     dinamicamente em código (ver AtualizarSistemasOperativos em
+                     dinamicamente em código (ver AtualizarDistribuicaoPorCampo em
                      EquipamentosWindow.xaml.cs) em vez de existirem já fixos aqui no XAML — este
                      painel único trata tanto o modo normal (gauges) como o Modo Compacto (barras
                      finas), decidido pelo mesmo Services.JanelaCompactaService.Ativo do construtor.
-                     "UniformGrid" à volta dá-lhe a mesma largura que a coluna da Obsolescência. -->
-                <Border x:Name="PainelSistemasOperativos" Style="{StaticResource CardStyle}">
+                     "UniformGrid" à volta dá-lhe a mesma largura que as colunas ao lado. -->
+                <Border x:Name="PainelSistemasOperativos" Style="{StaticResource CardStyle}" Margin="10,0,10,0">
                     <StackPanel>
                         <TextBlock x:Name="TxtTituloSistemasOperativos" Text="Sistemas Operativos" Style="{StaticResource SectionTitleStyle}" FontSize="16" />
                         <TextBlock x:Name="TxtTotalSistemasOperativos" TextWrapping="Wrap" FontSize="11"
@@ -238,6 +273,23 @@
                                    Foreground="{StaticResource BrushTextSecondary}" Visibility="Collapsed"
                                    Text="Nenhum equipamento visível tem o Sistema Operativo preenchido." />
                         <WrapPanel x:Name="PainelGaugesSistemaOperativo" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+
+                <!-- "Armazenamento" — % de equipamento com cada Tipo de Disco (SSD, HDD, NVMe,
+                     etc., os mesmos valores configurados em Administração → Dados Fixos → Tipos de
+                     Equipamento → Computador → "Tipo de Disco"). Mesmo mecanismo dinâmico de
+                     "Sistemas Operativos" ao lado — ver AtualizarDistribuicaoPorCampo. -->
+                <Border x:Name="PainelArmazenamento" Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Armazenamento" Style="{StaticResource SectionTitleStyle}" FontSize="16" />
+                        <TextBlock x:Name="TxtTotalArmazenamento" TextWrapping="Wrap" FontSize="11"
+                                   Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,10"
+                                   Text="% de equipamento com cada tipo de armazenamento" />
+                        <TextBlock x:Name="TxtSemArmazenamento" TextWrapping="Wrap" FontSize="11" FontStyle="Italic"
+                                   Foreground="{StaticResource BrushTextSecondary}" Visibility="Collapsed"
+                                   Text="Nenhum equipamento visível tem o Tipo de Disco preenchido." />
+                        <WrapPanel x:Name="PainelGaugesArmazenamento" HorizontalAlignment="Center" />
                     </StackPanel>
                 </Border>
             </UniformGrid>

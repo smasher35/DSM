@@ -126,7 +126,12 @@ public partial class PesquisaAvancadaEquipamentoWindow : Window
         var cmbValorSugerido = new ComboBox { Width = 160, Margin = new Thickness(0, 0, 6, 0), Visibility = Visibility.Collapsed };
         var cmbValorBool = new ComboBox { Width = 160, Margin = new Thickness(0, 0, 6, 0), ItemsSource = new[] { "Sim", "Não" }, Visibility = Visibility.Collapsed };
         var txtValor = new TextBox { Width = 160, Margin = new Thickness(0, 0, 6, 0), VerticalContentAlignment = VerticalAlignment.Center, Visibility = Visibility.Collapsed };
-        var btnRemover = new Button { Content = "✕", Width = 28, ToolTip = "Remover este filtro" };
+        var btnRemover = new Button
+        {
+            Content = "🗑️", Width = 32, Padding = new Thickness(2),
+            Style = (Style)FindResource("AdminButtonRose"),
+            ToolTip = "Remover este filtro"
+        };
 
         var painel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 8) };
         painel.Children.Add(cmbTipo);

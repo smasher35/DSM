@@ -66,6 +66,14 @@ public partial class EquipamentoEditWindow : Window
         // janela para caber na área de trabalho disponível - ver Services/JanelaTamanhoHelper.cs.
         // Sem efeito em ecrãs normais/grandes ou com o modo desativado.
         JanelaTamanhoHelper.AjustarSePreciso(this);
+        // Modo normal (Modo Compacto desligado, ver acima): a janela usa SizeToContent="Height"
+        // (ver XAML) para crescer conforme o Tipo de Equipamento escolhido tiver mais ou menos
+        // campos de características específicas — trava-se aqui esse crescimento no limite da área
+        // de trabalho disponível, para nunca ultrapassar o ecrã (com o ScrollViewer interno do XAML
+        // como rede de segurança para esse caso). Sem efeito quando o Modo Compacto já mudou a
+        // janela para tamanho fixo (Manual) na chamada acima.
+        if (SizeToContent == SizeToContent.Height)
+            MaxHeight = SystemParameters.WorkArea.Height - 24;
         // 1.2.1: tinge a barra de titulo nativa com um tom azul sobrio, consistente com a
         // identidade da aplicacao - ver Services/TitleBarService.cs. A janela continua nativa;
         // mover, minimizar, maximizar, fechar e o comportamento modal nao sao afetados.
@@ -115,7 +123,12 @@ public partial class EquipamentoEditWindow : Window
         // parte deste pedido e continua a vir de Dados Fixos genéricos, como antes.
         const string grpImpressora = GruposCaracteristicasEquipamento.Impressora;
         CmbTipoImpressora.ItemsSource = ValoresCaracteristicaEmbutida(grpImpressora, "Tipo de Impressora", new[] { "Laser", "Tinta" });
-        CmbLigacaoImpressora.ItemsSource = ValoresAtivos(GruposValorFixo.LigacaoImpressora, new[] { "USB", "Rede", "WiFi" });
+        // Antes lia da lista genérica GruposValorFixo.LigacaoImpressora — um valor acrescentado
+        // pelo administrador em Características Específicas → "Tipo de Ligação" (o sítio onde
+        // faz sentido gerir isto, ao lado de "Tipo de Impressora") nunca aparecia aqui, porque a
+        // combo continuava ligada à lista antiga. Agora lê da mesma característica que o
+        // administrador já usa, tal como CmbTipoImpressora acima.
+        CmbLigacaoImpressora.ItemsSource = ValoresCaracteristicaEmbutida(grpImpressora, "Tipo de Ligação", new[] { "USB", "Rede", "WiFi" });
 
         CmbEstado.ItemsSource = ValoresAtivos(GruposValorFixo.EstadoEquipamento, new[]
         {
@@ -356,6 +369,12 @@ public partial class EquipamentoEditWindow : Window
     {
         var valorPai = comboPai.Text;
 
+        // A combo-filha só faz sentido usar depois de a combo-pai ter um valor (ex.: só faz sentido
+        // escolher o "Tamanho do Disco" depois de saber se é HDD/SSD/NVMe) — mantê-la desativada
+        // até lá evita valores "soltos", sem o respetivo tipo escolhido, e deixa claro, só
+        // visualmente, a ordem a seguir a preencher o formulário.
+        comboFilha.IsEnabled = !string.IsNullOrWhiteSpace(valorPai);
+
         var idCaracteristicaFilha = string.IsNullOrWhiteSpace(valorPai)
             ? null
             : App.Db.CaracteristicasEquipamento
@@ -514,7 +533,16 @@ public partial class EquipamentoEditWindow : Window
         [GruposCaracteristicasEquipamento.Rede] = new() { "Nº de Portas", "Velocidade" },
         [GruposCaracteristicasEquipamento.Camera] = new() { "Tipo", "Resolução" },
         [GruposCaracteristicasEquipamento.Monitor] = new() { "Tipo de Painel", "Polegadas", "Resolução" },
-        [GruposCaracteristicasEquipamento.Projetor] = new() { "Luminosidade (Lumens)", "Resolução" }
+        [GruposCaracteristicasEquipamento.Projetor] = new() { "Luminosidade (Lumens)", "Resolução" },
+        // Faltava esta entrada — sem ela, NENHUMA característica do grupo Impressora era excluída
+        // do painel dinâmico "Características Adicionais" (o TryGetValue abaixo falhava, e a
+        // condição de filtro trata "sem lista nenhuma" como "não excluir nada"), pelo que "Tipo de
+        // Impressora", "Tipo de Ligação" e "Impressão a cores" — já configuradas como
+        // características do grupo em Dados Fixos, e cada uma já com o seu próprio campo fixo
+        // (CmbTipoImpressora, CmbLigacaoImpressora, ChkImpressaoCor) — apareciam TAMBÉM no painel
+        // dinâmico, duplicadas. "Cartuchos" não tem campo fixo equivalente, por isso não entra
+        // aqui, e continua (corretamente) só no painel dinâmico.
+        [GruposCaracteristicasEquipamento.Impressora] = new() { "Tipo de Impressora", "Tipo de Ligação", "Impressão a cores" }
     };
 
     private void AtualizarCaracteristicasAdicionais(string grupoCaracteristicas, string? tipo)
