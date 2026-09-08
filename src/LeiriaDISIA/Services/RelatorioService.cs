@@ -1353,7 +1353,8 @@ public partial class RelatorioService
     /// <param name="idsFiltrados">Quando indicado, restringe o relatório apenas a estas
     /// intervenções — ver nota em <see cref="GerarListaEquipamento"/>.</param>
     public void GerarListaIntervencoes(string caminhoDestino, int? ano = null,
-        DateTime? dataInicio = null, DateTime? dataFim = null, IReadOnlyCollection<int>? idsFiltrados = null)
+        DateTime? dataInicio = null, DateTime? dataFim = null, IReadOnlyCollection<int>? idsFiltrados = null,
+        string? tituloPersonalizado = null, string? subtituloPersonalizado = null)
     {
         var query = _db.Intervencoes
             .Include(i => i.Escola)
@@ -1387,12 +1388,12 @@ public partial class RelatorioService
             (pendentes.ToString(), "Pendentes", Colors.Red.Darken1),
         };
 
-        var titulo = usaPeriodo
+        var titulo = tituloPersonalizado ?? (usaPeriodo
             ? $"Lista de Intervenções — {dataInicio?.ToString("dd/MM/yyyy") ?? "início"} a {dataFim?.ToString("dd/MM/yyyy") ?? "hoje"}"
-            : ano is { } anoTitulo ? $"Lista de Intervenções — {anoTitulo}" : "Lista Total de Intervenções";
+            : ano is { } anoTitulo ? $"Lista de Intervenções — {anoTitulo}" : "Lista Total de Intervenções");
 
         GerarDocumentoPadrao(caminhoDestino, titulo,
-            "Registo de intervenções técnicas realizadas nas escolas e jardins de infância.",
+            subtituloPersonalizado ?? "Registo de intervenções técnicas realizadas nas escolas e jardins de infância.",
             intervencoes.Count, cards, col =>
         {
             if (intervencoes.Count == 0)

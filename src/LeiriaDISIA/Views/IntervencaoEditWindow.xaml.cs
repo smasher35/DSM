@@ -54,6 +54,16 @@ public partial class IntervencaoEditWindow : Window
     private readonly ObservableCollection<LinhaEquipamento> _intervencionados = new();
     private readonly ObservableCollection<LinhaEquipamento> _recolhidos = new();
     private readonly ObservableCollection<LinhaEquipamento> _abatidos = new();
+    private readonly ObservableCollection<LinhaEquipamento> _novosEntregues = new();
+
+    /// <summary>Ids de EquipamentoRecolhido devolvidos à escola (botão "Devolver à Escola" — ver
+    /// DevolverRecolhido_Click) durante esta sessão de edição — a mudança de Estado/DataEntrega já
+    /// é gravada de imediato ali, mas a ligação a ESTA intervenção em concreto
+    /// (EquipamentoRecolhido.IntervencaoEntregaId) só pode ser gravada depois de a própria
+    /// intervenção ter um Id válido, o que só acontece quando a intervenção é nova e ainda não foi
+    /// guardada nenhuma vez — ver Guardar(). Para uma intervenção já existente (_intervencaoIdGuardada
+    /// já tem valor), a ligação é gravada logo ali, sem precisar de esperar.</summary>
+    private readonly List<int> _devolvidosNestaSessao = new();
 
     public bool Sucesso { get; private set; }
 
@@ -86,6 +96,7 @@ public partial class IntervencaoEditWindow : Window
         GridIntervencionados.ItemsSource = _intervencionados;
         GridRecolhidos.ItemsSource = _recolhidos;
         GridAbatidos.ItemsSource = _abatidos;
+        GridNovosEntregues.ItemsSource = _novosEntregues;
 
         foreach (var cat in App.Db.CategoriasIntervencao.Where(c => c.Ativa).OrderBy(c => c.Nome))
         {
@@ -104,7 +115,10 @@ public partial class IntervencaoEditWindow : Window
                 CmbEscola.SelectedItem = _todasAsEscolas.FirstOrDefault(e => e.Id == escolaPreSelecionada.Id);
 
             if (pedidoOrigem != null)
+            {
                 TxtDescricao.Text = pedidoOrigem.Razao;
+                TxtNumeroSuporteSiga.Text = pedidoOrigem.NumeroSuporteSiga;
+            }
 
             AtualizarPainelPedidoAssociado();
             AtualizarRecolhidosDaEscola();
@@ -132,6 +146,7 @@ public partial class IntervencaoEditWindow : Window
         CmbEscola.SelectedItem = _todasAsEscolas.FirstOrDefault(e => e.Id == completa.EscolaId);
         DpData.SelectedDate = completa.Data;
         TxtDescricao.Text = completa.Descricao;
+        TxtNumeroSuporteSiga.Text = completa.NumeroSuporteSiga;
         TxtMaterial.Text = completa.MaterialRecolhidoAbatido;
         CmbEstado.SelectedItem = completa.Estado;
         TxtMotivoPendente.Text = completa.MotivoPendente;
@@ -177,6 +192,19 @@ public partial class IntervencaoEditWindow : Window
                 NumeroInventario = a.Equipamento.NumeroInventario,
                 Descricao = $"{a.Equipamento.Tipo} {a.Equipamento.Marca} {a.Equipamento.Modelo}".Trim(),
                 PersistedId = a.Id
+            });
+        }
+
+        foreach (var n in App.Db.IntervencaoEquipamentosNovos.Include(n => n.Equipamento).Where(n => n.IntervencaoId == intervencao.Id))
+        {
+            if (n.Equipamento == null) continue;
+            _novosEntregues.Add(new LinhaEquipamento
+            {
+                EquipamentoId = n.Equipamento.Id,
+                NumeroSerie = n.Equipamento.NumeroSerie,
+                NumeroInventario = n.Equipamento.NumeroInventario,
+                Descricao = $"{n.Equipamento.Tipo} {n.Equipamento.Marca} {n.Equipamento.Modelo}".Trim(),
+                PersistedId = n.Id
             });
         }
 
@@ -356,6 +384,8 @@ public partial class IntervencaoEditWindow : Window
         CmbEscola.SelectedItem = _todasAsEscolas.FirstOrDefault(esc => esc.Id == _pedidoOrigem.EscolaId);
         if (string.IsNullOrWhiteSpace(TxtDescricao.Text))
             TxtDescricao.Text = _pedidoOrigem.Razao;
+        if (string.IsNullOrWhiteSpace(TxtNumeroSuporteSiga.Text))
+            TxtNumeroSuporteSiga.Text = _pedidoOrigem.NumeroSuporteSiga;
 
         AtualizarPainelPedidoAssociado();
     }
@@ -416,6 +446,16 @@ public partial class IntervencaoEditWindow : Window
         registo.DataEntrega = DateTime.Today;
         if (registo.Equipamento != null)
             registo.Equipamento.Estado = EstadosEquipamento.EmServico;
+
+        // Liga esta devolução à intervenção atual, para aparecer no respetivo relatório PDF (ver
+        // Services/IntervencaoPdfService.cs) — se a intervenção já tiver Id (já foi guardada pelo
+        // menos uma vez), grava-se já; senão, fica em memória até Guardar() atribuir um Id à
+        // intervenção nova (ver _devolvidosNestaSessao e o comentário completo lá).
+        if (_intervencaoIdGuardada is { } idJaGuardada)
+            registo.IntervencaoEntregaId = idJaGuardada;
+        else
+            _devolvidosNestaSessao.Add(registo.Id);
+
         App.Db.SaveChanges();
         AtualizarRecolhidosDaEscola();
     }
@@ -490,6 +530,17 @@ public partial class IntervencaoEditWindow : Window
                         App.Db.EquipamentosAbatidos.Remove(a);
                     }
                     break;
+                case "equipamento novo entregue":
+                    // Ao contrário do que fazia sentido quando este equipamento era só "escolhido"
+                    // de uma lista, agora é criado como um registo permanente, com a escola já
+                    // atribuída pela própria janela "Novo Equipamento" (ver
+                    // AdicionarNovoEntregue_Click) — remover esta linha só desfaz o registo de que
+                    // a entrega aconteceu NESTA intervenção, nunca a própria atribuição da escola
+                    // ao equipamento, que continua válida (o equipamento não deixa de lá estar só
+                    // porque se corrigiu a que intervenção pertence este registo).
+                    var novo = App.Db.IntervencaoEquipamentosNovos.Find(linha.PersistedId);
+                    if (novo != null) App.Db.IntervencaoEquipamentosNovos.Remove(novo);
+                    break;
             }
             App.Db.SaveChanges();
         }
@@ -500,6 +551,41 @@ public partial class IntervencaoEditWindow : Window
     private void RemoverIntervencionado_Click(object sender, RoutedEventArgs e) => RemoverLinha(sender, _intervencionados, "equipamento intervencionado");
     private void RemoverRecolhido_Click(object sender, RoutedEventArgs e) => RemoverLinha(sender, _recolhidos, "equipamento recolhido");
     private void RemoverAbatido_Click(object sender, RoutedEventArgs e) => RemoverLinha(sender, _abatidos, "equipamento abatido");
+    private void RemoverNovoEntregue_Click(object sender, RoutedEventArgs e) => RemoverLinha(sender, _novosEntregues, "equipamento novo entregue");
+
+    /// <summary>Equipamento novo, que nunca chegou a ser registado como Equipamento — ao contrário
+    /// das outras três listas, aqui não há nada para "escolher" num picker (ver
+    /// Views/EquipamentoPickerWindow.xaml.cs): esse equipamento simplesmente ainda não existe na
+    /// base de dados. Em vez disso, abre-se o próprio formulário de "Novo Equipamento" (com a
+    /// escola desta intervenção já pré-selecionada, para poupar esse passo), onde a característica
+    /// "Usar Modelo..." (ver Views/ModelosEquipamentoWindow.xaml.cs) já ajuda a preencher
+    /// Marca/Modelo/características rapidamente — só ficam mesmo por escrever os campos únicos de
+    /// cada unidade (Nº de Série, Nº de Inventário). O equipamento fica gravado (com a escola já
+    /// atribuída, pela própria janela) assim que o formulário é guardado; esta linha só regista,
+    /// à parte, que a entrega aconteceu NESTA intervenção.</summary>
+    private void AdicionarNovoEntregue_Click(object sender, RoutedEventArgs e)
+    {
+        if (CmbEscola.SelectedItem is not Escola escola)
+        {
+            MessageBox.Show("Selecione primeiro uma escola antes de adicionar equipamento novo à intervenção.",
+                "Escola não selecionada", MessageBoxButton.OK, MessageBoxImage.Warning);
+            TxtPesquisaEscola.Focus();
+            return;
+        }
+
+        var janela = new EquipamentoEditWindow(null, escolaPreSelecionada: escola) { Owner = this };
+        janela.ShowDialog();
+        if (!janela.Sucesso || janela.EquipamentoGravado == null) return;
+
+        var eq = janela.EquipamentoGravado;
+        _novosEntregues.Add(new LinhaEquipamento
+        {
+            EquipamentoId = eq.Id,
+            NumeroSerie = eq.NumeroSerie,
+            NumeroInventario = eq.NumeroInventario,
+            Descricao = $"{eq.Tipo} {eq.Marca} {eq.Modelo}".Trim()
+        });
+    }
 
     private void Cancelar_Click(object sender, RoutedEventArgs e)
     {
@@ -542,6 +628,7 @@ public partial class IntervencaoEditWindow : Window
         intervencao.EscolaId = escola.Id;
         intervencao.AgrupamentoId = escola.AgrupamentoId;
         intervencao.Descricao = TxtDescricao.Text.Trim();
+        intervencao.NumeroSuporteSiga = string.IsNullOrWhiteSpace(TxtNumeroSuporteSiga.Text) ? null : TxtNumeroSuporteSiga.Text.Trim();
         intervencao.MaterialRecolhidoAbatido = string.IsNullOrWhiteSpace(TxtMaterial.Text) ? null : TxtMaterial.Text;
         intervencao.Estado = estado;
         intervencao.MotivoPendente = estado is EstadoIntervencao.Pendente or EstadoIntervencao.EmEspera
@@ -577,6 +664,20 @@ public partial class IntervencaoEditWindow : Window
         App.Db.SaveChanges();
         _intervencaoIdGuardada = intervencao.Id;
         BtnImprimirPdf.IsEnabled = true;
+
+        // Liga agora as devoluções feitas durante esta sessão de edição enquanto a intervenção
+        // ainda era nova e sem Id (ver DevolverRecolhido_Click) — para uma intervenção que já
+        // existia, isto já tinha sido gravado logo ali, e _devolvidosNestaSessao fica vazia.
+        if (_devolvidosNestaSessao.Count > 0)
+        {
+            var registosDevolvidos = App.Db.EquipamentosRecolhidos
+                .Where(r => _devolvidosNestaSessao.Contains(r.Id))
+                .ToList();
+            foreach (var registo in registosDevolvidos)
+                registo.IntervencaoEntregaId = intervencao.Id;
+            App.Db.SaveChanges();
+            _devolvidosNestaSessao.Clear();
+        }
 
         foreach (var linha in _intervencionados.Where(l => l.PersistedId == null))
         {
@@ -616,6 +717,20 @@ public partial class IntervencaoEditWindow : Window
 
             var equipamento = App.Db.Equipamentos.Find(linha.EquipamentoId);
             if (equipamento != null) equipamento.Estado = EstadosEquipamento.Abatido;
+        }
+
+        // Equipamento novo entregue e instalado nesta escola pela primeira vez — ver
+        // Models/Intervencao.cs (IntervencaoEquipamentoNovo) e AdicionarNovoEntregue_Click. Ao
+        // contrário de "intervencionado"/"recolhido"/"abatido", este equipamento é criado (Escola
+        // incluída) na própria janela "Novo Equipamento" que o abre — aqui só falta registar que
+        // essa entrega aconteceu NESTA intervenção em concreto.
+        foreach (var linha in _novosEntregues.Where(l => l.PersistedId == null))
+        {
+            App.Db.IntervencaoEquipamentosNovos.Add(new IntervencaoEquipamentoNovo
+            {
+                IntervencaoId = intervencao.Id,
+                EquipamentoId = linha.EquipamentoId
+            });
         }
 
         App.Db.SaveChanges();
@@ -680,6 +795,21 @@ public partial class IntervencaoEditWindow : Window
             .Where(a => a.IntervencaoId == intervencao.Id)
             .ToList();
 
+        // Equipamento devolvido à escola DURANTE esta intervenção (ver DevolverRecolhido_Click) —
+        // note-se que "IntervencaoEntregaId" (a entrega) é um campo distinto de "IntervencaoId"
+        // acima (a recolha original, possivelmente noutra intervenção); um mesmo registo de
+        // EquipamentoRecolhido pode por isso aparecer em ambas as listas, se tiver sido recolhido
+        // E devolvido na mesma intervenção.
+        var devolvidosDaIntervencao = App.Db.EquipamentosRecolhidos
+            .Include(r => r.Equipamento)
+            .Where(r => r.IntervencaoEntregaId == intervencao.Id)
+            .ToList();
+
+        var novosEntreguesDaIntervencao = App.Db.IntervencaoEquipamentosNovos
+            .Include(n => n.Equipamento)
+            .Where(n => n.IntervencaoId == intervencao.Id)
+            .ToList();
+
         var dialog = new SaveFileDialog
         {
             Title = "Guardar relatório da intervenção",
@@ -690,7 +820,8 @@ public partial class IntervencaoEditWindow : Window
 
         try
         {
-            new IntervencaoPdfService().Gerar(intervencao, recolhidosDaIntervencao, abatidosDaIntervencao, dialog.FileName);
+            new IntervencaoPdfService().Gerar(intervencao, recolhidosDaIntervencao, abatidosDaIntervencao,
+                devolvidosDaIntervencao, novosEntreguesDaIntervencao, dialog.FileName);
             var abrir = MessageBox.Show("PDF gerado com sucesso. Deseja abri-lo agora?", "Concluído",
                 MessageBoxButton.YesNo, MessageBoxImage.Information);
             if (abrir == MessageBoxResult.Yes)

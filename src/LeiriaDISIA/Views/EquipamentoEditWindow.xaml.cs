@@ -35,6 +35,12 @@ public partial class EquipamentoEditWindow : Window
 
     public bool Sucesso { get; private set; }
 
+    /// <summary>Equipamento efetivamente gravado, depois de Guardar() correr com sucesso — usado
+    /// por quem abre esta janela para inserir equipamento novo diretamente (ex.: "Equipamento
+    /// novo entregue" numa Intervenção — ver Views/IntervencaoEditWindow.xaml.cs) e precisa do
+    /// registo já com o Id atribuído pela base de dados, sem ter de o procurar separadamente.</summary>
+    public Equipamento? EquipamentoGravado { get; private set; }
+
     /// <summary>Preenchido após "Guardar" quando esta janela foi aberta com um contexto de
     /// Atividade DISIA (<see cref="_atividadeContexto"/>) e alguma característica de hardware
     /// (processador, memória, disco, sistema operativo) foi alterada. É null se nada mudou ou se
@@ -54,7 +60,13 @@ public partial class EquipamentoEditWindow : Window
             .Concat(new[] { "Tablet", "UPS/No-break", "Telefone IP", "Outro" })
             .ToArray();
 
-    public EquipamentoEditWindow(Equipamento? equipamento, AtividadeDisia? atividadeContexto = null)
+    /// <param name="escolaPreSelecionada">Só relevante quando <paramref name="equipamento"/> é
+    /// null (equipamento novo) — pré-seleciona esta escola no campo "Escola (se aplicável)", para
+    /// poupar um passo a quem já sabe para onde o equipamento vai (ex.: "Equipamento novo
+    /// entregue" numa Intervenção — ver Views/IntervencaoEditWindow.xaml.cs). Continua a poder
+    /// ser alterada livremente antes de gravar, tal como qualquer outro campo pré-preenchido.</param>
+    public EquipamentoEditWindow(Equipamento? equipamento, AtividadeDisia? atividadeContexto = null,
+        Escola? escolaPreSelecionada = null)
     {
         InitializeComponent();
 
@@ -176,6 +188,8 @@ public partial class EquipamentoEditWindow : Window
             TxtTitulo.Text = "Novo Equipamento";
             CmbEstado.SelectedItem = EstadosEquipamento.EmServico;
             _estadoOriginal = EstadosEquipamento.EmServico;
+            if (escolaPreSelecionada != null)
+                CmbEscola.SelectedItem = _todasAsEscolas.FirstOrDefault(x => x.Id == escolaPreSelecionada.Id);
             return;
         }
 
@@ -927,6 +941,7 @@ public partial class EquipamentoEditWindow : Window
         }
 
         Sucesso = true;
+        EquipamentoGravado = equipamento;
 
         // TemRecolhaPendente evita voltar a perguntar ou duplicar a atividade quando já existe uma
         // recolha em curso para este equipamento — cobre tanto o caso de regravar sem alterar o

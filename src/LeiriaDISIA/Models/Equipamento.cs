@@ -194,6 +194,17 @@ public class EquipamentoRecolhido
     public int? AtividadeDisiaId { get; set; }
     public AtividadeDisia? AtividadeDisia { get; set; }
 
+    /// <summary>Intervenção durante a qual este equipamento foi devolvido/entregue de volta à
+    /// escola (ver botão "Devolver à Escola" em Views/IntervencaoEditWindow.xaml.cs) — distinto de
+    /// <see cref="IntervencaoId"/>, que é a intervenção que originou a RECOLHA, não a entrega; as
+    /// duas podem ser intervenções diferentes (equipamento recolhido numa visita, devolvido só numa
+    /// visita posterior). Usado para o equipamento devolvido aparecer no relatório PDF da
+    /// intervenção em que a entrega de facto aconteceu — ver Services/IntervencaoPdfService.cs.
+    /// <c>null</c> enquanto o equipamento não tiver sido devolvido, ou quando a devolução foi
+    /// registada sem estar associada a nenhuma intervenção em concreto.</summary>
+    public int? IntervencaoEntregaId { get; set; }
+    public Intervencao? IntervencaoEntrega { get; set; }
+
     public DateTime DataRecolha { get; set; } = DateTime.Today;
 
     /// <summary>Pendente, Em Reparação, Aguarda Entrega ou Entregue — ver

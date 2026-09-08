@@ -23,6 +23,13 @@ public class Intervencao
     public string Descricao { get; set; } = string.Empty;        // "Tipo de Intervenção" no Excel
     public string? MaterialRecolhidoAbatido { get; set; }
 
+    /// <summary>Nº do pedido no sistema SIGA (Suporte) — quando a intervenção nasce de um Pedido
+    /// que já tenha este campo preenchido (ver <see cref="PedidoIntervencao.NumeroSuporteSiga"/>),
+    /// vem pré-preenchido automaticamente a partir daí; caso contrário, ou quando a intervenção é
+    /// registada diretamente sem pedido associado, pode ser escrito aqui à mão. Ver
+    /// Views/IntervencaoEditWindow.xaml.cs.</summary>
+    public string? NumeroSuporteSiga { get; set; }
+
     public EstadoIntervencao Estado { get; set; } = EstadoIntervencao.Fechada;
     public string? MotivoPendente { get; set; }
 
@@ -52,6 +59,32 @@ public class IntervencaoEquipamento
     public Equipamento? Equipamento { get; set; }
 
     public string? Observacoes { get; set; }
+}
+
+/// <summary>
+/// Equipamento que ainda não existia no inventário, registado e entregue a uma escola pela
+/// primeira vez durante uma intervenção — ex.: um lote de computadores novos, comprado e guardado
+/// na DISIA, nunca antes atribuído a nenhuma escola. Distinto de <see cref="IntervencaoEquipamento"/>
+/// (que pressupõe o equipamento já estar na escola antes da intervenção, a ser
+/// reparado/configurado no local) e de <see cref="EquipamentoRecolhido"/> (que pressupõe uma
+/// recolha anterior desse mesmo equipamento nessa escola). O registo do próprio equipamento (já
+/// com a Escola atribuída) é criado ao mesmo tempo, através do formulário "Novo Equipamento" — ver
+/// Views/IntervencaoEditWindow.xaml.cs, AdicionarNovoEntregue_Click; esta tabela só liga esse
+/// equipamento à intervenção durante a qual foi entregue. Tabela própria, em vez de reaproveitar
+/// <see cref="IntervencaoEquipamento"/> com uma bandeira a distinguir os dois casos, para não
+/// misturar este conceito nas estatísticas de "equipamento mais intervencionado"
+/// (Views/EquipamentosWindow.xaml.cs) — entregar equipamento novo não é, para esse efeito, uma
+/// intervenção sobre um equipamento.
+/// </summary>
+public class IntervencaoEquipamentoNovo
+{
+    public int Id { get; set; }
+
+    public int IntervencaoId { get; set; }
+    public Intervencao? Intervencao { get; set; }
+
+    public int EquipamentoId { get; set; }
+    public Equipamento? Equipamento { get; set; }
 }
 
 /// <summary>

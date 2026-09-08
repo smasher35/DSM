@@ -256,6 +256,9 @@
         </Grid>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+            <Button x:Name="BtnHistoricoIntervencoes" Content="📖 Histórico de Intervenções" Click="HistoricoIntervencoes_Click" Padding="12,6"
+                    Background="#7C3AED" Foreground="White" BorderThickness="0" Margin="0,0,8,0"
+                    ToolTip="Ver e imprimir o histórico de intervenções realizadas nesta escola" />
             <Button Content="Cancelar" Click="Cancelar_Click" Margin="0,0,8,0" Padding="16,6" />
             <Button Content="Guardar" Style="{StaticResource PrimaryButton}" Click="Guardar_Click" Padding="16,6" />
         </StackPanel>

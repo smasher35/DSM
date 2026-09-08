@@ -40,6 +40,10 @@ public partial class EscolaEditWindow : Window
 
         _escolaExistente = escola;
         _agrupamentoPreSelecionado = agrupamentoPreSelecionado;
+        // Uma escola nova ainda não tem Id nenhum — logo, não pode ter nenhuma intervenção
+        // registada (essas são sempre associadas a uma escola já existente). Ver
+        // HistoricoIntervencoes_Click.
+        BtnHistoricoIntervencoes.IsEnabled = _escolaExistente != null;
 
         var agrupamentosDisponiveis = new List<Agrupamento> { new() { Id = 0, Nome = "(Sem Agrupamento)" } };
         agrupamentosDisponiveis.AddRange(App.Db.Agrupamentos.OrderBy(a => a.Nome));
@@ -311,6 +315,14 @@ public partial class EscolaEditWindow : Window
         _imagemCaminhoAtual = null;
         _imagemRemovida = true;
         ImgEscola.Source = null;
+    }
+
+    private void HistoricoIntervencoes_Click(object sender, RoutedEventArgs e)
+    {
+        if (_escolaExistente == null) return;
+
+        var janela = new HistoricoIntervencoesEscolaWindow(_escolaExistente) { Owner = this };
+        janela.ShowDialog();
     }
 
     private void Cancelar_Click(object sender, RoutedEventArgs e)

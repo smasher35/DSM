@@ -54,6 +54,13 @@
                     <TextBlock Text="Data da Intervenção" FontWeight="SemiBold" />
                     <DatePicker x:Name="DpData" Margin="0,4,0,10" />
 
+                    <TextBlock Text="Nº Suporte SIGA" FontWeight="SemiBold" />
+                    <!-- Vem pré-preenchido a partir do Pedido de origem, quando este já o tiver
+                         (ver AtualizarPainelPedidoAssociado em IntervencaoEditWindow.xaml.cs) —
+                         continua editável, para se poder escrever à mão quando a intervenção não
+                         nasce de um pedido, ou quando o pedido ainda não tinha este nº. -->
+                    <TextBox x:Name="TxtNumeroSuporteSiga" Margin="0,4,0,10" />
+
                     <TextBlock Text="Descrição / Tipo de Intervenção" FontWeight="SemiBold" />
                     <TextBox x:Name="TxtDescricao" AcceptsReturn="True" Height="60" TextWrapping="Wrap" Margin="0,4,0,10" />
 
@@ -158,6 +165,39 @@
             <!-- ===================== COLUNA 3 — Equipamento recolhido da escola ===================== -->
             <Border Grid.Column="4" Style="{StaticResource CardStyle}" Margin="0,3,0,0">
                 <DockPanel>
+                    <!-- Equipamento que ainda nem existe no inventário — ao contrário das outras
+                         três listas (que escolhem equipamento JÁ existente, através de
+                         EquipamentoPickerWindow), "+ Adicionar" aqui abre logo o formulário "Novo
+                         Equipamento" (com a escola desta intervenção já pré-selecionada), para
+                         registar equipamento novo (ex.: um lote de computadores comprado e
+                         guardado na DISIA, nunca antes atribuído a nenhuma escola) e entregá-lo já
+                         a esta escola no mesmo passo — ver AdicionarNovoEntregue_Click em
+                         IntervencaoEditWindow.xaml.cs. Fica acima da lista de recolhido/devolvido
+                         abaixo, a pedido, por serem conceitos relacionados mas distintos (aqui não
+                         há recolha nenhuma envolvida). -->
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                        <Button DockPanel.Dock="Right" Content="+ Adicionar" Padding="10,4" Click="AdicionarNovoEntregue_Click" />
+                        <TextBlock Text="Equipamento novo entregue" FontWeight="Bold" VerticalAlignment="Center" TextWrapping="Wrap" />
+                    </DockPanel>
+                    <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" FontSize="11"
+                               Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,6"
+                               Text="Equipamento que ainda não existe no inventário — abre o formulário de Novo Equipamento (com a escola já pré-selecionada) para o registar e entregar aqui, sem passar por recolha nem reparação." />
+                    <DataGrid x:Name="GridNovosEntregues" DockPanel.Dock="Top" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                              HeadersVisibility="Column" RowHeight="26" MaxHeight="140" Margin="0,0,0,12">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Nº Série" Binding="{Binding NumeroSerie}" Width="Auto" />
+                            <DataGridTextColumn Header="Nº Inventário" Binding="{Binding NumeroInventario}" Width="Auto" />
+                            <DataGridTextColumn Header="Descrição" Binding="{Binding Descricao}" Width="*" />
+                            <DataGridTemplateColumn Width="Auto">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="✕" Padding="4,0" Click="RemoverNovoEntregue_Click" ToolTip="Remover da lista" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
                     <TextBlock DockPanel.Dock="Top" Text="Equipamento atualmente recolhido desta escola" FontWeight="Bold" Margin="0,0,0,4" TextWrapping="Wrap" />
                     <TextBlock DockPanel.Dock="Top" Text="Depois de reparado, use o botão Devolver para o entregar de volta à escola."
                                FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,8" TextWrapping="Wrap" />

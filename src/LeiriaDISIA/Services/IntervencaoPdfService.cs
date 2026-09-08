@@ -34,6 +34,8 @@ public class IntervencaoPdfService
         Intervencao intervencao,
         IReadOnlyList<EquipamentoRecolhido> recolhidos,
         IReadOnlyList<EquipamentoAbatido> abatidos,
+        IReadOnlyList<EquipamentoRecolhido> devolvidos,
+        IReadOnlyList<IntervencaoEquipamentoNovo> novosEntregues,
         string caminhoDestino)
     {
         var linhasIntervencionados = intervencao.EquipamentosIntervencionados
@@ -66,6 +68,34 @@ public class IntervencaoPdfService
                 a.Observacoes ?? ""))
             .ToList();
 
+        // Equipamento devolvido à escola durante ESTA intervenção (distinto do que foi recolhido
+        // nela — pode ter sido recolhido numa visita anterior e só devolvido agora, ver
+        // EquipamentoRecolhido.IntervencaoEntregaId). "InfoExtra" mostra a data da devolução, não a
+        // da recolha original (essa já não é relevante aqui — o que importa neste relatório é que
+        // o equipamento voltou à escola nesta intervenção).
+        var linhasDevolvidos = devolvidos
+            .Select(d => new LinhaEquipamentoPdf(
+                d.Equipamento == null ? "-" : DescricaoEquipamento(d.Equipamento.Tipo, d.Equipamento.Marca, d.Equipamento.Modelo),
+                d.Equipamento?.NumeroSerie ?? "-",
+                d.Equipamento?.NumeroInventario ?? "-",
+                d.DataEntrega?.ToString("dd-MM-yyyy") ?? "-",
+                d.Observacoes ?? ""))
+            .ToList();
+
+        // Equipamento novo (sem escola anterior) entregue e instalado nesta escola pela primeira
+        // vez nesta intervenção — distinto do devolvido acima (esse pressupõe uma recolha
+        // anterior; este nunca lá esteve). Sem "Observações" nem "InfoExtra" próprios (ver
+        // Models/Intervencao.cs, IntervencaoEquipamentoNovo) — a própria secção já deixa claro do
+        // que se trata, e ComposeTabelaEquipamento aceita null para não desenhar essa coluna.
+        var linhasNovosEntregues = novosEntregues
+            .Select(n => new LinhaEquipamentoPdf(
+                n.Equipamento == null ? "-" : DescricaoEquipamento(n.Equipamento.Tipo, n.Equipamento.Marca, n.Equipamento.Modelo),
+                n.Equipamento?.NumeroSerie ?? "-",
+                n.Equipamento?.NumeroInventario ?? "-",
+                "",
+                ""))
+            .ToList();
+
         Document.Create(container =>
         {
             container.Page(page =>
@@ -94,6 +124,20 @@ public class IntervencaoPdfService
                         col.Item().PaddingTop(18);
                         ComposeTabelaEquipamento(col, "Equipamento Recolhido para a DISIA", "#7C3AED",
                             "Estado / Data", linhasRecolhidos);
+                    }
+
+                    if (linhasDevolvidos.Count > 0)
+                    {
+                        col.Item().PaddingTop(18);
+                        ComposeTabelaEquipamento(col, "Equipamento Devolvido à Escola", "#0F766E",
+                            "Data da Devolução", linhasDevolvidos);
+                    }
+
+                    if (linhasNovosEntregues.Count > 0)
+                    {
+                        col.Item().PaddingTop(18);
+                        ComposeTabelaEquipamento(col, "Equipamento Novo Entregue à Escola", "#0891B2",
+                            null, linhasNovosEntregues);
                     }
 
                     if (linhasAbatidos.Count > 0)
@@ -250,6 +294,18 @@ public class IntervencaoPdfService
                     {
                         cc.Item().Text("MOTIVO").FontSize(7.5f).Bold().FontColor(Colors.Grey.Darken1).LetterSpacing(0.05f);
                         cc.Item().Text(intervencao.MotivoPendente!).FontSize(9.5f).FontColor(Colors.Grey.Darken3);
+                    });
+                });
+            }
+
+            if (!string.IsNullOrWhiteSpace(intervencao.NumeroSuporteSiga))
+            {
+                c.Item().PaddingTop(10).Row(row =>
+                {
+                    row.RelativeItem().Column(cc =>
+                    {
+                        cc.Item().Text("Nº SUPORTE SIGA").FontSize(7.5f).Bold().FontColor(Colors.Grey.Darken1).LetterSpacing(0.05f);
+                        cc.Item().Text(intervencao.NumeroSuporteSiga!).FontSize(9.5f).FontColor(Colors.Grey.Darken3);
                     });
                 });
             }

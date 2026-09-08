@@ -232,6 +232,29 @@ public static class SchemaUpgrade
 
         CriarModelosEquipamentoSePreciso(conexao);
         CriarModeloEquipamentoCaracteristicaValoresSePreciso(conexao);
+
+        AdicionarColunaSeNaoExistir(conexao, "Intervencoes", "NumeroSuporteSiga", "TEXT");
+        AdicionarColunaSeNaoExistir(conexao, "EquipamentosRecolhidos", "IntervencaoEntregaId", "INTEGER");
+
+        CriarIntervencaoEquipamentosNovosSePreciso(conexao);
+    }
+
+    /// <summary>Equipamento novo entregue e instalado numa escola durante uma intervenção, sem
+    /// recolha nem trabalho prévio — ver Models/Intervencao.cs (IntervencaoEquipamentoNovo) para a
+    /// explicação completa.</summary>
+    private static void CriarIntervencaoEquipamentosNovosSePreciso(SqliteConnection conexao)
+    {
+        if (TabelaExiste(conexao, "IntervencaoEquipamentosNovos")) return;
+
+        using var cmd = conexao.CreateCommand();
+        cmd.CommandText = """
+            CREATE TABLE "IntervencaoEquipamentosNovos" (
+                "Id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                "IntervencaoId" INTEGER NOT NULL,
+                "EquipamentoId" INTEGER NOT NULL
+            )
+            """;
+        cmd.ExecuteNonQuery();
     }
 
     /// <summary>Valores das características adicionais (definidas pelo administrador) preenchidos
