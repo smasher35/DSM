@@ -83,7 +83,8 @@ public partial class HistoricoIntervencoesEscolaWindow : Window
             servico.GerarListaIntervencoes(dialog.FileName,
                 idsFiltrados: _intervencoes.Select(i => i.Id).ToList(),
                 tituloPersonalizado: $"Histórico de Intervenções — {_escola.Nome}",
-                subtituloPersonalizado: "Registo de todas as intervenções técnicas realizadas nesta escola.");
+                subtituloPersonalizado: "Registo de todas as intervenções técnicas realizadas nesta escola.",
+                resumoPorCategoria: true);
 
             var abrir = MessageBox.Show("Relatório PDF gerado com sucesso. Deseja abri-lo agora?",
                 "Concluído", MessageBoxButton.YesNo, MessageBoxImage.Information);

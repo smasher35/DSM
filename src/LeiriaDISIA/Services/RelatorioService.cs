@@ -1354,7 +1354,7 @@ public partial class RelatorioService
     /// intervenções — ver nota em <see cref="GerarListaEquipamento"/>.</param>
     public void GerarListaIntervencoes(string caminhoDestino, int? ano = null,
         DateTime? dataInicio = null, DateTime? dataFim = null, IReadOnlyCollection<int>? idsFiltrados = null,
-        string? tituloPersonalizado = null, string? subtituloPersonalizado = null)
+        string? tituloPersonalizado = null, string? subtituloPersonalizado = null, bool resumoPorCategoria = false)
     {
         var query = _db.Intervencoes
             .Include(i => i.Escola)
@@ -1402,24 +1402,54 @@ public partial class RelatorioService
                 return;
             }
 
-            // Resumo visual por agrupamento primeiro (visão geral), com o detalhe linha-a-linha
-            // logo a seguir — ordem habitual num relatório profissional (resumo → detalhe).
-            // Intervenções "Canceladas" não contam aqui, tal como nos totais do Dashboard.
-            var porAgrupamentoResumo = intervencoes
-                .Where(i => i.Estado != EstadoIntervencao.Cancelada)
-                .GroupBy(i => i.Agrupamento?.Nome ?? "(Sem Agrupamento)")
-                .Select(g => new { Agrupamento = g.Key, Total = g.Count() })
-                .OrderByDescending(g => g.Total)
-                .ToList();
+            // Resumo visual primeiro (visão geral), com o detalhe linha-a-linha logo a seguir —
+            // ordem habitual num relatório profissional (resumo → detalhe). Intervenções
+            // "Canceladas" não contam aqui, tal como nos totais do Dashboard.
+            //
+            // Por Agrupamento (o normal, para uma lista com várias escolas/agrupamentos) ou por
+            // Categoria/Tipo de Intervenção (resumoPorCategoria=true) — este segundo faz mais
+            // sentido, por exemplo, para o histórico de UMA escola: aí, "por Agrupamento" seria
+            // sempre uma única barra (a própria escola só tem um agrupamento), enquanto "por
+            // Categoria" mostra logo, de relance, que TIPO de trabalho tem sido feito ali (mais
+            // Hardware? mais Redes?) — ver Views/HistoricoIntervencoesEscolaWindow.xaml.cs.
+            var intervencoesValidas = intervencoes.Where(i => i.Estado != EstadoIntervencao.Cancelada).ToList();
 
-            if (porAgrupamentoResumo.Count > 0)
+            if (resumoPorCategoria)
             {
-                GraficoBarras(col, "Resumo por Agrupamento (excl. Canceladas)",
-                    porAgrupamentoResumo.Select(a => (a.Agrupamento, a.Total)).ToList());
-            }
+                var porCategoriaResumo = intervencoesValidas
+                    .SelectMany(i => i.Categorias)
+                    .Where(c => c.Categoria != null)
+                    .GroupBy(c => c.Categoria!.Nome)
+                    .Select(g => new { Categoria = g.Key, Total = g.Sum(x => x.Quantidade) })
+                    .OrderByDescending(g => g.Total)
+                    .ToList();
 
-            col.Item().PaddingTop(porAgrupamentoResumo.Count > 0 ? 4 : 0).PaddingBottom(4)
-                .Text("Detalhe das Intervenções").FontSize(11).Bold().FontColor(Colors.Blue.Darken2);
+                if (porCategoriaResumo.Count > 0)
+                {
+                    GraficoBarras(col, "Resumo por Tipo de Intervenção (excl. Canceladas)",
+                        porCategoriaResumo.Select(c => (c.Categoria, c.Total)).ToList());
+                }
+
+                col.Item().PaddingTop(porCategoriaResumo.Count > 0 ? 4 : 0).PaddingBottom(4)
+                    .Text("Detalhe das Intervenções").FontSize(11).Bold().FontColor(Colors.Blue.Darken2);
+            }
+            else
+            {
+                var porAgrupamentoResumo = intervencoesValidas
+                    .GroupBy(i => i.Agrupamento?.Nome ?? "(Sem Agrupamento)")
+                    .Select(g => new { Agrupamento = g.Key, Total = g.Count() })
+                    .OrderByDescending(g => g.Total)
+                    .ToList();
+
+                if (porAgrupamentoResumo.Count > 0)
+                {
+                    GraficoBarras(col, "Resumo por Agrupamento (excl. Canceladas)",
+                        porAgrupamentoResumo.Select(a => (a.Agrupamento, a.Total)).ToList());
+                }
+
+                col.Item().PaddingTop(porAgrupamentoResumo.Count > 0 ? 4 : 0).PaddingBottom(4)
+                    .Text("Detalhe das Intervenções").FontSize(11).Bold().FontColor(Colors.Blue.Darken2);
+            }
 
             col.Item().Table(table =>
             {
