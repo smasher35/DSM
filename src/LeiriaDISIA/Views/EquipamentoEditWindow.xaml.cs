@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using LeiriaDISIA.Models;
 using LeiriaDISIA.Services;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +12,10 @@ namespace LeiriaDISIA.Views;
 
 public partial class EquipamentoEditWindow : Window
 {
-    private readonly Equipamento? _existente;
+    // Já não é "readonly": PrepararParaNovoEquipamento (chamado por "💾 Guardar e Novo" — ver
+    // GuardarNovo_Click) repõe este campo a null a meio da vida da janela, para o próximo Guardar()
+    // voltar a criar um equipamento novo em vez de continuar a editar o que acabou de ser gravado.
+    private Equipamento? _existente;
 
     /// <summary>Quando esta janela é aberta a partir de uma Atividade DISIA (ver botão "✏️ Editar
     /// Equipamento" em <see cref="AtividadeDisiaEditWindow"/>), guarda essa atividade apenas para
@@ -193,6 +197,11 @@ public partial class EquipamentoEditWindow : Window
             return;
         }
 
+        // "Guardar e Novo" só faz sentido a inserir equipamento novo de seguida — a editar um já
+        // existente, ficaria confuso (o botão continuaria a gravar-EDITAR, não a criar) - por isso
+        // só aparece quando esta janela abre em modo "Novo Equipamento".
+        BtnGuardarNovo.Visibility = Visibility.Collapsed;
+
         TxtTitulo.Text = "Editar Equipamento";
         TxtNumeroSerie.Text = equipamento.NumeroSerie;
         TxtNumeroInventario.Text = equipamento.NumeroInventario;
@@ -273,6 +282,7 @@ public partial class EquipamentoEditWindow : Window
                 Data = ie.Intervencao!.Data,
                 Descricao = ie.Intervencao!.Descricao,
                 Estado = ie.Intervencao!.Estado.ToString(),
+                IntervencaoId = ie.IntervencaoId,
             })
             .ToList();
 
@@ -289,6 +299,7 @@ public partial class EquipamentoEditWindow : Window
                 Data = r.DataRecolha,
                 Descricao = DescricaoRecolha(r),
                 Estado = r.Estado,
+                AtividadeDisiaId = r.AtividadeDisia?.Id,
             })
             .ToList();
 
@@ -298,6 +309,39 @@ public partial class EquipamentoEditWindow : Window
         GridHistoricoIntervencoes.ItemsSource = historico;
         // (2.1) O painel (título + datagrid) mantém-se sempre visível, mesmo sem histórico, para
         // não deixar um espaço em branco pouco apelativo — a datagrid fica simplesmente vazia.
+    }
+
+    /// <summary>Abre, com duplo clique numa linha, o registo completo por trás dessa linha do
+    /// histórico — a Intervenção (equipamento intervencionado no local) ou a Atividade DISIA
+    /// (recolha), consoante o que a linha representa (ver HistoricoIntervencaoEquipamento). Um
+    /// registo de recolha antigo, ligado só à IntervencaoDisia obsoleta (sem Atividade DISIA
+    /// moderna associada), não tem para onde abrir — mostra-se um aviso em vez de não fazer nada
+    /// silenciosamente. Recarrega o histórico ao voltar, já que a janela aberta pode ter mudado
+    /// algo nele (ex.: o estado da intervenção).</summary>
+    private void GridHistoricoIntervencoes_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (GridHistoricoIntervencoes.SelectedItem is not HistoricoIntervencaoEquipamento linha) return;
+
+        if (linha.IntervencaoId is { } intervencaoId)
+        {
+            var intervencao = App.Db.Intervencoes.Find(intervencaoId);
+            if (intervencao == null) return;
+            new IntervencaoEditWindow(intervencao) { Owner = this }.ShowDialog();
+        }
+        else if (linha.AtividadeDisiaId is { } atividadeId)
+        {
+            var atividade = App.Db.AtividadesDisia.Find(atividadeId);
+            if (atividade == null) return;
+            new AtividadeDisiaEditWindow(atividade) { Owner = this }.ShowDialog();
+        }
+        else
+        {
+            MessageBox.Show("Este registo não tem uma janela de consulta disponível (histórico antigo).",
+                "Sem detalhe disponível", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        if (_existente != null) CarregarHistoricoIntervencoes(_existente.Id);
     }
 
     /// <summary>(2.2) Descrição completa a mostrar no histórico para uma recolha, indo buscar o que
@@ -325,6 +369,14 @@ public partial class EquipamentoEditWindow : Window
         public DateTime Data { get; set; }
         public string Descricao { get; set; } = string.Empty;
         public string Estado { get; set; } = string.Empty;
+
+        /// <summary>Id da Intervenção (quando a linha vem de "equipamento intervencionado no
+        /// local") ou da Atividade DISIA (quando vem de uma recolha) — usado para abrir o registo
+        /// completo com duplo clique (ver GridHistoricoIntervencoes_MouseDoubleClick). Nunca os
+        /// dois ao mesmo tempo; ambos nulos quando nenhum se aplica (ex.: registos de recolha
+        /// antigos, só ligados a uma IntervencaoDisia obsoleta, já sem janela de edição própria).</summary>
+        public int? IntervencaoId { get; set; }
+        public int? AtividadeDisiaId { get; set; }
     }
 
     /// <summary>
@@ -574,6 +626,74 @@ public partial class EquipamentoEditWindow : Window
         AtualizarObsolescencia();
     }
 
+    /// <summary>Operação inversa de UsarModelo_Click: em vez de trazer dados de um modelo já
+    /// existente para este formulário, guarda os dados JÁ ESCRITOS aqui (Tipo/Marca/Modelo/
+    /// características) como um modelo novo reutilizável — ver
+    /// ModelosEquipamentoWindow.PreencherParaNovoModelo. Útil ao inserir um equipamento cujo modelo
+    /// ainda não existe no catálogo, para não ter de o repetir mais tarde a partir do zero em
+    /// Administração de Equipamento Base. Os campos próprios de cada unidade (Nº de Série, Nº de
+    /// Inventário, Escola, Aquisição, Estado, Observações) nunca fazem parte de um modelo, por isso
+    /// não são copiados — só as características que fazem sentido serem iguais entre várias
+    /// unidades. Exige pelo menos Tipo + (Marca ou Modelo) preenchidos — sem isto, não há dados
+    /// suficientes para um modelo minimamente identificável, e mostra-se um aviso em vez de abrir a
+    /// janela.</summary>
+    private void AdicionarComoModelo_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(CmbTipo.Text) ||
+            (string.IsNullOrWhiteSpace(TxtMarca.Text) && string.IsNullOrWhiteSpace(TxtModelo.Text)))
+        {
+            MessageBox.Show(
+                "Indique pelo menos o Tipo de Equipamento e a Marca ou o Modelo antes de guardar como modelo reutilizável.",
+                "Dados insuficientes", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var dados = new ModeloEquipamento
+        {
+            Tipo = CmbTipo.Text,
+            Marca = string.IsNullOrWhiteSpace(TxtMarca.Text) ? null : TxtMarca.Text,
+            Modelo = string.IsNullOrWhiteSpace(TxtModelo.Text) ? null : TxtModelo.Text,
+
+            Processador = string.IsNullOrWhiteSpace(CmbProcessador.Text) ? null : CmbProcessador.Text,
+            FamiliaProcessador = string.IsNullOrWhiteSpace(TxtFamiliaProcessador.Text) ? null : TxtFamiliaProcessador.Text,
+            TipoMemoria = string.IsNullOrWhiteSpace(CmbTipoMemoria.Text) ? null : CmbTipoMemoria.Text,
+            QuantidadeMemoriaGB = ParseInt(CmbMemoriaGB.Text),
+            TipoDisco = string.IsNullOrWhiteSpace(CmbTipoDisco.Text) ? null : CmbTipoDisco.Text,
+            TamanhoDiscoGB = ParseInt(CmbTamanhoDisco.Text),
+            SistemaOperativo = string.IsNullOrWhiteSpace(CmbSistemaOperativo.Text) ? null : CmbSistemaOperativo.Text,
+
+            PolegadasMonitor = ParseDouble(CmbPolegadas.Text),
+            TipoPainelMonitor = string.IsNullOrWhiteSpace(CmbTipoPainel.Text) ? null : CmbTipoPainel.Text,
+            ResolucaoMonitor = string.IsNullOrWhiteSpace(CmbResolucaoMonitor.Text) ? null : CmbResolucaoMonitor.Text,
+
+            TipoImpressora = string.IsNullOrWhiteSpace(CmbTipoImpressora.Text) ? null : CmbTipoImpressora.Text,
+            ImpressaoCor = ChkImpressaoCor.IsChecked,
+            LigacaoImpressora = string.IsNullOrWhiteSpace(CmbLigacaoImpressora.Text) ? null : CmbLigacaoImpressora.Text,
+
+            NumeroPortas = ParseInt(CmbNumeroPortas.Text),
+            VelocidadeRede = string.IsNullOrWhiteSpace(CmbVelocidadeRede.Text) ? null : CmbVelocidadeRede.Text,
+            Gerivel = ChkGerivel.IsChecked,
+
+            ResolucaoCamera = string.IsNullOrWhiteSpace(CmbResolucaoCamera.Text) ? null : CmbResolucaoCamera.Text,
+            TipoCamera = string.IsNullOrWhiteSpace(CmbTipoCamera.Text) ? null : CmbTipoCamera.Text,
+            VisaoNoturna = ChkVisaoNoturna.IsChecked,
+
+            LuminosidadeLumens = ParseInt(CmbLuminosidade.Text),
+            ResolucaoProjetor = string.IsNullOrWhiteSpace(CmbResolucaoProjetor.Text) ? null : CmbResolucaoProjetor.Text,
+
+            EspecificacoesAdicionais = string.IsNullOrWhiteSpace(TxtEspecificacoesAdicionais.Text) ? null : TxtEspecificacoesAdicionais.Text
+        };
+
+        var caracteristicasAdicionais = _camposCaracteristicasAdicionais
+            .Select(kv => (Id: kv.Key, Valor: ObterTextoCampoCaracteristica(kv.Value)))
+            .Where(x => !string.IsNullOrWhiteSpace(x.Valor))
+            .ToDictionary(x => x.Id, x => x.Valor);
+
+        var janela = new ModelosEquipamentoWindow { Owner = this };
+        janela.PreencherParaNovoModelo(dados, caracteristicasAdicionais);
+        janela.ShowDialog();
+    }
+
     private void AtualizarGruposVisiveis(string? tipo)
     {
         BtnUsarModelo.IsEnabled = !string.IsNullOrWhiteSpace(tipo);
@@ -818,19 +938,28 @@ public partial class EquipamentoEditWindow : Window
 
     private void Guardar_Click(object sender, RoutedEventArgs e)
     {
+        if (Guardar()) Close();
+    }
+
+    /// <summary>Guarda o equipamento e devolve true se a gravação foi bem-sucedida (false num
+    /// qualquer dos avisos de validação, ou se a gravação em si falhar) — extraído de Guardar_Click
+    /// para ser partilhado com GuardarNovo_Click ("Guardar e Novo" — ver PrepararParaNovoEquipamento),
+    /// que faz tudo o que este método faz mas sem fechar a janela a seguir.</summary>
+    private bool Guardar()
+    {
         if (string.IsNullOrWhiteSpace(TxtNumeroSerie.Text))
         {
             MessageBox.Show("O Número de Série é obrigatório. Se não conseguir encontrá-lo no equipamento, " +
                 "use o botão \"🎲 Gerar\" para criar um número de série padrão.",
                 "Dados incompletos", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
+            return false;
         }
 
         if (string.IsNullOrWhiteSpace(CmbTipo.Text))
         {
             MessageBox.Show("Selecione ou indique o Tipo de Equipamento.",
                 "Dados incompletos", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
+            return false;
         }
 
         var numeroInventario = TxtNumeroInventario.Text.Trim();
@@ -842,7 +971,7 @@ public partial class EquipamentoEditWindow : Window
         {
             MessageBox.Show("Já existe um equipamento com o mesmo Número de Série ou de Inventário.",
                 "Duplicado", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
+            return false;
         }
 
         Equipamento equipamento;
@@ -937,7 +1066,7 @@ public partial class EquipamentoEditWindow : Window
 
             MessageBox.Show($"Não foi possível gravar o equipamento:\n{causaRaiz.Message}",
                 "Erro ao gravar", MessageBoxButton.OK, MessageBoxImage.Error);
-            return;
+            return false;
         }
 
         Sucesso = true;
@@ -1045,7 +1174,44 @@ public partial class EquipamentoEditWindow : Window
             }
         }
 
-        Close();
+        return true;
+    }
+
+    private void GuardarNovo_Click(object sender, RoutedEventArgs e)
+    {
+        if (!Guardar()) return;
+
+        // Um "Guardar e Novo" bem sucedido conta como sucesso da janela também, para quem a tiver
+        // aberto (ex.: IntervencaoEditWindow.AdicionarNovoEntregue_Click) saber que pelo menos um
+        // equipamento foi mesmo gravado, mesmo que a janela continue aberta para mais do que um.
+        Sucesso = true;
+
+        PrepararParaNovoEquipamento();
+    }
+
+    /// <summary>Repõe o formulário para inserir mais um equipamento, sem fechar a janela — usado
+    /// pelo botão "💾 Guardar e Novo" (ver GuardarNovo_Click), pensado para quando há vários
+    /// equipamentos iguais ou semelhantes a dar entrada de seguida (ex.: um lote entregue à mesma
+    /// escola). Mantém deliberadamente Escola, Tipo, Marca, Modelo, Estado, Aquisição e todas as
+    /// características específicas — o que costuma ser igual entre as várias unidades de um mesmo
+    /// lote — e limpa só o que é sempre próprio de cada unidade em concreto: Nº de Série, Nº de
+    /// Inventário e Observações.</summary>
+    private void PrepararParaNovoEquipamento()
+    {
+        _existente = null;
+        EquipamentoGravado = null;
+        // Mesmo valor com que o construtor inicializa esta variável para um equipamento novo (ver
+        // "if (equipamento == null)" mais acima) — sem isto, ficaria com o estado ORIGINAL do
+        // equipamento anterior, o que podia acionar incorretamente a lógica de transição de
+        // estado (ex.: fecho automático de recolhas) ao gravar este próximo equipamento.
+        _estadoOriginal = EstadosEquipamento.EmServico;
+        TxtTitulo.Text = "Novo Equipamento";
+
+        TxtNumeroSerie.Clear();
+        TxtNumeroInventario.Clear();
+        TxtObservacoes.Clear();
+
+        TxtNumeroSerie.Focus();
     }
 
     /// <summary>Compara o hardware do equipamento tal como estava ao abrir esta janela

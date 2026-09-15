@@ -19,12 +19,17 @@ public static class RecolhaEquipamentoService
     public readonly record struct EquipamentoARecolher(int EquipamentoId, string Descricao, string NumeroSerie);
 
     /// <summary>
-    /// Regista a recolha de um ou mais equipamentos já existentes, associados a uma escola: cria
-    /// UMA Atividade DISIA no estado "Em Progresso" que agrega a reparação de todos os
-    /// equipamentos indicados, cria o registo <see cref="EquipamentoRecolhido"/> de cada um
-    /// (ligado a essa atividade) com estado "Pendente", e marca cada <see cref="Equipamento"/> com
-    /// o estado "Recolhido". É exatamente a mesma sequência de operações que já era feita, inline,
-    /// em <see cref="LeiriaDISIA.Views.IntervencaoEditWindow"/>.
+    /// Regista a recolha de um ou mais equipamentos já existentes, associados a uma escola: junta
+    /// os equipamentos a uma Atividade DISIA "Em Progresso" já existente para a mesma
+    /// <paramref name="intervencaoId"/> (ex.: equipamento acrescentado ao editar uma intervenção
+    /// mais tarde, depois de já ter sido criada a Atividade DISIA da primeira recolha), ou, quando
+    /// não há nenhuma nesse estado, cria uma nova — que agrega a reparação de todos os equipamentos
+    /// indicados nesta chamada. Em qualquer dos casos, cria o registo <see cref="EquipamentoRecolhido"/>
+    /// de cada equipamento (ligado a essa atividade) com estado "Pendente", e marca cada
+    /// <see cref="Equipamento"/> com o estado "Recolhido". É essencialmente a mesma sequência de
+    /// operações que já era feita, inline, em <see cref="LeiriaDISIA.Views.IntervencaoEditWindow"/>,
+    /// com a diferença de agora reaproveitar uma Atividade DISIA ainda aberta da mesma intervenção
+    /// em vez de criar sempre uma nova a cada chamada.
     ///
     /// Não faz commit/gere transação — grava as alterações no <see cref="App.Db"/> através de
     /// <c>SaveChanges()</c> (necessário aqui apenas para obter o Id gerado da Atividade DISIA antes
@@ -48,23 +53,49 @@ public static class RecolhaEquipamentoService
         if (escola == null)
             throw new ArgumentNullException(nameof(escola));
 
-        // Cria uma Atividade DISIA (módulo "Atividades DISIA", não uma nova Intervenção) que agrega
-        // todo o equipamento recolhido nesta operação, para acompanhar a reparação nas instalações
-        // da DISIA. Fica "Em Progresso"; só quando for fechada é que o equipamento avança para
-        // "Aguarda Entrega" e liberta a devolução à escola (ver AtividadeDisiaEditWindow).
         var descricaoEquipamentos = string.Join("; ", equipamentos.Select(eq =>
             $"{eq.Descricao} (Nº Série {eq.NumeroSerie})".Trim()));
 
-        var atividadeDisia = new AtividadeDisia
+        // Quando esta mesma Intervenção já tiver uma Atividade DISIA ainda "Em Progresso" (criada
+        // por uma gravação anterior desta intervenção — ver IntervencaoEditWindow.Guardar()), o
+        // equipamento agora recolhido junta-se a essa mesma atividade em vez de abrir uma nova: uma
+        // intervenção editada mais tarde para acrescentar equipamento esquecido continua a fazer
+        // parte do MESMO trabalho de reparação, não de um trabalho à parte. Só quando não há
+        // nenhuma "Em Progresso" para esta intervenção (primeira vez, ou a(s) anterior(es) já
+        // fechada(s) — nesse caso já não faz sentido reabri-la, é mesmo um novo lote de reparação)
+        // é que se cria uma Atividade DISIA nova, tal como antes.
+        var atividadeDisia = intervencaoId is { } idIntervencao
+            ? App.Db.EquipamentosRecolhidos
+                .Where(r => r.IntervencaoId == idIntervencao && r.AtividadeDisiaId != null)
+                .Select(r => r.AtividadeDisia!)
+                .FirstOrDefault(a => a.Estado == EstadoIntervencao.EmProgresso)
+            : null;
+
+        if (atividadeDisia != null)
         {
-            Data = data,
-            Mes = data.Month,
-            Ano = data.Year,
-            Local = escola.Nome,
-            Descricao = $"Reparação de equipamento recolhido em {escola.Nome}: {descricaoEquipamentos}",
-            Estado = EstadoIntervencao.EmProgresso
-        };
-        App.Db.AtividadesDisia.Add(atividadeDisia);
+            // Acrescenta os novos equipamentos à descrição já existente, em vez de a substituir —
+            // mantém o registo de tudo o que já lá estava.
+            atividadeDisia.Descricao = $"{atividadeDisia.Descricao}; {descricaoEquipamentos}";
+        }
+        else
+        {
+            // Cria uma Atividade DISIA (módulo "Atividades DISIA", não uma nova Intervenção) que
+            // agrega todo o equipamento recolhido nesta operação, para acompanhar a reparação nas
+            // instalações da DISIA. Fica "Em Progresso"; só quando for fechada é que o equipamento
+            // avança para "Aguarda Entrega" e liberta a devolução à escola (ver
+            // AtividadeDisiaEditWindow).
+            atividadeDisia = new AtividadeDisia
+            {
+                Data = data,
+                Mes = data.Month,
+                Ano = data.Year,
+                Local = escola.Nome,
+                Descricao = $"Reparação de equipamento recolhido em {escola.Nome}: {descricaoEquipamentos}",
+                Estado = EstadoIntervencao.EmProgresso
+            };
+            App.Db.AtividadesDisia.Add(atividadeDisia);
+        }
+
         App.Db.SaveChanges();
 
         foreach (var eq in equipamentos)
@@ -84,6 +115,7 @@ public static class RecolhaEquipamentoService
             if (equipamentoEntidade != null) equipamentoEntidade.Estado = EstadosEquipamento.Recolhido;
         }
 
+        App.Db.SaveChanges();
         return atividadeDisia;
     }
 

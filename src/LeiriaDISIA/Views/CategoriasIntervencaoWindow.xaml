@@ -1,7 +1,7 @@
 <Window x:Class="LeiriaDISIA.Views.CategoriasIntervencaoWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Categorias de Intervenção" Height="560" Width="831" WindowStartupLocation="CenterOwner"
+        Title="Categorias de Intervenção" SizeToContent="Height" Width="831" WindowStartupLocation="CenterOwner"
         Background="{StaticResource BrushBackground}">
     <Grid Margin="20">
         <Grid.ColumnDefinitions>

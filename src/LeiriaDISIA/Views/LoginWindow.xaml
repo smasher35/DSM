@@ -16,7 +16,19 @@
             <TextBox x:Name="TxtUtilizador" Margin="0,4,0,14" Padding="8" FontSize="14" />
 
             <TextBlock Text="Palavra-passe" FontWeight="SemiBold" />
-            <PasswordBox x:Name="TxtPassword" Margin="0,4,0,6" Padding="8" FontSize="14" KeyDown="TxtPassword_KeyDown" />
+            <Grid Margin="0,4,0,6">
+                <!-- PasswordBox não expõe o texto por Binding nem permite trocar a máscara em
+                     runtime — por isso a alternância "mostrar/ocultar" usa uma segunda caixa
+                     (TextBox, sem máscara) sobreposta na mesma célula da Grid, e só uma das duas
+                     fica visível de cada vez (ver MostrarPassword_Click em LoginWindow.xaml.cs). -->
+                <PasswordBox x:Name="TxtPassword" Padding="8,8,36,8" FontSize="14" KeyDown="TxtPassword_KeyDown" />
+                <TextBox x:Name="TxtPasswordVisivel" Padding="8,8,36,8" FontSize="14" KeyDown="TxtPassword_KeyDown"
+                         Visibility="Collapsed" />
+                <Button x:Name="BtnMostrarPassword" Content="👁" FontSize="14" Cursor="Hand"
+                        HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0"
+                        Padding="4,2" Background="Transparent" BorderThickness="0"
+                        Click="MostrarPassword_Click" ToolTip="Mostrar palavra-passe" />
+            </Grid>
 
             <TextBlock x:Name="TxtErro" Foreground="{StaticResource BrushDanger}" TextWrapping="Wrap"
                        Margin="0,4,0,10" Visibility="Collapsed" />

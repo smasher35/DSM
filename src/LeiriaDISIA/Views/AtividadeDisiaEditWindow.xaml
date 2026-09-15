@@ -1,7 +1,7 @@
 <Window x:Class="LeiriaDISIA.Views.AtividadeDisiaEditWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Atividade DISIA" Height="680" Width="1510" MinHeight="560" MinWidth="860"
+        Title="Atividade DISIA" SizeToContent="Height" Width="1510" MinHeight="560" MinWidth="860"
         WindowStartupLocation="CenterOwner"
         Background="{StaticResource BrushBackground}">
     <!-- Layout em duas linhas: conteúdo central com scroll (cresce/encolhe livremente) + área de

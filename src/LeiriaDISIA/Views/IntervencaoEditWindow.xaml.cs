@@ -72,6 +72,19 @@ public partial class IntervencaoEditWindow : Window
     {
         InitializeComponent();
 
+        // Ao contrário da maioria das janelas de inserção/edição (ver Views/PedidoEditWindow.xaml.cs
+        // e outras, que usam SizeToContent="Height"), esta janela não pode usar esse mecanismo —
+        // tem secções que dividem o espaço disponível proporcionalmente (Height="*", ver COLUNA 2 e
+        // COLUNA 3 em IntervencaoEditWindow.xaml) em vez de crescerem para caber o conteúdo, e
+        // SizeToContent trataria essas linhas "*" como "Auto", quebrando essa divisão. Em vez disso,
+        // limita-se aqui a altura inicial (definida no XAML) à área de trabalho disponível, para
+        // nunca abrir maior do que o ecrã permite — como a janela continua com
+        // ResizeMode="CanResize", quem precisar de mais altura (ecrã maior) pode sempre a
+        // redimensionar à mão depois.
+        var alturaMaximaDisponivel = SystemParameters.WorkArea.Height - 24;
+        if (Height > alturaMaximaDisponivel)
+            Height = Math.Max(MinHeight, alturaMaximaDisponivel);
+
         // Perfil Guest (Services/SessaoAtual.PodeEditar): não pode criar/editar/eliminar
         // registos - fecha-se logo a seguir a abrir, com um aviso, em vez de deixar o
         // formulário aberto só para descobrir mais tarde que não consegue gravar nada.
@@ -100,7 +113,10 @@ public partial class IntervencaoEditWindow : Window
 
         foreach (var cat in App.Db.CategoriasIntervencao.Where(c => c.Ativa).OrderBy(c => c.Nome))
         {
-            var cb = new CheckBox { Content = cat.Nome, Tag = cat, Margin = new Thickness(0, 2, 0, 2) };
+            // Width fixa para caberem duas por linha no WrapPanel (ver IntervencaoEditWindow.xaml) —
+            // a coluna tem 360px de largura; 165px por caixa deixa uma margem confortável para a
+            // marca de verificação e o texto, mesmo em nomes de categoria mais compridos.
+            var cb = new CheckBox { Content = cat.Nome, Tag = cat, Width = 165, Margin = new Thickness(0, 2, 0, 4) };
             _checkBoxesCategorias.Add(cb);
             ListaCategorias.Items.Add(cb);
         }
@@ -147,7 +163,6 @@ public partial class IntervencaoEditWindow : Window
         DpData.SelectedDate = completa.Data;
         TxtDescricao.Text = completa.Descricao;
         TxtNumeroSuporteSiga.Text = completa.NumeroSuporteSiga;
-        TxtMaterial.Text = completa.MaterialRecolhidoAbatido;
         CmbEstado.SelectedItem = completa.Estado;
         TxtMotivoPendente.Text = completa.MotivoPendente;
 
@@ -629,7 +644,10 @@ public partial class IntervencaoEditWindow : Window
         intervencao.AgrupamentoId = escola.AgrupamentoId;
         intervencao.Descricao = TxtDescricao.Text.Trim();
         intervencao.NumeroSuporteSiga = string.IsNullOrWhiteSpace(TxtNumeroSuporteSiga.Text) ? null : TxtNumeroSuporteSiga.Text.Trim();
-        intervencao.MaterialRecolhidoAbatido = string.IsNullOrWhiteSpace(TxtMaterial.Text) ? null : TxtMaterial.Text;
+        // "Notas gerais de material" (MaterialRecolhidoAbatido) deixou de ter campo próprio neste
+        // formulário — ver IntervencaoEditWindow.xaml — por isso já não é escrito aqui. Uma
+        // intervenção antiga com esse campo preenchido por outra via (registo histórico) mantém o
+        // valor intacto, precisamente por nunca mais ser tocado a partir daqui.
         intervencao.Estado = estado;
         intervencao.MotivoPendente = estado is EstadoIntervencao.Pendente or EstadoIntervencao.EmEspera
             ? TxtMotivoPendente.Text : null;

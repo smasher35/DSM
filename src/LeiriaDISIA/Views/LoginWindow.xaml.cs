@@ -36,12 +36,46 @@ public partial class LoginWindow : Window
         if (e.Key == Key.Enter) Entrar_Click(sender, e);
     }
 
+    /// <summary>Alterna entre a PasswordBox mascarada e a TextBox sem máscara (ver comentário em
+    /// LoginWindow.xaml) — sincroniza o texto no momento da troca, para nunca perder o que já
+    /// tinha sido escrito, e mantém o foco e a posição do cursor no fim do texto, tal como
+    /// aconteceria se a pessoa continuasse a escrever sem trocar de campo.</summary>
+    private void MostrarPassword_Click(object sender, RoutedEventArgs e)
+    {
+        var aMostrarAgora = TxtPasswordVisivel.Visibility != Visibility.Visible;
+
+        if (aMostrarAgora)
+        {
+            TxtPasswordVisivel.Text = TxtPassword.Password;
+            TxtPassword.Visibility = Visibility.Collapsed;
+            TxtPasswordVisivel.Visibility = Visibility.Visible;
+            TxtPasswordVisivel.Focus();
+            TxtPasswordVisivel.CaretIndex = TxtPasswordVisivel.Text.Length;
+            BtnMostrarPassword.Content = "🙈";
+            BtnMostrarPassword.ToolTip = "Ocultar palavra-passe";
+        }
+        else
+        {
+            TxtPassword.Password = TxtPasswordVisivel.Text;
+            TxtPasswordVisivel.Visibility = Visibility.Collapsed;
+            TxtPassword.Visibility = Visibility.Visible;
+            TxtPassword.Focus();
+            BtnMostrarPassword.Content = "👁";
+            BtnMostrarPassword.ToolTip = "Mostrar palavra-passe";
+        }
+    }
+
+    /// <summary>Lê a palavra-passe da caixa atualmente visível — qualquer uma das duas pode ter
+    /// sido a última a ser editada, consoante a pessoa ter alternado a meio de a escrever.</summary>
+    private string ObterPassword() =>
+        TxtPasswordVisivel.Visibility == Visibility.Visible ? TxtPasswordVisivel.Text : TxtPassword.Password;
+
     private void Entrar_Click(object sender, RoutedEventArgs e)
     {
         TxtErro.Visibility = Visibility.Collapsed;
 
         var nomeUtilizador = TxtUtilizador.Text.Trim();
-        var password = TxtPassword.Password;
+        var password = ObterPassword();
 
         if (string.IsNullOrWhiteSpace(nomeUtilizador) || string.IsNullOrWhiteSpace(password))
         {

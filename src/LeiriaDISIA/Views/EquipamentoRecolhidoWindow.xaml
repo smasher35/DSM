@@ -75,6 +75,7 @@
                           MouseDoubleClick="Grid_MouseDoubleClick" RowStyle="{StaticResource DataGridRowClickableStyle}">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Nº Série" Binding="{Binding Equipamento.NumeroSerie}" Width="Auto" />
+                        <DataGridTextColumn Header="Nº Inventário" Binding="{Binding Equipamento.NumeroInventario}" Width="Auto" />
                         <DataGridTextColumn Header="Cód. GEPE" Binding="{Binding Equipamento.Escola.CodGEPE}" Width="Auto" />
                         <DataGridTextColumn Header="Tipo" Binding="{Binding Equipamento.Tipo}" Width="Auto" />
                         <DataGridTextColumn Header="Escola" Binding="{Binding Equipamento.Escola.Nome}" Width="*" />

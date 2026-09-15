@@ -1,7 +1,7 @@
 <Window x:Class="LeiriaDISIA.Views.ContactoEditWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Contacto" Height="712" Width="440" WindowStartupLocation="CenterOwner"
+        Title="Contacto" SizeToContent="Height" Width="440" WindowStartupLocation="CenterOwner"
         Background="{StaticResource BrushBackground}">
     <StackPanel Margin="20">
         <TextBlock x:Name="TxtTitulo" Text="Novo Contacto" Style="{StaticResource SectionTitleStyle}" FontSize="18" />

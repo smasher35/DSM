@@ -15,6 +15,12 @@ public partial class EstadosCorWindow : Window
     public EstadosCorWindow(string grupo, string titulo)
     {
         InitializeComponent();
+
+        // SizeToContent cresce até caber sempre todo o conteúdo, sem deixar nenhum campo por
+        // mostrar — trava-se aqui esse crescimento no limite da área de trabalho disponível, para
+        // nunca ultrapassar o ecrã (mesmo padrão já usado em Views/PedidoEditWindow.xaml.cs).
+        MaxHeight = SystemParameters.WorkArea.Height - 24;
+
         // 1.2.1: tinge a barra de titulo nativa com um tom azul sobrio, consistente com a
         // identidade da aplicacao - ver Services/TitleBarService.cs. A janela continua nativa;
         // mover, minimizar, maximizar, fechar e o comportamento modal nao sao afetados.

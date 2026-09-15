@@ -62,19 +62,35 @@
                     <TextBox x:Name="TxtNumeroSuporteSiga" Margin="0,4,0,10" />
 
                     <TextBlock Text="Descrição / Tipo de Intervenção" FontWeight="SemiBold" />
-                    <TextBox x:Name="TxtDescricao" AcceptsReturn="True" Height="60" TextWrapping="Wrap" Margin="0,4,0,10" />
+                    <!-- Altura aumentada mais uma vez (100 → 170) com o espaço libertado por
+                         remover "Notas gerais de material" abaixo (praticamente nunca usado) — ver
+                         IntervencaoEditWindow.xaml.cs para o campo (MaterialRecolhidoAbatido) que
+                         lá ficava: os dados históricos já preenchidos por essa via continuam
+                         intactos na base de dados e a aparecer no relatório PDF ("Notas Adicionais
+                         (registo histórico)"), só deixou de haver aqui um campo para o editar. -->
+                    <TextBox x:Name="TxtDescricao" AcceptsReturn="True" Height="170" TextWrapping="Wrap"
+                             VerticalScrollBarVisibility="Auto" Margin="0,4,0,10" />
 
                     <TextBlock Text="Categorias envolvidas" FontWeight="SemiBold" />
-                    <ItemsControl x:Name="ListaCategorias" Margin="0,4,0,10" />
+                    <!-- WrapPanel em vez do StackPanel vertical por omissão de um ItemsControl —
+                         cada CheckBox recebe uma Width fixa em código (ver IntervencaoEditWindow.xaml.cs)
+                         para ficarem lado a lado em duas colunas, em vez de uma lista vertical
+                         longa — foi isto que libertou espaço para aumentar a caixa de Descrição
+                         acima, que ficava demasiado baixa para se perceber bem o que lá estava
+                         escrito em descrições mais longas. -->
+                    <ItemsControl x:Name="ListaCategorias" Margin="0,4,0,10">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
 
                     <TextBlock Text="Estado da Intervenção" FontWeight="SemiBold" />
                     <ComboBox x:Name="CmbEstado" Margin="0,4,0,10" />
 
                     <TextBlock Text="Motivo (se pendente / em espera)" FontWeight="SemiBold" />
                     <TextBox x:Name="TxtMotivoPendente" Margin="0,4,0,10" />
-
-                    <TextBlock Text="Notas gerais de material (opcional)" FontWeight="SemiBold" />
-                    <TextBox x:Name="TxtMaterial" Margin="0,4,0,10" TextWrapping="Wrap" AcceptsReturn="True" Height="40" />
                 </StackPanel>
             </ScrollViewer>
 
@@ -163,8 +179,19 @@
             </Grid>
 
             <!-- ===================== COLUNA 3 — Equipamento recolhido da escola ===================== -->
-            <Border Grid.Column="4" Style="{StaticResource CardStyle}" Margin="0,3,0,0">
-                <DockPanel>
+            <!-- Grid de duas linhas iguais (em vez de um único DockPanel, onde "Equipamento novo
+                 entregue" ficava pequeno e fixo e "Equipamento atualmente recolhido" ocupava tudo o
+                 resto) — a pedido, para nenhuma das duas dominar a outra: nenhuma delas costuma
+                 ter muitos itens de cada vez, por isso meio a meio chega para as duas, com scroll
+                 próprio sempre que uma tiver mais itens do que cabem na sua metade. -->
+            <Grid Grid.Column="4" Margin="0,3,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="10" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Style="{StaticResource CardStyle}">
                     <!-- Equipamento que ainda nem existe no inventário — ao contrário das outras
                          três listas (que escolhem equipamento JÁ existente, através de
                          EquipamentoPickerWindow), "+ Adicionar" aqui abre logo o formulário "Novo
@@ -172,57 +199,63 @@
                          registar equipamento novo (ex.: um lote de computadores comprado e
                          guardado na DISIA, nunca antes atribuído a nenhuma escola) e entregá-lo já
                          a esta escola no mesmo passo — ver AdicionarNovoEntregue_Click em
-                         IntervencaoEditWindow.xaml.cs. Fica acima da lista de recolhido/devolvido
-                         abaixo, a pedido, por serem conceitos relacionados mas distintos (aqui não
-                         há recolha nenhuma envolvida). -->
-                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                        <Button DockPanel.Dock="Right" Content="+ Adicionar" Padding="10,4" Click="AdicionarNovoEntregue_Click" />
-                        <TextBlock Text="Equipamento novo entregue" FontWeight="Bold" VerticalAlignment="Center" TextWrapping="Wrap" />
+                         IntervencaoEditWindow.xaml.cs. -->
+                    <DockPanel>
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <Button DockPanel.Dock="Right" Content="+ Adicionar" Padding="10,4" Click="AdicionarNovoEntregue_Click" />
+                            <TextBlock Text="Equipamento novo entregue" FontWeight="Bold" VerticalAlignment="Center" TextWrapping="Wrap" />
+                        </DockPanel>
+                        <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" FontSize="11"
+                                   Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,6"
+                                   Text="Equipamento que ainda não existe no inventário — abre o formulário de Novo Equipamento (com a escola já pré-selecionada) para o registar e entregar aqui, sem passar por recolha nem reparação." />
+                        <DataGrid x:Name="GridNovosEntregues" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                                  HeadersVisibility="Column" RowHeight="26">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Nº Série" Binding="{Binding NumeroSerie}" Width="Auto" />
+                                <DataGridTextColumn Header="Nº Inventário" Binding="{Binding NumeroInventario}" Width="Auto" />
+                                <DataGridTextColumn Header="Descrição" Binding="{Binding Descricao}" Width="*" />
+                                <DataGridTemplateColumn Width="Auto">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="✕" Padding="4,0" Click="RemoverNovoEntregue_Click" ToolTip="Remover da lista" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
                     </DockPanel>
-                    <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" FontSize="11"
-                               Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,6"
-                               Text="Equipamento que ainda não existe no inventário — abre o formulário de Novo Equipamento (com a escola já pré-selecionada) para o registar e entregar aqui, sem passar por recolha nem reparação." />
-                    <DataGrid x:Name="GridNovosEntregues" DockPanel.Dock="Top" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
-                              HeadersVisibility="Column" RowHeight="26" MaxHeight="140" Margin="0,0,0,12">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Nº Série" Binding="{Binding NumeroSerie}" Width="Auto" />
-                            <DataGridTextColumn Header="Nº Inventário" Binding="{Binding NumeroInventario}" Width="Auto" />
-                            <DataGridTextColumn Header="Descrição" Binding="{Binding Descricao}" Width="*" />
-                            <DataGridTemplateColumn Width="Auto">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <Button Content="✕" Padding="4,0" Click="RemoverNovoEntregue_Click" ToolTip="Remover da lista" />
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
-                        </DataGrid.Columns>
-                    </DataGrid>
+                </Border>
 
-                    <TextBlock DockPanel.Dock="Top" Text="Equipamento atualmente recolhido desta escola" FontWeight="Bold" Margin="0,0,0,4" TextWrapping="Wrap" />
-                    <TextBlock DockPanel.Dock="Top" Text="Depois de reparado, use o botão Devolver para o entregar de volta à escola."
-                               FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,8" TextWrapping="Wrap" />
-                    <ItemsControl x:Name="ListaRecolhidosEscola" DockPanel.Dock="Top">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Background="{StaticResource BrushBackground}" CornerRadius="6" Padding="8" Margin="0,0,0,6">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding TituloLinha}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                                        <TextBlock Text="{Binding SubtituloLinha}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" />
-                                        <Border Background="{Binding CorFundo}" CornerRadius="4" Padding="6,2" HorizontalAlignment="Left" Margin="0,4,0,4">
-                                            <TextBlock Text="{Binding Estado}" FontSize="11" Foreground="White" FontWeight="SemiBold" />
+                <Border Grid.Row="2" Style="{StaticResource CardStyle}">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="Equipamento atualmente recolhido desta escola" FontWeight="Bold" Margin="0,0,0,4" TextWrapping="Wrap" />
+                        <TextBlock DockPanel.Dock="Top" Text="Depois de reparado, use o botão Devolver para o entregar de volta à escola."
+                                   FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,8" TextWrapping="Wrap" />
+                        <TextBlock x:Name="TxtSemRecolhidos" DockPanel.Dock="Bottom" Text="Sem equipamento recolhido para esta escola."
+                                   Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" Visibility="Collapsed" />
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ItemsControl x:Name="ListaRecolhidosEscola">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{StaticResource BrushBackground}" CornerRadius="6" Padding="8" Margin="0,0,0,6">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding TituloLinha}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                                <TextBlock Text="{Binding SubtituloLinha}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" />
+                                                <Border Background="{Binding CorFundo}" CornerRadius="4" Padding="6,2" HorizontalAlignment="Left" Margin="0,4,0,4">
+                                                    <TextBlock Text="{Binding Estado}" FontSize="11" Foreground="White" FontWeight="SemiBold" />
+                                                </Border>
+                                                <Button Content="Devolver à Escola" Click="DevolverRecolhido_Click" Tag="{Binding Id}"
+                                                        IsEnabled="{Binding PodeDevolver}" HorizontalAlignment="Left" Padding="8,4"
+                                                        ToolTip="Só é possível devolver depois de a Atividade DISIA de reparação ser fechada." />
+                                            </StackPanel>
                                         </Border>
-                                        <Button Content="Devolver à Escola" Click="DevolverRecolhido_Click" Tag="{Binding Id}"
-                                                IsEnabled="{Binding PodeDevolver}" HorizontalAlignment="Left" Padding="8,4"
-                                                ToolTip="Só é possível devolver depois de a Atividade DISIA de reparação ser fechada." />
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                    <TextBlock x:Name="TxtSemRecolhidos" DockPanel.Dock="Top" Text="Sem equipamento recolhido para esta escola."
-                               Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" Visibility="Collapsed" />
-                </DockPanel>
-            </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Border>
+            </Grid>
         </Grid>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">

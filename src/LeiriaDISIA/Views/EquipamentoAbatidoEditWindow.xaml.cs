@@ -20,6 +20,11 @@ public partial class EquipamentoAbatidoEditWindow : Window
     {
         InitializeComponent();
 
+        // SizeToContent cresce até caber sempre todo o conteúdo, sem deixar nenhum campo por
+        // mostrar — trava-se aqui esse crescimento no limite da área de trabalho disponível, para
+        // nunca ultrapassar o ecrã (mesmo padrão já usado em Views/PedidoEditWindow.xaml.cs).
+        MaxHeight = SystemParameters.WorkArea.Height - 24;
+
         // Perfil Guest (Services/SessaoAtual.PodeEditar): não pode criar/editar/eliminar
         // registos - fecha-se logo a seguir a abrir, com um aviso, em vez de deixar o
         // formulário aberto só para descobrir mais tarde que não consegue gravar nada.

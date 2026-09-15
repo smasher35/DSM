@@ -1,7 +1,7 @@
 <Window x:Class="LeiriaDISIA.Views.CategoriasDisiaWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Categorias de Atividades DISIA" Height="636" Width="1006" WindowStartupLocation="CenterOwner"
+        Title="Categorias de Atividades DISIA" SizeToContent="Height" Width="1006" WindowStartupLocation="CenterOwner"
         Background="{StaticResource BrushBackground}">
     <Grid Margin="20">
         <Grid.ColumnDefinitions>

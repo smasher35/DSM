@@ -966,6 +966,35 @@ public partial class AdministracaoWindow : Window
         return true;
     }
 
+    /// <summary>Se ainda não existir nenhum "Tipo de Equipamento" (painel de cima, "Adicionar /
+    /// Editar Valor") a apontar para o grupo indicado, e o painel de cima tiver, neste preciso
+    /// momento, dados por gravar exatamente para esse mesmo grupo — típico de quem cria um Tipo
+    /// novo (escreve o nome, escolhe as Características Específicas) e vem logo a seguir adicionar
+    /// as suas características abaixo, sem clicar em Guardar lá em cima primeiro — grava esse Tipo
+    /// automaticamente antes de prosseguir, reutilizando a mesma lógica de GuardarValor_Click.
+    ///
+    /// Devolve false (e não grava nada) só quando havia mesmo um Tipo por gravar automaticamente e
+    /// isso falhou (ex.: nome de Tipo repetido) — GuardarValor_Click já mostra o aviso adequado
+    /// nesse caso, por isso este método não mostra outro; quem chamar deve simplesmente desistir de
+    /// gravar a característica, para nunca a deixar associada a um grupo sem nenhum Tipo de
+    /// Equipamento que aponte para ele.</summary>
+    private bool GarantirTipoPaiGravado(string grupo)
+    {
+        var jaTemTipo = App.Db.ValoresFixos.Any(v => v.Grupo == GruposValorFixo.TipoEquipamento && v.GrupoCaracteristicas == grupo);
+        if (jaTemTipo) return true;
+
+        var painelDeCimaTemEsteGrupoPorGravar =
+            _grupoAtual == GruposValorFixo.TipoEquipamento &&
+            !string.IsNullOrWhiteSpace(TxtValor.Text) &&
+            NormalizarGrupoCaracteristicas(CmbGrupoCaracteristicas.Text) == grupo;
+
+        if (!painelDeCimaTemEsteGrupoPorGravar) return true; // nada para gravar automaticamente — segue em frente
+
+        GuardarValor_Click(this, new RoutedEventArgs());
+
+        return App.Db.ValoresFixos.Any(v => v.Grupo == GruposValorFixo.TipoEquipamento && v.GrupoCaracteristicas == grupo);
+    }
+
     private void GuardarCaracteristica_Click(object sender, RoutedEventArgs e)
     {
         var grupo = NormalizarGrupoCaracteristicas(CmbGrupoCaracteristicasPainel.Text);
@@ -993,7 +1022,13 @@ public partial class AdministracaoWindow : Window
         var tipoEspecificoId = (CmbTipoEspecificoCaracteristica.SelectedValue as int?);
         var caracteristicaPaiId = (CmbCaracteristicaPai.SelectedValue as int?);
 
-        int idGravado;
+        // Garante que o Tipo de Equipamento "pai" deste grupo já está gravado antes de gravar a
+        // característica — ver GarantirTipoPaiGravado. Sem isto, era fácil (e já aconteceu) ficar
+        // com várias características gravadas para um grupo cujo Tipo de Equipamento nunca chegou
+        // a ser guardado lá em cima — ficavam "invisíveis", sem nenhum Tipo que as mostrasse em
+        // Inserir Equipamento, apesar de todo o trabalho de as configurar.
+        if (!GarantirTipoPaiGravado(grupo)) return;
+
         if (_caracteristicaSelecionada == null)
         {
             var nova = new CaracteristicaEquipamento
@@ -1008,7 +1043,6 @@ public partial class AdministracaoWindow : Window
             };
             App.Db.CaracteristicasEquipamento.Add(nova);
             App.Db.SaveChanges();
-            idGravado = nova.Id;
         }
         else
         {
@@ -1020,20 +1054,24 @@ public partial class AdministracaoWindow : Window
             entidade.TipoEquipamentoId = tipoEspecificoId;
             entidade.CaracteristicaPaiId = caracteristicaPaiId;
             App.Db.SaveChanges();
-            idGravado = entidade.Id;
         }
 
-        // Mantém a característica gravada selecionada, em vez de limpar o formulário — permite
-        // clicar logo a seguir em "Gerir Valores desta Característica..." sem a voltar a procurar.
+        // Atualiza a grelha antes de voltar ao estado "nova característica" — NovaCaracteristica_Click
+        // usa o nº de itens já na grelha para sugerir a próxima Ordem de apresentação, por isso tem
+        // de já incluir a característica acabada de gravar quando corre a seguir.
         GridCaracteristicas.ItemsSource = App.Db.CaracteristicasEquipamento
             .Where(c => c.GrupoCaracteristicas == grupo)
             .OrderBy(c => c.Ordem).ThenBy(c => c.Nome)
             .ToList();
-        _caracteristicaSelecionada = (GridCaracteristicas.ItemsSource as IEnumerable<CaracteristicaEquipamento>)?
-            .FirstOrDefault(c => c.Id == idGravado);
-        GridCaracteristicas.SelectedItem = _caracteristicaSelecionada;
-        BtnGerirValoresCaracteristica.IsEnabled = _caracteristicaSelecionada != null;
-        BtnEliminarCaracteristica.IsEnabled = _caracteristicaSelecionada != null;
+
+        // Depois de gravar, o formulário volta ao estado "nova característica" (mesmo padrão já
+        // usado a seguir a eliminar, em EliminarCaracteristica_Click) — antes ficava com os dados
+        // gravados ainda no ecrã, o que parecia conveniente para clicar logo a seguir em "Gerir
+        // Valores desta Característica..." sem ter de a voltar a procurar, mas na prática levava a
+        // enganos: escrever a seguir pensando estar a criar uma característica nova alterava, sem
+        // se dar conta, a que acabara de ser gravada. Continua a dar para voltar a selecioná-la na
+        // lista (ver GridCaracteristicas) sempre que for mesmo preciso gerir os seus valores.
+        NovaCaracteristica_Click(sender, e);
 
         // Se o grupo escrito era novo, fica já disponível nas combos de grupo (aqui e em cima).
         var grupos = ObterGruposCaracteristicasDisponiveis();
@@ -1338,6 +1376,21 @@ public partial class AdministracaoWindow : Window
         App.Db.SaveChanges();
         RecarregarValores();
         NovoValor_Click(sender, e);
+
+        // Depois de eliminar um Tipo de Equipamento, a secção "Características do Grupo" (em
+        // baixo) ficava a mostrar as características do Tipo acabado de eliminar, sem nada que a
+        // avisasse de que esse Tipo deixou de existir — corrige-se selecionando o primeiro Tipo da
+        // lista (se sobrar algum), o que já desencadeia GridValores_SelectionChanged e mostra as
+        // suas características corretamente; sem nenhum Tipo na lista, volta a Genérico, para não
+        // continuar a mostrar as de um Tipo que já não existe.
+        if (_grupoAtual == GruposValorFixo.TipoEquipamento)
+        {
+            var primeiro = (GridValores.ItemsSource as IEnumerable<ValorListaItem>)?.FirstOrDefault();
+            if (primeiro != null)
+                GridValores.SelectedItem = primeiro;
+            else
+                RecarregarCaracteristicasGrupo(GruposCaracteristicasEquipamento.Generico);
+        }
     }
 
     private void CategoriasIntervencao_Click(object sender, RoutedEventArgs e)

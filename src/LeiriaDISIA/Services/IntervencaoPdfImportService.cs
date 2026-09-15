@@ -207,36 +207,58 @@ public class IntervencaoPdfImportService
         return texto == "-" || string.IsNullOrWhiteSpace(texto) ? null : texto;
     }
 
-    /// <summary>As categorias aparecem lado a lado na mesma linha visual (ver
-    /// <see cref="IntervencaoPdfService.ComposeInfoCard"/>, "chipsRow"), o que torna ambíguo
-    /// separá-las por palavra sempre que um nome de categoria tenha mais do que uma palavra (ex.:
-    /// "Redes e Comunicações"). Em vez de tentar separar essa linha às cegas, verifica-se, para
-    /// cada categoria realmente configurada na aplicação (<see cref="App.Db"/>), se o respetivo
-    /// nome aparece como texto dentro dessa linha - isto continua a ser uma correspondência
-    /// exclusivamente textual (não usa nenhuma coordenada), só que ancorada num conjunto de nomes
-    /// conhecido em vez de tentar adivinhar fronteiras entre palavras.</summary>
+    /// <summary>As categorias aparecem lado a lado, em selos (ver
+    /// <see cref="IntervencaoPdfService.ComposeInfoCard"/>, "chipsRow") — no máximo 3 por linha
+    /// (para nunca ultrapassar a largura da página; ver comentário completo lá), por isso, com mais
+    /// de 3 categorias envolvidas, esta secção passa a ocupar mais do que uma linha do PDF. Por
+    /// essa razão, tal como <see cref="ExtrairDescricao"/>, junta-se aqui todas as linhas até ao
+    /// título seguinte (não apenas a primeira, como <see cref="ValorAposRotulo"/> faria) antes de
+    /// procurar, em todo esse texto, o nome de cada categoria realmente configurada na aplicação
+    /// (<see cref="App.Db"/>) — continua a ser uma correspondência exclusivamente textual (não usa
+    /// nenhuma coordenada), só que ancorada num conjunto de nomes conhecido em vez de tentar
+    /// adivinhar fronteiras entre palavras ou entre linhas.</summary>
     private static List<int> ExtrairCategorias(List<string> linhas)
     {
-        var linhaCategorias = ValorAposRotulo(linhas, "CATEGORIAS");
-        if (string.IsNullOrWhiteSpace(linhaCategorias) || linhaCategorias == "-")
+        var indiceTitulo = linhas.FindIndex(l => l.Trim().Equals("CATEGORIAS", StringComparison.OrdinalIgnoreCase));
+        if (indiceTitulo == -1) return new List<int>();
+
+        string[] titulosSeguintes = { "MOTIVO", "Nº SUPORTE SIGA", "Descrição / Tipo de Intervenção" };
+
+        var linhasCategorias = new List<string>();
+        for (var i = indiceTitulo + 1; i < linhas.Count; i++)
+        {
+            if (titulosSeguintes.Any(t => linhas[i].Trim().Equals(t, StringComparison.OrdinalIgnoreCase))) break;
+            linhasCategorias.Add(linhas[i]);
+        }
+
+        var textoCategorias = string.Join(" ", linhasCategorias).Trim();
+        if (string.IsNullOrWhiteSpace(textoCategorias) || textoCategorias == "-")
             return new List<int>();
 
         return App.Db.CategoriasIntervencao
             .Where(c => c.Ativa)
             .AsEnumerable()
-            .Where(c => linhaCategorias.Contains(c.Nome, StringComparison.OrdinalIgnoreCase))
+            .Where(c => textoCategorias.Contains(c.Nome, StringComparison.OrdinalIgnoreCase))
             .Select(c => c.Id)
             .ToList();
     }
 
     /// <summary>Localiza e reconstrói a tabela "Equipamento Intervencionado no Local" a partir das
     /// posições X/Y das palavras (não de coordenadas fixas): encontra a linha de cabeçalho da
-    /// tabela pelos títulos das colunas ("Equipamento", "Nº Série", "Nº Inventário", "Observações"),
+    /// tabela pelos títulos das colunas ("Equipamento", "Nº Série", "Nº Inventário" — já não
+    /// "Observações", que deixou de ser uma coluna desta tabela, ver
+    /// <see cref="IntervencaoPdfService.ComposeTabelaEquipamento"/>/ComposeObservacoesFinais),
     /// usa a posição X de cada título de coluna como fronteira, e depois agrupa as palavras de cada
     /// linha seguinte pela coluna em que caem, até encontrar a linha "Total: N equipamento(s)" (fim
     /// da tabela) ou o início da tabela seguinte. Devolve uma lista vazia (sem erro) se a tabela não
     /// for encontrada ou não puder ser reconstruída com confiança - o utilizador preenche esses
-    /// dados manualmente no formulário, tal como qualquer outro campo não encontrado.</summary>
+    /// dados manualmente no formulário, tal como qualquer outro campo não encontrado.
+    ///
+    /// Como "Observações" já não é uma coluna desta tabela, esta importação nunca preenche
+    /// <see cref="LinhaEquipamentoImportado.Observacoes"/> (fica sempre vazia) — esse texto passou
+    /// a estar na secção "Observações sobre o Equipamento" no fim do documento, que esta
+    /// função ainda não lê de volta; quem importar um PDF antigo (ou atual) continua a poder
+    /// escrever essas observações à mão, tal como qualquer outro campo não reconhecido.</summary>
     private static List<LinhaEquipamentoImportado> ExtrairEquipamentoIntervencionado(List<Word> todasAsPalavras)
     {
         var resultado = new List<LinhaEquipamentoImportado>();
@@ -258,13 +280,13 @@ public class IntervencaoPdfImportService
             }
             var bandasOrdenadas = bandas.OrderByDescending(b => b.Y).ToList();
 
-            // A linha de cabeçalho da tabela é a única banda que contém, em simultâneo, os 4
+            // A linha de cabeçalho da tabela é a única banda que contém, em simultâneo, os 3
             // títulos de coluna conhecidos.
             var indiceCabecalho = bandasOrdenadas.FindIndex(b =>
             {
                 var textoBanda = string.Join(" ", b.Palavras.Select(p => p.Text));
                 return textoBanda.Contains("Equipamento") && textoBanda.Contains("Série") &&
-                       textoBanda.Contains("Inventário") && textoBanda.Contains("Observações");
+                       textoBanda.Contains("Inventário");
             });
             if (indiceCabecalho == -1) return resultado; // tabela não encontrada - devolve vazio
 
@@ -277,7 +299,6 @@ public class IntervencaoPdfImportService
             // A 2ª ocorrência de "Nº" (a de "Nº Inventário") é a que fica mais à direita das duas.
             var xInventario = palavrasCabecalho.Where(p => p.Text.Equals("Nº", StringComparison.OrdinalIgnoreCase))
                 .Select(p => p.BoundingBox.Left).OrderByDescending(x => x).First();
-            var xObservacoes = ProcurarPalavra(palavrasCabecalho, "Observações").BoundingBox.Left;
 
             for (var i = indiceCabecalho + 1; i < bandasOrdenadas.Count; i++)
             {
@@ -298,8 +319,7 @@ public class IntervencaoPdfImportService
 
                 var descricao = TextoNaColuna(xEquipamento, xSerie).Trim();
                 var numeroSerie = TextoNaColuna(xSerie, xInventario).Trim();
-                var numeroInventario = TextoNaColuna(xInventario, xObservacoes).Trim();
-                var observacoes = TextoNaColuna(xObservacoes, double.MaxValue).Trim();
+                var numeroInventario = TextoNaColuna(xInventario, double.MaxValue).Trim();
 
                 if (string.IsNullOrWhiteSpace(descricao) && string.IsNullOrWhiteSpace(numeroSerie)) continue;
 
@@ -311,7 +331,7 @@ public class IntervencaoPdfImportService
                     descricao == "-" ? "" : descricao,
                     numeroSerie == "-" ? "" : numeroSerie,
                     numeroInventario == "-" ? "" : numeroInventario,
-                    observacoes == "-" ? "" : observacoes,
+                    "",
                     equipamentoId));
             }
         }

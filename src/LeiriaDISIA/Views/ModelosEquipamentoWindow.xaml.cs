@@ -42,6 +42,14 @@ public partial class ModelosEquipamentoWindow : Window
     /// conseguir ler o valor de cada um sem precisar de percorrer o painel à procura deles.</summary>
     private readonly Dictionary<int, Control> _camposCaracteristicasAdicionais = new();
 
+    /// <summary>Só usado por PreencherParaNovoModelo (chamado a partir de
+    /// EquipamentoEditWindow.AdicionarComoModelo_Click) — quando definido, é isto (e não uma
+    /// consulta a ModeloEquipamentoCaracteristicaValores) que preenche os valores iniciais das
+    /// Características Adicionais em AtualizarCaracteristicasAdicionais, com os valores já
+    /// preenchidos no equipamento de origem. Consumido uma única vez (posto a null logo a
+    /// seguir a ser lido) — não é um estado persistente do formulário.</summary>
+    private Dictionary<int, string?>? _valoresAdicionaisPreCarregados;
+
     public ModelosEquipamentoWindow()
     {
         InitializeComponent();
@@ -170,6 +178,59 @@ public partial class ModelosEquipamentoWindow : Window
         TxtEspecificacoesAdicionais.Text = modelo.EspecificacoesAdicionais;
 
         AtualizarGruposVisiveis(modelo.Tipo);
+    }
+
+    /// <summary>Pré-preenche o formulário para um modelo NOVO a partir dos dados atualmente
+    /// escritos numa janela de Equipamento (ver EquipamentoEditWindow.AdicionarComoModelo_Click) —
+    /// ao contrário de CarregarModelo, nunca define _selecionado (fica sempre "novo modelo", nunca
+    /// "editar"), já que estes dados vêm de um equipamento em concreto, não de um modelo já
+    /// gravado; a pessoa continua livre de rever/ajustar tudo (incluindo dar-lhe um Nome) antes de
+    /// gravar. <paramref name="caracteristicasAdicionais"/> espelha o mesmo formato usado para ler
+    /// ModeloEquipamentoCaracteristicaValores (Id da característica → valor), para também trazer as
+    /// características definidas pelo administrador (ex.: "Norma Wifi" de um Access Point) já
+    /// preenchidas no equipamento de origem — ver AtualizarCaracteristicasAdicionais.</summary>
+    public void PreencherParaNovoModelo(ModeloEquipamento dados, Dictionary<int, string?> caracteristicasAdicionais)
+    {
+        TxtTituloEdicao.Text = "Novo Modelo";
+
+        CmbTipo.SelectedItem = _tiposEquipamento.FirstOrDefault(t => t.Nome == dados.Tipo);
+        TxtNome.Text = dados.Nome;
+        TxtMarca.Text = dados.Marca;
+        TxtModelo.Text = dados.Modelo;
+        ChkAtivo.IsChecked = true;
+
+        CmbProcessador.Text = dados.Processador;
+        TxtFamiliaProcessador.Text = dados.FamiliaProcessador;
+        CmbTipoMemoria.Text = dados.TipoMemoria;
+        CmbMemoriaGB.Text = dados.QuantidadeMemoriaGB?.ToString();
+        CmbTipoDisco.Text = dados.TipoDisco;
+        CmbTamanhoDisco.Text = dados.TamanhoDiscoGB?.ToString();
+        CmbSistemaOperativo.Text = dados.SistemaOperativo;
+
+        CmbPolegadas.Text = dados.PolegadasMonitor?.ToString();
+        CmbTipoPainel.Text = dados.TipoPainelMonitor;
+        CmbResolucaoMonitor.Text = dados.ResolucaoMonitor;
+
+        CmbTipoImpressora.Text = dados.TipoImpressora;
+        ChkImpressaoCor.IsChecked = dados.ImpressaoCor;
+        CmbLigacaoImpressora.Text = dados.LigacaoImpressora;
+
+        CmbNumeroPortas.Text = dados.NumeroPortas?.ToString();
+        CmbVelocidadeRede.Text = dados.VelocidadeRede;
+        ChkGerivel.IsChecked = dados.Gerivel;
+
+        CmbResolucaoCamera.Text = dados.ResolucaoCamera;
+        CmbTipoCamera.Text = dados.TipoCamera;
+        ChkVisaoNoturna.IsChecked = dados.VisaoNoturna;
+
+        CmbLuminosidade.Text = dados.LuminosidadeLumens?.ToString();
+        CmbResolucaoProjetor.Text = dados.ResolucaoProjetor;
+
+        TxtEspecificacoesAdicionais.Text = dados.EspecificacoesAdicionais;
+
+        _valoresAdicionaisPreCarregados = caracteristicasAdicionais;
+        AtualizarGruposVisiveis(dados.Tipo);
+        _valoresAdicionaisPreCarregados = null; // uso único — já consumido por AtualizarGruposVisiveis acima
     }
 
     private void CmbTipo_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -315,11 +376,11 @@ public partial class ModelosEquipamentoWindow : Window
             return;
         }
 
-        var valoresExistentes = _selecionado == null
+        var valoresExistentes = _valoresAdicionaisPreCarregados ?? (_selecionado == null
             ? new Dictionary<int, string?>()
             : App.Db.ModeloEquipamentoCaracteristicaValores
                 .Where(v => v.ModeloEquipamentoId == _selecionado.Id)
-                .ToDictionary(v => v.CaracteristicaEquipamentoId, v => v.Valor);
+                .ToDictionary(v => v.CaracteristicaEquipamentoId, v => v.Valor));
 
         var idsCaracteristicas = caracteristicas.Select(c => c.Id).ToList();
         var opcoesPorCaracteristica = App.Db.CaracteristicaEquipamentoOpcoes
@@ -467,9 +528,14 @@ public partial class ModelosEquipamentoWindow : Window
             return;
         }
 
-        var idGravado = modelo.Id;
+        // Atualiza a lista antes de voltar ao estado "novo modelo" (mesmo padrão já aplicado a
+        // GuardarCaracteristica_Click em Views/AdministracaoWindow.xaml.cs, pela mesma razão): antes
+        // ficava com os dados do modelo gravado ainda no ecrã e selecionado na lista, o que parecia
+        // conveniente mas, na prática, levava a enganos — escrever a seguir, pensando estar a criar
+        // um modelo novo, alterava sem se dar conta o que acabara de ser gravado. Selecionar um
+        // modelo na lista continua a repovoar o formulário normalmente para o editar.
         Recarregar();
-        ListaModelos.SelectedItem = _todos.FirstOrDefault(m => m.Id == idGravado);
+        Novo_Click(sender, e);
     }
 
     private static string? TextoOuNulo(string? texto) => string.IsNullOrWhiteSpace(texto) ? null : texto.Trim();

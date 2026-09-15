@@ -135,7 +135,13 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
                         <DataGridTextColumn Header="Local" Binding="{Binding Local}" Width="Auto" />
-                        <DataGridTextColumn Header="Qtd" Binding="{Binding Quantidade}" Width="Auto" />
+                        <DataGridTextColumn Header="Qtd" Binding="{Binding Quantidade}" Width="Auto">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Center" />
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
                         <DataGridTemplateColumn Header="Estado" Width="Auto" SortMemberPath="Estado">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>

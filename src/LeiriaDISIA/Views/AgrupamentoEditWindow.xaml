@@ -1,7 +1,7 @@
 <Window x:Class="LeiriaDISIA.Views.AgrupamentoEditWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Agrupamento" Height="580" Width="860" MinHeight="420" MinWidth="760"
+        Title="Agrupamento" SizeToContent="Height" Width="860" MinHeight="420" MinWidth="760"
         WindowStartupLocation="CenterOwner"
         Background="{StaticResource BrushBackground}">
     <Grid Margin="24">

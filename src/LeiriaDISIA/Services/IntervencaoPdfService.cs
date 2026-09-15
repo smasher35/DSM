@@ -96,6 +96,18 @@ public class IntervencaoPdfService
                 ""))
             .ToList();
 
+        // Junta as observações de todas as listas acima que as tenham preenchidas (a maior parte
+        // não tem) — para as listar todas juntas no fim do documento, em vez de uma coluna
+        // "Observações" em cada tabela (ver ComposeObservacoesFinais/ComposeTabelaEquipamento).
+        // "Equipamento Novo Entregue" não tem Observações (ver Models/Intervencao.cs,
+        // IntervencaoEquipamentoNovo), por isso não entra aqui.
+        var observacoesParaListar = new List<(string Secao, LinhaEquipamentoPdf Linha)>();
+        observacoesParaListar.AddRange(linhasIntervencionados.Select(l => ("Equipamento Intervencionado no Local", l)));
+        observacoesParaListar.AddRange(linhasRecolhidos.Select(l => ("Equipamento Recolhido para a DISIA", l)));
+        observacoesParaListar.AddRange(linhasDevolvidos.Select(l => ("Equipamento Devolvido à Escola", l)));
+        observacoesParaListar.AddRange(linhasAbatidos.Select(l => ("Equipamento Abatido", l)));
+        observacoesParaListar = observacoesParaListar.Where(x => !string.IsNullOrWhiteSpace(x.Linha.Observacoes)).ToList();
+
         Document.Create(container =>
         {
             container.Page(page =>
@@ -152,6 +164,8 @@ public class IntervencaoPdfService
                         col.Item().PaddingTop(18);
                         ComposeCaixaTexto(col, "Notas Adicionais (registo histórico)", intervencao.MaterialRecolhidoAbatido);
                     }
+
+                    ComposeObservacoesFinais(col, observacoesParaListar);
                 });
                 page.Footer().Element(ComposeRodape);
             });
@@ -266,23 +280,42 @@ public class IntervencaoPdfService
                     cc.Item().Text("LOCALIDADE").FontSize(7.5f).Bold().FontColor(Colors.Grey.Darken1).LetterSpacing(0.05f);
                     cc.Item().Text(intervencao.Escola?.Localidade ?? "-").FontSize(9.5f).FontColor(Colors.Grey.Darken3);
                 });
-                row.RelativeItem(3).Column(cc =>
+            });
+
+            // "CATEGORIAS" fica agora na sua própria linha, a toda a largura — não a partilhar
+            // com "Localidade" como antes — para dar o máximo de espaço possível aos selos: uma
+            // intervenção pode ter todas as categorias envolvidas (ex.: apetrechamento completo de
+            // uma escola nova), e Row() em QuestPDF NÃO passa sozinho os itens que não cabem para
+            // uma nova linha (ao contrário de um WrapPanel em WPF) — com largura a menos e vários
+            // selos de nomes compridos (ex.: "Redes e Comunicações"), isto já chegou a impedir todo
+            // o PDF de ser gerado ("conflicting size constraints"). Como proteção adicional, mesmo
+            // com toda a largura da página disponível, os selos continuam agrupados em blocos de
+            // no máximo 3 por linha (ver maxSelosPorLinha) — sem esta segunda salvaguarda, uma
+            // lista de categorias suficientemente comprida (ou nomes suficientemente longos)
+            // poderia voltar a ultrapassar a largura disponível mesmo a toda a largura da página.
+            c.Item().PaddingTop(10).Column(cc =>
+            {
+                cc.Item().Text("CATEGORIAS").FontSize(7.5f).Bold().FontColor(Colors.Grey.Darken1).LetterSpacing(0.05f);
+
+                if (intervencao.Categorias.Count == 0)
                 {
-                    cc.Item().Text("CATEGORIAS").FontSize(7.5f).Bold().FontColor(Colors.Grey.Darken1).LetterSpacing(0.05f);
-                    if (intervencao.Categorias.Count == 0)
+                    cc.Item().PaddingTop(2).Text("-").FontSize(9.5f).FontColor(Colors.Grey.Darken3);
+                }
+                else
+                {
+                    const int maxSelosPorLinha = 3;
+                    var categorias = intervencao.Categorias.ToList();
+                    for (var i = 0; i < categorias.Count; i += maxSelosPorLinha)
                     {
-                        cc.Item().PaddingTop(2).Text("-").FontSize(9.5f).FontColor(Colors.Grey.Darken3);
-                    }
-                    else
-                    {
-                        cc.Item().PaddingTop(3).Row(chipsRow =>
+                        var linha = categorias.Skip(i).Take(maxSelosPorLinha).ToList();
+                        cc.Item().PaddingTop(i == 0 ? 3 : 4).Row(chipsRow =>
                         {
                             chipsRow.Spacing(5);
-                            foreach (var ic in intervencao.Categorias)
+                            foreach (var ic in linha)
                                 chipsRow.AutoItem().Element(e => Selo(e, FormatarCategoria(ic), ic.Categoria?.CorHex ?? "#64748B"));
                         });
                     }
-                });
+                }
             });
 
             if (intervencao.Estado is EstadoIntervencao.Pendente or EstadoIntervencao.EmEspera &&
@@ -340,9 +373,14 @@ public class IntervencaoPdfService
         });
     }
 
-    /// <summary>Desenha a tabela de uma das três listas de equipamento (intervencionado, recolhido
-    /// ou abatido). Quando <paramref name="rotuloColunaExtra"/> é nulo, a coluna de estado/data não
-    /// é desenhada (caso do equipamento intervencionado no local, que não tem esse conceito).</summary>
+    /// <summary>Desenha a tabela de uma das listas de equipamento (intervencionado, recolhido,
+    /// devolvido, abatido ou novo entregue). Quando <paramref name="rotuloColunaExtra"/> é nulo, a
+    /// coluna de estado/data não é desenhada (caso do equipamento intervencionado no local e do
+    /// novo entregue, que não têm esse conceito). Não desenha "Observações" — cada linha continua a
+    /// guardar o seu texto (ver <see cref="LinhaEquipamentoPdf"/>), mas é listado à parte, no fim
+    /// do documento (ver <see cref="ComposeObservacoesFinais"/>), para não obrigar esta tabela a
+    /// abrir espaço para textos que, a maior parte das vezes, nem estão preenchidos — a decisão de
+    /// "Nº Série"/"Descrição" ganharem esse espaço em vez de o deixar por usar.</summary>
     private static void ComposeTabelaEquipamento(
         ColumnDescriptor col, string titulo, string corAccent,
         string? rotuloColunaExtra, IReadOnlyList<LinhaEquipamentoPdf> linhas)
@@ -353,11 +391,10 @@ public class IntervencaoPdfService
         {
             table.ColumnsDefinition(cols =>
             {
-                cols.RelativeColumn(2.6f);
-                cols.ConstantColumn(75);
+                cols.RelativeColumn(1f);
+                cols.ConstantColumn(110);
                 cols.ConstantColumn(75);
                 if (rotuloColunaExtra != null) cols.ConstantColumn(85);
-                cols.RelativeColumn(2f);
             });
 
             IContainer CabecalhoCelula(IContainer c) => c.Background(corAccent).PaddingVertical(6).PaddingHorizontal(6).AlignMiddle();
@@ -369,7 +406,6 @@ public class IntervencaoPdfService
                 h.Cell().Element(CabecalhoCelula).Text("Nº Inventário").FontSize(8).Bold().FontColor(Colors.White);
                 if (rotuloColunaExtra != null)
                     h.Cell().Element(CabecalhoCelula).Text(rotuloColunaExtra).FontSize(8).Bold().FontColor(Colors.White);
-                h.Cell().Element(CabecalhoCelula).Text("Observações").FontSize(8).Bold().FontColor(Colors.White);
             });
 
             for (var i = 0; i < linhas.Count; i++)
@@ -384,10 +420,42 @@ public class IntervencaoPdfService
                 table.Cell().Element(Cell).Text(string.IsNullOrWhiteSpace(linha.NumeroInventario) ? "-" : linha.NumeroInventario).FontSize(8.5f);
                 if (rotuloColunaExtra != null)
                     table.Cell().Element(Cell).Text(linha.InfoExtra).FontSize(8).FontColor(Colors.Grey.Darken2);
-                table.Cell().Element(Cell).Text(string.IsNullOrWhiteSpace(linha.Observacoes) ? "-" : linha.Observacoes).FontSize(8.5f).FontColor(Colors.Grey.Darken2);
             }
         });
 
         col.Item().PaddingTop(3).Text($"Total: {linhas.Count} equipamento(s)").FontSize(8).Italic().FontColor(Colors.Grey.Darken1);
+    }
+
+    /// <summary>Lista, no fim do documento, as observações de todo o equipamento de todas as
+    /// tabelas acima que as tiver preenchidas — em vez de uma coluna "Observações" em cada tabela
+    /// (que na maior parte das intervenções fica vazia, só a ocupar espaço à custa de "Nº Série"/
+    /// "Descrição"), agrupadas aqui por secção de origem, para se continuar a saber a que
+    /// equipamento e a que lista cada observação pertence.</summary>
+    private static void ComposeObservacoesFinais(ColumnDescriptor col, IReadOnlyList<(string Secao, LinhaEquipamentoPdf Linha)> observacoes)
+    {
+        if (observacoes.Count == 0) return;
+
+        col.Item().PaddingTop(18);
+        TituloSeccao(col, "Observações sobre o Equipamento", CorNavy);
+
+        col.Item().PaddingTop(6).Column(c =>
+        {
+            c.Spacing(8);
+            foreach (var (secao, linha) in observacoes)
+            {
+                c.Item().Background(CorFundoCaixa).Padding(10).Column(cc =>
+                {
+                    cc.Item().Text(text =>
+                    {
+                        text.Span(string.IsNullOrWhiteSpace(linha.Descricao) ? "Equipamento" : linha.Descricao)
+                            .FontSize(9.5f).Bold().FontColor(CorNavyEscuro);
+                        if (!string.IsNullOrWhiteSpace(linha.NumeroSerie) && linha.NumeroSerie != "-")
+                            text.Span($"  ·  Nº Série: {linha.NumeroSerie}").FontSize(8.5f).FontColor(Colors.Grey.Darken2);
+                        text.Span($"  ·  {secao}").FontSize(8.5f).Italic().FontColor(Colors.Grey.Darken1);
+                    });
+                    cc.Item().PaddingTop(3).Text(linha.Observacoes).FontSize(9).FontColor(Colors.Grey.Darken3).LineHeight(1.3f);
+                });
+            }
+        });
     }
 }
