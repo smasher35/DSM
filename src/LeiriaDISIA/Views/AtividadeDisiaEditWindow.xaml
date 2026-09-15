@@ -70,9 +70,15 @@
                              branco pouco cuidado: mostra a lista de equipamentos quando existem, ou
                              um estado vazio apelativo quando não existem, dentro da mesma área. -->
                         <StackPanel x:Name="PainelEquipamentoRecolhido" Margin="0,0,0,10">
-                            <TextBlock Text="Equipamento recolhido associado" FontWeight="SemiBold" Margin="0,0,0,4" />
+                            <DockPanel Margin="0,0,0,4">
+                                <TextBlock Text="Equipamento recolhido associado" FontWeight="SemiBold" />
+                                <!-- Só com mais do que um equipamento (ver CarregarEquipamentoRecolhido em
+                                     AtividadeDisiaEditWindow.xaml.cs) — com zero ou um, fica vazio. -->
+                                <TextBlock x:Name="TxtResumoProgresso" DockPanel.Dock="Right" FontSize="11" FontWeight="SemiBold"
+                                           Foreground="#15803D" VerticalAlignment="Center" />
+                            </DockPanel>
                             <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,6"
-                                       Text="Enquanto esta atividade não for fechada, pode alterar o estado de cada equipamento para 'Em Reparação' no módulo de Equipamentos. Ao fechar esta atividade, o equipamento passa automaticamente a 'Aguarda Entrega' e abre-se uma nova Intervenção para o devolver à escola. Use o botão 'Editar Equipamento' para registar diretamente aqui alterações de hardware (ex: troca de disco, memória adicionada) — o resumo é acrescentado às Observações abaixo." />
+                                       Text="Use o selo 'Pronto' para ir acompanhando, equipamento a equipamento, o que já está reparado — é só informativo, não altera o estado da recolha nem da atividade. Ao fechar esta atividade, o equipamento passa automaticamente a 'Aguarda Entrega' e abre-se uma nova Intervenção para o devolver à escola. Use o botão 'Editar Equipamento' para registar diretamente aqui alterações de hardware (ex: troca de disco, memória adicionada) — o resumo é acrescentado às Observações abaixo." />
 
                             <!-- Cartão que agrega a lista e o estado vazio: mesma área, mesmo
                                  tamanho, quer existam ou não equipamentos — evita o "salto" visual
@@ -102,12 +108,35 @@
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="*" />
                                                                 <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="Auto" />
                                                             </Grid.ColumnDefinitions>
                                                             <StackPanel Grid.Column="0">
                                                                 <TextBlock Text="{Binding TituloLinha}" FontWeight="SemiBold" TextWrapping="Wrap" />
                                                                 <TextBlock Text="{Binding SubtituloLinha}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" />
                                                             </StackPanel>
-                                                            <Button Grid.Column="1" Content="✏️ Editar Equipamento" Tag="{Binding EquipamentoId}"
+                                                            <!-- Selo/alternador "Pronto"/"Pendente" (ver MarcarPronto_Click em
+                                                                 AtividadeDisiaEditWindow.xaml.cs) — puramente informativo, não
+                                                                 altera o Estado da recolha nem do equipamento. -->
+                                                            <Button Grid.Column="1" Tag="{Binding RecolhaId}" Click="MarcarPronto_Click"
+                                                                    IsEnabled="{Binding PodeAlterarPronto}"
+                                                                    Padding="10,4" VerticalAlignment="Center" Margin="10,0,0,0" BorderThickness="0"
+                                                                    ToolTip="Marca este equipamento como pronto/reparado — só informativo, para acompanhar o progresso">
+                                                                <Button.Style>
+                                                                    <Style TargetType="Button">
+                                                                        <Setter Property="Content" Value="○ Pendente" />
+                                                                        <Setter Property="Background" Value="#E2E8F0" />
+                                                                        <Setter Property="Foreground" Value="#475569" />
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding Pronto}" Value="True">
+                                                                                <Setter Property="Content" Value="✓ Pronto" />
+                                                                                <Setter Property="Background" Value="#15803D" />
+                                                                                <Setter Property="Foreground" Value="White" />
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </Button.Style>
+                                                            </Button>
+                                                            <Button Grid.Column="2" Content="✏️ Editar Equipamento" Tag="{Binding EquipamentoId}"
                                                                     Click="EditarEquipamentoRecolhido_Click" Padding="8,4" VerticalAlignment="Center" Margin="10,0,0,0"
                                                                     ToolTip="Abre o registo deste equipamento para atualizar hardware (ex: disco, memória) ou outros dados" />
                                                         </Grid>

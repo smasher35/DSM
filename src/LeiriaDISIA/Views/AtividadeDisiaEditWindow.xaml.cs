@@ -10,9 +10,18 @@ public partial class AtividadeDisiaEditWindow : Window
 {
     private class LinhaEquipamentoRecolhido
     {
+        public int RecolhaId { get; set; }
         public int EquipamentoId { get; set; }
         public string TituloLinha { get; set; } = "";
         public string SubtituloLinha { get; set; } = "";
+
+        /// <summary>Ver EquipamentoRecolhido.MarcadoProntoEm — progresso individual, independente
+        /// do estado da atividade como um todo.</summary>
+        public bool Pronto { get; set; }
+
+        /// <summary>False assim que a atividade já estiver fechada — a essa altura já não há
+        /// progresso nenhum para acompanhar (ver MarcarPronto_Click).</summary>
+        public bool PodeAlterarPronto { get; set; } = true;
     }
 
     private readonly AtividadeDisia? _existente;
@@ -93,7 +102,9 @@ public partial class AtividadeDisiaEditWindow : Window
     /// <summary>Mostra o equipamento recolhido que esta atividade agrega e cuja reparação está a
     /// acompanhar — ver fluxo automático em <see cref="IntervencaoEditWindow"/>. Cada linha tem um
     /// botão "✏️ Editar Equipamento" que abre o registo do equipamento para permitir atualizar
-    /// diretamente o hardware (ex: troca de disco, memória adicionada) sem ter de sair desta janela.</summary>
+    /// diretamente o hardware (ex: troca de disco, memória adicionada) sem ter de sair desta janela,
+    /// e um selo "Pronto"/"Pendente" (ver MarcarPronto_Click) para acompanhar o progresso de cada
+    /// equipamento individualmente, sem ter de esperar até fechar a atividade toda.</summary>
     private void CarregarEquipamentoRecolhido(int atividadeId)
     {
         var recolhidos = App.Db.EquipamentosRecolhidos
@@ -106,11 +117,39 @@ public partial class AtividadeDisiaEditWindow : Window
         // declarativamente se mostra a lista ou o estado vazio, sem lógica de negócio aqui.
         ListaEquipamentoRecolhido.ItemsSource = recolhidos.Select(r => new LinhaEquipamentoRecolhido
         {
+            RecolhaId = r.Id,
             EquipamentoId = r.EquipamentoId,
             TituloLinha = $"{r.Equipamento?.Tipo} {r.Equipamento?.Marca} {r.Equipamento?.Modelo} — Nº Série {r.Equipamento?.NumeroSerie}".Trim(),
             SubtituloLinha = $"Escola: {r.Equipamento?.Escola?.Nome ?? "—"}  •  Estado do equipamento: {r.Equipamento?.Estado}  •  " +
-                $"Recolhido em {r.DataRecolha:dd/MM/yyyy}  •  Hardware: {ResumoHardware(r.Equipamento)}"
+                $"Recolhido em {r.DataRecolha:dd/MM/yyyy}  •  Hardware: {ResumoHardware(r.Equipamento)}",
+            Pronto = r.MarcadoProntoEm != null,
+            PodeAlterarPronto = _estadoOriginal != EstadoIntervencao.Fechada
         }).ToList();
+
+        // Resumo de progresso ("X de Y prontos") — só útil com mais do que um equipamento; com
+        // zero ou um, a informação já está toda visível no próprio selo da linha.
+        TxtResumoProgresso.Text = recolhidos.Count > 1
+            ? $"{recolhidos.Count(r => r.MarcadoProntoEm != null)} de {recolhidos.Count} prontos"
+            : "";
+    }
+
+    /// <summary>Alterna o selo "Pronto"/"Pendente" de um equipamento (ver
+    /// EquipamentoRecolhido.MarcadoProntoEm) — puramente informativo, para se ir acompanhando o
+    /// progresso à medida que cada equipamento fica reparado, sem qualquer efeito no Estado da
+    /// recolha em si (esse continua ligado ao ciclo de vida da atividade como um todo) nem no
+    /// Estado do próprio equipamento. Desativado assim que a atividade já estiver fechada (ver
+    /// XAML) — a essa altura já não há progresso nenhum para acompanhar.</summary>
+    private void MarcarPronto_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button { Tag: int recolhaId }) return;
+
+        var recolha = App.Db.EquipamentosRecolhidos.Find(recolhaId);
+        if (recolha == null) return;
+
+        recolha.MarcadoProntoEm = recolha.MarcadoProntoEm == null ? DateTime.Now : null;
+        App.Db.SaveChanges();
+
+        if (_existente != null) CarregarEquipamentoRecolhido(_existente.Id);
     }
 
     /// <summary>Resumo curto do hardware atual (processador, memória, disco), para se ver de

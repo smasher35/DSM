@@ -215,6 +215,16 @@ public class EquipamentoRecolhido
     public DateTime? DataEntrega { get; set; }
     public string? Observacoes { get; set; }
 
+    /// <summary>Marcado manualmente pelo técnico, enquanto a Atividade DISIA que trata deste
+    /// equipamento ainda está "Em Progresso" (ver Views/AtividadeDisiaEditWindow.xaml.cs) — para
+    /// acompanhar o progresso de uma reparação com vários equipamentos, ao ir tratando cada um,
+    /// sem ter de esperar até fechar a atividade toda para se saber o que já está pronto.
+    /// Deliberadamente independente de <see cref="Estado"/> (esse continua a ser definido em bloco
+    /// pelo ciclo de vida da atividade — "Em Reparação" ao abrir, "Aguarda Entrega" ao fechar — não
+    /// por este campo) e não tem qualquer efeito no estado do <see cref="Equipamento"/> em si;
+    /// puramente informativo. <c>null</c> enquanto não marcado.</summary>
+    public DateTime? MarcadoProntoEm { get; set; }
+
     /// <summary>Dias decorridos desde a recolha (até à entrega, ou até hoje se ainda não foi entregue).</summary>
     public int DiasEmRecolha => (int)((DataEntrega ?? DateTime.Today) - DataRecolha).TotalDays;
 
