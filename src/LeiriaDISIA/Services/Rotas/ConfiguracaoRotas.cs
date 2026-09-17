@@ -7,6 +7,11 @@ namespace LeiriaDISIA.Services.Rotas;
 /// <see cref="NomeVariavelAmbiente"/>, definida uma única vez em cada computador onde a aplicação
 /// corre (Definições do Sistema → Variáveis de Ambiente, ou <c>setx DISIA_ORS_API_KEY "chave" /M</c>
 /// numa consola de administrador). Obtém-se uma chave gratuita em https://openrouteservice.org/dev/#/signup.
+///
+/// IMPORTANTE: A chave de API é um segredo e nunca deve ser incluída em código-fonte, ficheiros de
+/// configuração versionados, ou artefactos de compilação. Deve ser provisionada no momento da instalação
+/// através de gestão segura de segredos (variáveis de ambiente, cofres de chaves, ou sistemas de gestão
+/// de configuração). O ficheiro install_api.txt contém apenas um placeholder e instruções.
 /// </summary>
 public static class ConfiguracaoRotas
 {

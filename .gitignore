@@ -35,3 +35,6 @@ bld/
 *.tmp
 *.cache
 *~
+
+## Sensitive configuration files
+install_api.txt
