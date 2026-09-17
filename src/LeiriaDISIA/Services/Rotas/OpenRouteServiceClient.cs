@@ -141,7 +141,14 @@ public class OpenRouteServiceClient : IGeocodingService, IRoutingService
                 // Pedido explícito: nunca sugerir autoestrada/via rápida — as equipas fazem estas
                 // deslocações em viatura de serviço por estradas normais, e a rota "mais rápida"
                 // por autoestrada dava distâncias bastante diferentes da realidade destas viagens.
-                options = new { avoid_features = new[] { "highways" } }
+                options = new { avoid_features = new[] { "highways" } },
+                // Explícito (embora seja o valor por omissão da API) — para nunca deixar de vir o
+                // "segments[].steps[]" de que ConstruirPassos precisa, mesmo que esse omisso alguma
+                // vez mude do lado do OpenRouteService.
+                instructions = true,
+                // Sem isto, as instruções de navegação (ex.: "Turn right onto...") vêm em inglês —
+                // a aplicação inteira está em português, por isso pede-se explicitamente aqui.
+                language = "pt"
             };
 
             using var pedido = new HttpRequestMessage(HttpMethod.Post, $"{BaseUrl}/v2/directions/driving-car");
@@ -154,14 +161,16 @@ public class OpenRouteServiceClient : IGeocodingService, IRoutingService
                 return ResultadoDistancia.Falha(await MensagemErroHttp(resposta, ct));
 
             var dados = await resposta.Content.ReadFromJsonAsync<DirectionsResponse>(JsonOpcoes, ct);
-            var resumo = dados?.Routes?.FirstOrDefault()?.Summary;
+            var rota = dados?.Routes?.FirstOrDefault();
+            var resumo = rota?.Summary;
 
             if (resumo == null)
                 return ResultadoDistancia.Falha("Não foi possível calcular a rota rodoviária entre os dois pontos.");
 
             return ResultadoDistancia.Ok(
                 Math.Round(resumo.Distance / 1000.0, 1),
-                (int)Math.Round(resumo.Duration / 60.0));
+                (int)Math.Round(resumo.Duration / 60.0),
+                ConstruirPassos(rota));
         }
         catch (TaskCanceledException) when (!ct.IsCancellationRequested)
         {
@@ -172,6 +181,22 @@ public class OpenRouteServiceClient : IGeocodingService, IRoutingService
             return ResultadoDistancia.Falha($"Sem ligação ao serviço de rotas: {ex.Message}");
         }
     }
+
+    /// <summary>Converte os "steps" (passos de navegação) da API de Directions para
+    /// <see cref="PassoRota"/> — usado tanto por <see cref="CalcularDistanciaAsync"/> como por
+    /// <see cref="OtimizarRotaAsync"/> (mesma resposta HTTP, dois consumidores diferentes). Ignora
+    /// passos sem instrução (nunca deviam existir, mas evita uma linha em branco no resumo se
+    /// alguma vez acontecer) e normaliza o nome da via "-" (convenção da API para "sem nome
+    /// conhecido") para null.</summary>
+    private static List<PassoRota> ConstruirPassos(DirectionsRoute? rota) =>
+        (rota?.Segments ?? new())
+            .SelectMany(s => s.Steps ?? new())
+            .Where(p => !string.IsNullOrWhiteSpace(p.Instruction))
+            .Select(p => new PassoRota(
+                p.Instruction!,
+                string.IsNullOrWhiteSpace(p.Name) || p.Name == "-" ? null : p.Name,
+                Math.Round(p.Distance / 1000.0, 2)))
+            .ToList();
 
     /// <summary>Nº máximo de paragens aceites numa única chamada de Planeamento de Rotas. A ordem é
     /// decidida por "vizinho mais próximo" (ver <see cref="OtimizarRotaAsync"/>), o que pede
@@ -264,7 +289,8 @@ public class OpenRouteServiceClient : IGeocodingService, IRoutingService
                 resultado.Add(new ParagemRotaOtimizada(
                     IndiceOriginal: escolhido.Indice,
                     DistanciaDesdeAnteriorKm: distanciaTrocoKm,
-                    DuracaoDesdeAnteriorMinutos: duracaoTrocoMin));
+                    DuracaoDesdeAnteriorMinutos: duracaoTrocoMin,
+                    PassosDesdeAnterior: escolhido.Resultado.Passos));
 
                 distanciaTotalKm += distanciaTrocoKm;
                 duracaoTotalMin += duracaoTrocoMin;
@@ -276,6 +302,7 @@ public class OpenRouteServiceClient : IGeocodingService, IRoutingService
             // extra falhar, não invalida a rota toda: só o total fica sem esse último troço.
             double? distanciaRegressoKm = null;
             int? duracaoRegressoMin = null;
+            List<PassoRota>? passosRegresso = null;
             if (regresso != null)
             {
                 var regressoResultado = await CalcularDistanciaAsync(pontoAtual, regresso, ct);
@@ -283,12 +310,14 @@ public class OpenRouteServiceClient : IGeocodingService, IRoutingService
                 {
                     distanciaRegressoKm = regressoResultado.DistanciaKm ?? 0;
                     duracaoRegressoMin = regressoResultado.DuracaoMinutos ?? 0;
+                    passosRegresso = regressoResultado.Passos;
                     distanciaTotalKm += distanciaRegressoKm.Value;
                     duracaoTotalMin += duracaoRegressoMin.Value;
                 }
             }
 
-            return ResultadoOtimizacaoRota.Ok(resultado, Math.Round(distanciaTotalKm, 1), duracaoTotalMin, distanciaRegressoKm, duracaoRegressoMin);
+            return ResultadoOtimizacaoRota.Ok(resultado, Math.Round(distanciaTotalKm, 1), duracaoTotalMin,
+                distanciaRegressoKm, duracaoRegressoMin, passosRegresso);
         }
         catch (TaskCanceledException) when (!ct.IsCancellationRequested)
         {
@@ -354,10 +383,31 @@ public class OpenRouteServiceClient : IGeocodingService, IRoutingService
     }
 
     private class DirectionsResponse { [JsonPropertyName("routes")] public List<DirectionsRoute>? Routes { get; set; } }
-    private class DirectionsRoute { [JsonPropertyName("summary")] public DirectionsSummary? Summary { get; set; } }
+    private class DirectionsRoute
+    {
+        [JsonPropertyName("summary")] public DirectionsSummary? Summary { get; set; }
+        [JsonPropertyName("segments")] public List<DirectionsSegment>? Segments { get; set; }
+    }
     private class DirectionsSummary
     {
         [JsonPropertyName("distance")] public double Distance { get; set; }
         [JsonPropertyName("duration")] public double Duration { get; set; }
+    }
+
+    /// <summary>Um troço entre dois pontos consecutivos do pedido — aqui sempre um só, já que
+    /// <see cref="CalcularDistanciaAsync"/> pede sempre exatamente 2 coordenadas (origem/destino).</summary>
+    private class DirectionsSegment { [JsonPropertyName("steps")] public List<DirectionsStep>? Steps { get; set; } }
+
+    /// <summary>Um passo de navegação dentro de um segmento (ex.: "Vire à direita para a N109") —
+    /// ver <see cref="PassoRota"/>, para onde isto é convertido.</summary>
+    private class DirectionsStep
+    {
+        [JsonPropertyName("distance")] public double Distance { get; set; }
+        [JsonPropertyName("instruction")] public string? Instruction { get; set; }
+
+        /// <summary>Nome da via, quando mapeado — a API devolve o literal "-" (não vazio) quando
+        /// não há nome conhecido, daí a normalização em <see cref="CalcularDistanciaAsync"/> em vez
+        /// de confiar só em string.IsNullOrWhiteSpace.</summary>
+        [JsonPropertyName("name")] public string? Name { get; set; }
     }
 }

@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 using LeiriaDISIA.Models;
 using LeiriaDISIA.Services;
 using Microsoft.EntityFrameworkCore;
@@ -16,6 +17,10 @@ public partial class EquipamentoEditWindow : Window
     // GuardarNovo_Click) repõe este campo a null a meio da vida da janela, para o próximo Guardar()
     // voltar a criar um equipamento novo em vez de continuar a editar o que acabou de ser gravado.
     private Equipamento? _existente;
+
+    /// <summary>Esconde <see cref="PainelConfirmacaoGuardado"/> alguns segundos depois de aparecer
+    /// — ver MostrarConfirmacaoGuardado.</summary>
+    private DispatcherTimer? _timerConfirmacaoGuardado;
 
     /// <summary>Quando esta janela é aberta a partir de uma Atividade DISIA (ver botão "✏️ Editar
     /// Equipamento" em <see cref="AtividadeDisiaEditWindow"/>), guarda essa atividade apenas para
@@ -1179,6 +1184,10 @@ public partial class EquipamentoEditWindow : Window
 
     private void GuardarNovo_Click(object sender, RoutedEventArgs e)
     {
+        // Capturado antes de Guardar()/PrepararParaNovoEquipamento() limparem o campo — para a
+        // confirmação abaixo poder identificar qual equipamento ficou gravado.
+        var numeroSerieGravado = TxtNumeroSerie.Text.Trim();
+
         if (!Guardar()) return;
 
         // Um "Guardar e Novo" bem sucedido conta como sucesso da janela também, para quem a tiver
@@ -1187,15 +1196,39 @@ public partial class EquipamentoEditWindow : Window
         Sucesso = true;
 
         PrepararParaNovoEquipamento();
+        MostrarConfirmacaoGuardado($"✓ Equipamento \"{numeroSerieGravado}\" gravado com sucesso. Pronto para o próximo.");
+    }
+
+    /// <summary>Mostra, por breves segundos (ou até começar a escrever-se o equipamento seguinte),
+    /// uma confirmação visual de que a gravação em "💾 Guardar e Novo" correu bem — como a janela
+    /// não fecha (ao contrário do "Guardar" normal, onde fechar já é a própria confirmação), sem
+    /// isto não havia nenhum sinal visível de que o equipamento anterior tinha mesmo ficado
+    /// gravado.</summary>
+    private void MostrarConfirmacaoGuardado(string mensagem)
+    {
+        _timerConfirmacaoGuardado?.Stop();
+
+        TxtConfirmacaoGuardado.Text = mensagem;
+        PainelConfirmacaoGuardado.Visibility = Visibility.Visible;
+
+        _timerConfirmacaoGuardado = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+        _timerConfirmacaoGuardado.Tick += (_, _) =>
+        {
+            PainelConfirmacaoGuardado.Visibility = Visibility.Collapsed;
+            _timerConfirmacaoGuardado!.Stop();
+        };
+        _timerConfirmacaoGuardado.Start();
     }
 
     /// <summary>Repõe o formulário para inserir mais um equipamento, sem fechar a janela — usado
     /// pelo botão "💾 Guardar e Novo" (ver GuardarNovo_Click), pensado para quando há vários
-    /// equipamentos iguais ou semelhantes a dar entrada de seguida (ex.: um lote entregue à mesma
-    /// escola). Mantém deliberadamente Escola, Tipo, Marca, Modelo, Estado, Aquisição e todas as
-    /// características específicas — o que costuma ser igual entre as várias unidades de um mesmo
-    /// lote — e limpa só o que é sempre próprio de cada unidade em concreto: Nº de Série, Nº de
-    /// Inventário e Observações.</summary>
+    /// equipamentos a dar entrada de seguida para a mesma escola. Mantém apenas os dados de
+    /// Aquisição/Localização/Estado (Escola, Data, Valor, Fornecedor, Estado) — esses sim razoáveis
+    /// de se repetirem num lote entregue à mesma escola no mesmo dia. Tudo o resto que identifica
+    /// ESTE equipamento em concreto (Nº de Série, Nº de Inventário, Tipo de Equipamento, Marca,
+    /// Modelo, e todas as Características Específicas, fixas e definidas pelo administrador) é
+    /// limpo — a lista de campos espelha exatamente a de UsarModelo_Click (a operação inversa: em
+    /// vez de preencher a partir de um modelo, aqui limpa-se tudo o que lá seria preenchido).</summary>
     private void PrepararParaNovoEquipamento()
     {
         _existente = null;
@@ -1211,6 +1244,64 @@ public partial class EquipamentoEditWindow : Window
         TxtNumeroInventario.Clear();
         TxtObservacoes.Clear();
 
+        TxtMarca.Clear();
+        TxtModelo.Clear();
+
+        // Também o próprio Tipo de Equipamento (a pedido, depois de confirmar que o uso real é
+        // vários equipamentos DIFERENTES para a mesma escola, não um lote do mesmo tipo/modelo) —
+        // isto colapsa o painel de Características Específicas de volta ao estado inicial (mesmo
+        // AtualizarGruposVisiveis já chamado no construtor para "equipamento == null"), e desativa
+        // "Usar Modelo..."/"Adicionar como Modelo..." até haver um Tipo escolhido outra vez.
+        CmbTipo.Text = "";
+        AtualizarGruposVisiveis(null);
+
+        CmbProcessador.Text = "";
+        TxtFamiliaProcessador.Clear();
+
+        // Mesma ordem (pai → AtualizarOpcoesDependentes → filho) já usada em UsarModelo_Click, pela
+        // mesma razão — limpar a combo-filha antes de recarregar as suas opções arrisca ficar com
+        // um valor por lá que já não corresponde às opções disponíveis.
+        CmbTipoMemoria.Text = "";
+        AtualizarOpcoesDependentes(CmbTipoMemoria, CmbMemoriaGB, "Tipo de Memória");
+        CmbMemoriaGB.Text = "";
+
+        CmbTipoDisco.Text = "";
+        AtualizarOpcoesDependentes(CmbTipoDisco, CmbTamanhoDisco, "Tipo de Disco");
+        CmbTamanhoDisco.Text = "";
+
+        CmbSistemaOperativo.Text = "";
+
+        CmbPolegadas.Text = "";
+        CmbTipoPainel.Text = "";
+        CmbResolucaoMonitor.Text = "";
+
+        CmbTipoImpressora.Text = "";
+        ChkImpressaoCor.IsChecked = false;
+        CmbLigacaoImpressora.Text = "";
+
+        CmbNumeroPortas.Text = "";
+        CmbVelocidadeRede.Text = "";
+        ChkGerivel.IsChecked = false;
+
+        CmbResolucaoCamera.Text = "";
+        CmbTipoCamera.Text = "";
+        ChkVisaoNoturna.IsChecked = false;
+
+        CmbLuminosidade.Text = "";
+        CmbResolucaoProjetor.Text = "";
+
+        TxtEspecificacoesAdicionais.Clear();
+
+        foreach (var campo in _camposCaracteristicasAdicionais.Values)
+        {
+            switch (campo)
+            {
+                case TextBox caixa: caixa.Text = ""; break;
+                case ComboBox combo: combo.Text = ""; break;
+            }
+        }
+
+        AtualizarObsolescencia();
         TxtNumeroSerie.Focus();
     }
 

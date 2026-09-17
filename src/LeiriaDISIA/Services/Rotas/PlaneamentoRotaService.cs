@@ -19,18 +19,27 @@ public record PedidoParaPlaneamento(PedidoIntervencao Pedido, string? Bloqueio, 
 
 /// <summary>Pré-visualização de uma rota calculada, antes de ser confirmada/guardada — ver
 /// <see cref="PlaneamentoRotaService.CalcularRotaAsync"/>.</summary>
+/// <param name="Passos">Passos de navegação do troço que termina NESTA paragem (desde a paragem
+/// anterior, ou desde a sede na primeira) — ver <see cref="PassoRota"/>.</param>
 public record ParagemPreVisualizacao(
-    PedidoIntervencao Pedido, Escola Escola, int Ordem, double DistanciaDesdeAnteriorKm, int DuracaoDesdeAnteriorMinutos);
+    PedidoIntervencao Pedido, Escola Escola, int Ordem, double DistanciaDesdeAnteriorKm, int DuracaoDesdeAnteriorMinutos,
+    List<PassoRota> Passos);
 
 /// <param name="DistanciaRegressoKm">Distância/duração do troço final de regresso à sede — já
 /// somadas em <see cref="DistanciaTotalKm"/>/<see cref="DuracaoTotalDeslocacaoMinutos"/>, mas
 /// expostas também em separado para a UI poder mostrar esse troço como linha própria na tabela
 /// (ver Views/PlanearRotaWindow.xaml.cs), em vez do total "aparecer" maior do que a soma das
 /// paragens visíveis sem nenhuma explicação.</param>
+/// <param name="CoordenadaSede">Repetida aqui (já resolvida a meio do cálculo da rota) para quem
+/// consumir este resultado — nomeadamente o mapa em Views/PlanearRotaWindow.xaml.cs — não ter de
+/// voltar a geocodificar a sede sozinho.</param>
+/// <param name="PassosRegresso">Passos de navegação do troço de regresso à sede, quando pedido —
+/// à parte de <see cref="Paragens"/> por não pertencerem a nenhuma paragem em concreto.</param>
 public record PreVisualizacaoRota(
     bool Sucesso, string? Erro, List<ParagemPreVisualizacao> Paragens,
     double DistanciaTotalKm, int DuracaoTotalDeslocacaoMinutos, int DuracaoTotalComIntervencoesMinutos, List<string> Avisos,
-    double? DistanciaRegressoKm = null, int? DuracaoRegressoMinutos = null);
+    double? DistanciaRegressoKm = null, int? DuracaoRegressoMinutos = null, CoordenadaGeografica? CoordenadaSede = null,
+    List<PassoRota>? PassosRegresso = null);
 
 /// <summary>
 /// Motor de negócio do Planeamento de Rotas: elegibilidade de pedidos, prevenção de duplicados,
@@ -197,7 +206,8 @@ public class PlaneamentoRotaService
             Escola: pedidosSelecionados[p.IndiceOriginal].Escola!,
             Ordem: i + 1,
             DistanciaDesdeAnteriorKm: p.DistanciaDesdeAnteriorKm,
-            DuracaoDesdeAnteriorMinutos: p.DuracaoDesdeAnteriorMinutos)).ToList();
+            DuracaoDesdeAnteriorMinutos: p.DuracaoDesdeAnteriorMinutos,
+            Passos: p.PassosDesdeAnterior ?? new())).ToList();
 
         var duracaoIntervencoesMinutos = pedidosSelecionados.Sum(p => p.DuracaoEstimadaMinutos ?? DuracaoPorOmissaoMinutos);
         var duracaoTotalComIntervencoes = otimizacao.DuracaoTotalMinutos + duracaoIntervencoesMinutos;
@@ -222,7 +232,7 @@ public class PlaneamentoRotaService
 
         return new PreVisualizacaoRota(true, null, paragens, otimizacao.DistanciaTotalKm,
             otimizacao.DuracaoTotalMinutos, duracaoTotalComIntervencoes, avisos,
-            otimizacao.DistanciaRegressoKm, otimizacao.DuracaoRegressoMinutos);
+            otimizacao.DistanciaRegressoKm, otimizacao.DuracaoRegressoMinutos, coordenadaSede, otimizacao.PassosRegresso);
     }
 
     /// <summary>Persiste o plano confirmado pelo utilizador. Volta a validar, no momento de gravar,

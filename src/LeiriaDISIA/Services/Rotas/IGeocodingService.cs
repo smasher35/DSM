@@ -20,30 +20,44 @@ public record ResultadoEnderecoInverso(bool Sucesso, string? Morada, string? Cod
     public static ResultadoEnderecoInverso Falha(string mensagem) => new(false, null, null, null, mensagem);
 }
 
-public record ResultadoDistancia(bool Sucesso, double? DistanciaKm, int? DuracaoMinutos, string? MensagemErro)
+/// <summary>Um único passo de navegação dentro de um troço da rota — ex.: "Vire à direita" na
+/// "N109", com a distância percorrida nesse troço específico. Vem diretamente da mesma chamada à
+/// API de Directions do OpenRouteService já feita para calcular a distância/duração do troço (ver
+/// <see cref="OpenRouteServiceClient.CalcularDistanciaAsync"/>) — não é um pedido extra.
+/// <see cref="NomeVia"/> vem vazio quando a via não tem nome mapeado (comum em rotundas, acessos e
+/// troços sem placa) — nesse caso mostra-se só a instrução, sem inventar um nome de estrada.</summary>
+public record PassoRota(string Instrucao, string? NomeVia, double DistanciaKm);
+
+public record ResultadoDistancia(bool Sucesso, double? DistanciaKm, int? DuracaoMinutos, string? MensagemErro, List<PassoRota>? Passos = null)
 {
-    public static ResultadoDistancia Ok(double distanciaKm, int duracaoMinutos) => new(true, distanciaKm, duracaoMinutos, null);
+    public static ResultadoDistancia Ok(double distanciaKm, int duracaoMinutos, List<PassoRota>? passos = null) =>
+        new(true, distanciaKm, duracaoMinutos, null, passos);
     public static ResultadoDistancia Falha(string mensagem) => new(false, null, null, mensagem);
 }
 
 /// <summary>Uma paragem de uma rota já otimizada — <see cref="IndiceOriginal"/> refere-se à posição
 /// da paragem na lista pedida a <see cref="IRoutingService.OtimizarRotaAsync"/>, para o chamador
 /// conseguir voltar a associá-la ao Pedido/Escola correto depois de reordenada.</summary>
-public record ParagemRotaOtimizada(int IndiceOriginal, double DistanciaDesdeAnteriorKm, int DuracaoDesdeAnteriorMinutos);
+public record ParagemRotaOtimizada(
+    int IndiceOriginal, double DistanciaDesdeAnteriorKm, int DuracaoDesdeAnteriorMinutos,
+    List<PassoRota>? PassosDesdeAnterior = null);
 
 /// <param name="DistanciaRegressoKm">Distância/duração do troço final de regresso à sede, quando
 /// pedido (ver <see cref="IRoutingService.OtimizarRotaAsync"/>) — já estão somadas em
 /// <see cref="DistanciaTotalKm"/>/<see cref="DuracaoTotalMinutos"/>, mas ficam também disponíveis em
 /// separado para a UI poder mostrar esse troço como uma linha própria, em vez de o total "aparecer"
 /// maior do que a soma das paragens visíveis sem explicação.</param>
+/// <param name="PassosRegresso">Passos de navegação do troço de regresso, no mesmo formato de
+/// <see cref="ParagemRotaOtimizada.PassosDesdeAnterior"/> — mantidos à parte por não pertencerem a
+/// nenhuma paragem em concreto (o regresso não é uma "paragem").</param>
 public record ResultadoOtimizacaoRota(
     bool Sucesso, List<ParagemRotaOtimizada> Paragens, double DistanciaTotalKm, int DuracaoTotalMinutos, string? MensagemErro,
-    double? DistanciaRegressoKm = null, int? DuracaoRegressoMinutos = null)
+    double? DistanciaRegressoKm = null, int? DuracaoRegressoMinutos = null, List<PassoRota>? PassosRegresso = null)
 {
     public static ResultadoOtimizacaoRota Ok(
         List<ParagemRotaOtimizada> paragens, double distanciaTotalKm, int duracaoTotalMinutos,
-        double? distanciaRegressoKm = null, int? duracaoRegressoMinutos = null) =>
-        new(true, paragens, distanciaTotalKm, duracaoTotalMinutos, null, distanciaRegressoKm, duracaoRegressoMinutos);
+        double? distanciaRegressoKm = null, int? duracaoRegressoMinutos = null, List<PassoRota>? passosRegresso = null) =>
+        new(true, paragens, distanciaTotalKm, duracaoTotalMinutos, null, distanciaRegressoKm, duracaoRegressoMinutos, passosRegresso);
 
     public static ResultadoOtimizacaoRota Falha(string mensagem) => new(false, new List<ParagemRotaOtimizada>(), 0, 0, mensagem);
 }

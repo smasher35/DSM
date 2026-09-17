@@ -1,10 +1,13 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using LeiriaDISIA.Models;
 using LeiriaDISIA.Services.Rotas;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Web.WebView2.Core;
 
 namespace LeiriaDISIA.Views;
 
@@ -166,6 +169,10 @@ public partial class PlanearRotaWindow : Window
         PainelAvisos.Visibility = Visibility.Collapsed;
         GridParagens.ItemsSource = null;
         BtnConfirmar.IsEnabled = false;
+
+        MapaRota.Visibility = Visibility.Collapsed;
+        TxtMapaRotaIndisponivel.Text = "Calcule a rota para ver aqui o mapa com as paragens.";
+        TxtMapaRotaIndisponivel.Visibility = Visibility.Visible;
     }
 
     private async void CalcularRota_Click(object sender, RoutedEventArgs e)
@@ -203,7 +210,7 @@ public partial class PlanearRotaWindow : Window
         decimal? limiteHoras = null;
         if (!string.IsNullOrWhiteSpace(TxtLimiteHoras.Text))
         {
-            if (!decimal.TryParse(TxtLimiteHoras.Text, NumberStyles.Number, CultureInfo.CurrentCulture, out var limite) || limite <= 0)
+            if (!TentarConverterHoras(TxtLimiteHoras.Text, out var limite) || limite <= 0)
             {
                 MessageBox.Show("O limite de horas da equipa deve ser um número positivo (ex.: 7 ou 7,5).", "Valor inválido", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
@@ -226,6 +233,7 @@ public partial class PlanearRotaWindow : Window
             }
 
             MostrarPreVisualizacao(_preVisualizacaoAtual);
+            _ = AtualizarMapaRotaAsync(_preVisualizacaoAtual, ChkRegressarSede.IsChecked == true);
 
             // A geocodificação de escolas que ainda não tinham coordenadas foi gravada dentro de
             // CalcularRotaAsync — recarrega a grelha da esquerda para refletir a distância à sede
@@ -240,6 +248,19 @@ public partial class PlanearRotaWindow : Window
         {
             DefinirATrabalhar(false, null);
         }
+    }
+
+    /// <summary>Converte o texto do "Limite de Horas da Equipa" para decimal, aceitando tanto
+    /// vírgula como ponto como separador decimal, independentemente da cultura configurada na
+    /// máquina — corrige um bug em que "3,5" era lido como "35": com <c>NumberStyles.Number</c> (que
+    /// inclui separador de milhares) e a cultura do sistema a usar "." como separador decimal, a
+    /// vírgula era interpretada como separador de milhares e simplesmente removida. Não permite
+    /// separadores de milhares aqui de propósito — não fazem sentido para um número de horas tão
+    /// pequeno, e é precisamente essa permissão que causava o problema.</summary>
+    private static bool TentarConverterHoras(string texto, out decimal valor)
+    {
+        var normalizado = texto.Trim().Replace(',', '.');
+        return decimal.TryParse(normalizado, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out valor);
     }
 
     private void CarregarPedidosSemLimparPreVisualizacao()
@@ -313,6 +334,91 @@ public partial class PlanearRotaWindow : Window
         BtnConfirmar.IsEnabled = true;
     }
 
+    /// <summary>Mostra, num mapa incorporado (WebView2 + Google Maps "embed" sem chave de API —
+    /// mesma técnica de Views/EscolaEditWindow.xaml.cs), a rota completa com todas as paragens
+    /// assinaladas na ordem calculada: sede → 1ª paragem → 2ª → … → última, e de volta à sede se
+    /// <paramref name="regressarSede"/>. Reutiliza as coordenadas já resolvidas durante o cálculo
+    /// da rota (<see cref="PreVisualizacaoRota.CoordenadaSede"/> e <see cref="Escola.Latitude"/>/
+    /// <see cref="Escola.Longitude"/> de cada paragem) — não volta a geocodificar nada.</summary>
+    private async Task AtualizarMapaRotaAsync(PreVisualizacaoRota preVisualizacao, bool regressarSede)
+    {
+        var url = ConstruirUrlMapaRota(preVisualizacao, regressarSede);
+        if (url == null)
+        {
+            MapaRota.Visibility = Visibility.Collapsed;
+            TxtMapaRotaIndisponivel.Text = "Sem coordenadas suficientes para desenhar a rota no mapa.";
+            TxtMapaRotaIndisponivel.Visibility = Visibility.Visible;
+            return;
+        }
+
+        try
+        {
+            await MapaRota.EnsureCoreWebView2Async();
+
+            // Mesma necessidade de embrulhar num <iframe> já documentada em
+            // Views/EscolaEditWindow.xaml.cs — a API de "embed" do Google Maps não aceita ser
+            // carregada diretamente como documento de topo.
+            var urlParaAtributoHtml = url.Replace("&", "&amp;").Replace("\"", "&quot;");
+            var html = $$"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8" />
+                    <style>
+                        html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+                        iframe { width: 100%; height: 100%; border: 0; }
+                    </style>
+                </head>
+                <body>
+                    <iframe src="{{urlParaAtributoHtml}}" allowfullscreen loading="lazy"></iframe>
+                </body>
+                </html>
+                """;
+
+            MapaRota.CoreWebView2.NavigateToString(html);
+            TxtMapaRotaIndisponivel.Visibility = Visibility.Collapsed;
+            MapaRota.Visibility = Visibility.Visible;
+        }
+        catch (Exception ex)
+        {
+            MapaRota.Visibility = Visibility.Collapsed;
+            TxtMapaRotaIndisponivel.Text = "Não foi possível carregar o mapa.\n" +
+                "Verifique a ligação à internet ou se o \"WebView2 Runtime\" está instalado neste computador.\n\n" +
+                $"({ex.Message})";
+            TxtMapaRotaIndisponivel.Visibility = Visibility.Visible;
+        }
+    }
+
+    /// <summary>Constrói o URL de direções do Google Maps (formato "clássico", sem chave de API —
+    /// suporta várias paragens encadeando "+to:" entre coordenadas, ao contrário do formato de
+    /// marcador único usado em EscolaEditWindow). Devolve null quando faltam coordenadas (sede não
+    /// geocodificada, ou nenhuma paragem com Latitude/Longitude preenchidas).</summary>
+    private static string? ConstruirUrlMapaRota(PreVisualizacaoRota preVisualizacao, bool regressarSede)
+    {
+        if (preVisualizacao.CoordenadaSede is not { } sede) return null;
+
+        var paragensComCoordenadas = preVisualizacao.Paragens
+            .Where(p => p.Escola.Latitude != null && p.Escola.Longitude != null)
+            .ToList();
+        if (paragensComCoordenadas.Count == 0) return null;
+
+        static string Coord(double lat, double lon) =>
+            $"{lat.ToString(CultureInfo.InvariantCulture)},{lon.ToString(CultureInfo.InvariantCulture)}";
+
+        var pontos = new List<string> { Coord(sede.Latitude, sede.Longitude) };
+        pontos.AddRange(paragensComCoordenadas.Select(p => Coord(p.Escola.Latitude!.Value, p.Escola.Longitude!.Value)));
+        if (regressarSede) pontos.Add(Coord(sede.Latitude, sede.Longitude));
+
+        var origem = pontos[0];
+        var destino = pontos[^1];
+        var intermedias = pontos.Skip(1).Take(pontos.Count - 2).ToList();
+        var daddr = intermedias.Count == 0
+            ? destino
+            : string.Join("", intermedias.Select(p => $"{p}+to:")) + destino;
+
+        return $"https://maps.google.com/maps?saddr={origem}&daddr={daddr}&output=embed";
+    }
+
     private async void Confirmar_Click(object sender, RoutedEventArgs e)
     {
         if (_preVisualizacaoAtual is not { Sucesso: true }) return;
@@ -326,7 +432,7 @@ public partial class PlanearRotaWindow : Window
         if (confirmar != MessageBoxResult.Yes) return;
 
         var horaPartida = TimeSpan.ParseExact(TxtHoraPartida.Text, @"hh\:mm", CultureInfo.InvariantCulture);
-        decimal? limiteHoras = decimal.TryParse(TxtLimiteHoras.Text, NumberStyles.Number, CultureInfo.CurrentCulture, out var l) ? l : null;
+        decimal? limiteHoras = TentarConverterHoras(TxtLimiteHoras.Text, out var l) ? l : null;
 
         DefinirATrabalhar(true, "A guardar o plano, aguarde…");
         try
@@ -372,12 +478,26 @@ public partial class PlanearRotaWindow : Window
 
         var paragensOrdenadas = plano.Paragens.OrderBy(pp => pp.Ordem).ToList();
 
+        // Lista única, contínua, com os passos de navegação de toda a viagem por ordem (sede → 1ª
+        // paragem → 2ª → … → última, e regresso à sede se aplicável) — ver PlanoRotaPdfService,
+        // secção "Resumo da Rota". Vem da pré-visualização ainda em memória (_preVisualizacaoAtual),
+        // não voltando a pedir nada ao serviço de rotas; se por algum motivo já não existir (não
+        // devia acontecer neste ponto do fluxo), o PDF simplesmente não mostra essa secção.
+        var passosRota = _preVisualizacaoAtual?.Paragens.SelectMany(p => p.Passos)
+            .Concat(_preVisualizacaoAtual.PassosRegresso ?? new())
+            .ToList();
+
+        // WebView2 só pode ser acedido a partir da thread de UI — por isso a captura acontece aqui,
+        // antes do Task.Run abaixo, que corre em segundo plano; o PDF recebe só os bytes já
+        // capturados (uma imagem), nunca o controlo WebView2 em si.
+        var imagemMapa = await CapturarMapaAsync();
+
         var pastaDestino = System.IO.Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LeiriaDISIA", "PlanosRota");
         System.IO.Directory.CreateDirectory(pastaDestino);
         var caminhoPdf = System.IO.Path.Combine(pastaDestino, $"PlanoRota_{plano.Data:yyyyMMdd}_{plano.Id}.pdf");
 
-        await Task.Run(() => new PlanoRotaPdfService().GerarPdf(caminhoPdf, plano, paragensOrdenadas));
+        await Task.Run(() => new PlanoRotaPdfService().GerarPdf(caminhoPdf, plano, paragensOrdenadas, imagemMapa, passosRota));
 
         plano.CaminhoPdf = caminhoPdf;
         await App.Db.SaveChangesAsync();
@@ -385,6 +505,28 @@ public partial class PlanearRotaWindow : Window
         var abrir = MessageBox.Show("Deseja abrir o PDF gerado agora?", "PDF gerado", MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (abrir == MessageBoxResult.Yes)
             Process.Start(new ProcessStartInfo(caminhoPdf) { UseShellExecute = true });
+    }
+
+    /// <summary>Captura o mapa atualmente mostrado (ver AtualizarMapaRotaAsync) como imagem PNG,
+    /// para incluir no PDF do plano — ver GerarEGuardarPdfAsync, que a chama antes de gerar o PDF
+    /// em segundo plano. Devolve null quando não há mapa visível (ex.: rota nunca chegou a ser
+    /// calculada com sucesso, ou faltavam coordenadas) — nesse caso o PDF simplesmente não mostra a
+    /// secção do mapa, tal como já acontecia sem esta imagem.</summary>
+    private async Task<byte[]?> CapturarMapaAsync()
+    {
+        if (MapaRota.Visibility != Visibility.Visible || MapaRota.CoreWebView2 == null) return null;
+
+        try
+        {
+            using var stream = new MemoryStream();
+            await MapaRota.CoreWebView2.CapturePreviewAsync(CoreWebView2CapturePreviewImageFormat.Png, stream);
+            return stream.ToArray();
+        }
+        catch
+        {
+            // Uma falha a capturar o mapa não deve impedir a geração do resto do PDF.
+            return null;
+        }
     }
 
     private void DefinirATrabalhar(bool aTrabalhar, string? mensagem)

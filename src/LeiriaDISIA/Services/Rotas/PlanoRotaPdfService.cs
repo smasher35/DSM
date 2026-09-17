@@ -16,7 +16,8 @@ namespace LeiriaDISIA.Services.Rotas;
 /// </summary>
 public class PlanoRotaPdfService
 {
-    public void GerarPdf(string caminhoDestino, PlanoRota plano, List<PlanoRotaParagem> paragensOrdenadas)
+    public void GerarPdf(string caminhoDestino, PlanoRota plano, List<PlanoRotaParagem> paragensOrdenadas,
+        byte[]? imagemMapa = null, List<PassoRota>? passosRota = null)
     {
         QuestPDF.Settings.License = LicenseType.Community;
 
@@ -109,6 +110,34 @@ public class PlanoRotaPdfService
                         Resumo(plano.PontoRegresso == EnderecoSedeMunicipio.Morada ? "Sede do Município" : "Sem regresso", "Regresso", 1.6f);
                     });
 
+                    // Mapa com a rota traçada e as paragens assinaladas (captura do mesmo mapa já
+                    // mostrado na pré-visualização — ver AtualizarMapaRotaAsync/CapturarMapaAsync em
+                    // Views/PlanearRotaWindow.xaml.cs), com o resumo das estradas do trajeto ao lado
+                    // direito (a pedido, para quem não conhece bem o território — ver
+                    // ComposeResumoPassos). Qualquer um dos dois, em falta (captura do mapa falhou,
+                    // ou a rota não tem troços com via mapeada), a secção correspondente
+                    // simplesmente não aparece, sem deixar um espaço em branco por preencher; com
+                    // os dois em falta, a linha toda desaparece. A agregação por estrada acontece já
+                    // aqui (não dentro de ComposeResumoPassos) precisamente para esta verificação
+                    // bater certo com o que lá é desenhado.
+                    var estradasRota = passosRota != null ? AgruparPorEstrada(passosRota) : new();
+                    if (imagemMapa != null || estradasRota.Count > 0)
+                    {
+                        mainCol.Item().PaddingBottom(10).Row(row =>
+                        {
+                            if (imagemMapa != null)
+                            {
+                                row.RelativeItem(1.1f).MaxHeight(220).Image(imagemMapa).FitArea();
+                            }
+
+                            if (estradasRota.Count > 0)
+                            {
+                                if (imagemMapa != null) row.ConstantItem(12);
+                                row.RelativeItem(1.5f).Element(c => ComposeResumoPassos(c, estradasRota));
+                            }
+                        });
+                    }
+
                     // Tabela de paragens
                     mainCol.Item().Table(table =>
                     {
@@ -183,5 +212,80 @@ public class PlanoRotaPdfService
                 });
             });
         }).GeneratePdf(caminhoDestino);
+    }
+
+    /// <summary>Resumo simplificado da rota — só os números das estradas usadas em cada troço, com
+    /// a distância percorrida em cada uma (ex.: "1. N109 — 3.2 km"), sem as instruções de navegação
+    /// palavra-a-palavra ("vire à esquerda", etc.), que se revelaram detalhe a mais para o que se
+    /// pretendia aqui. Recebe a lista já agregada por <see cref="AgruparPorEstrada"/> (chamado antes
+    /// deste método, para a decisão de mostrar ou não esta secção bater certo com o que aqui é
+    /// desenhado) — troços consecutivos da mesma via já vêm juntos numa só entrada, e troços sem
+    /// nome de via mapeado (rotundas, acessos, etc.) já não constam. O essencial aqui é dar uma
+    /// ideia das estradas principais do trajeto, não uma reconciliação exata da distância total
+    /// (essa já está nos cartões de resumo acima). Vem da mesma chamada à API de Directions já
+    /// feita para calcular as distâncias apresentadas na tabela de paragens (ver
+    /// OpenRouteServiceClient.CalcularDistanciaAsync) — não é um pedido extra nem uma segunda fonte
+    /// de dados que possa divergir da tabela.
+    ///
+    /// Duas colunas lado a lado em vez de uma única lista vertical — para uma rota com muitos
+    /// troços de estrada (ex.: 40 entradas), uma só coluna estreita ficava demasiado alta e acabava
+    /// por transbordar para a página seguinte, mesmo havendo largura de página de sobra à direita
+    /// por preencher. Numeração contínua (1..metade na coluna esquerda, o resto na direita, nunca
+    /// reiniciada a meio) — não é uma lista nova a começar, é a mesma lista só dividida visualmente
+    /// ao meio.</summary>
+    private static void ComposeResumoPassos(IContainer container, List<(string NomeVia, double DistanciaKm)> estradas)
+    {
+        var metade = (estradas.Count + 1) / 2; // arredondado para cima — a coluna esquerda fica com 1 a mais quando o total é ímpar
+        var colunaEsquerda = estradas.Take(metade).ToList();
+        var colunaDireita = estradas.Skip(metade).ToList();
+
+        void ComposeColuna(ColumnDescriptor col, List<(string NomeVia, double DistanciaKm)> itens, int primeiroNumero)
+        {
+            col.Spacing(4);
+            for (var i = 0; i < itens.Count; i++)
+            {
+                var (nomeVia, distanciaKm) = itens[i];
+                col.Item().Row(linha =>
+                {
+                    linha.ConstantItem(16).Text($"{primeiroNumero + i}.").FontSize(8.5f).Bold().FontColor(Colors.Grey.Darken1);
+                    linha.RelativeItem().Text(texto =>
+                    {
+                        texto.Span(nomeVia).FontSize(8.5f).FontColor(Colors.Grey.Darken3);
+                        texto.Span($" — {distanciaKm:0.#} km").FontSize(8.5f).FontColor(Colors.Grey.Darken1);
+                    });
+                });
+            }
+        }
+
+        container.Background("#F1F5F9").Padding(10).Column(col =>
+        {
+            col.Item().PaddingBottom(6).Text("Resumo da Rota").FontSize(10).Bold().FontColor(Colors.Blue.Darken2);
+
+            col.Item().Row(row =>
+            {
+                row.RelativeItem().Column(c => ComposeColuna(c, colunaEsquerda, 1));
+                row.ConstantItem(14);
+                row.RelativeItem().Column(c => ComposeColuna(c, colunaDireita, metade + 1));
+            });
+        });
+    }
+
+    /// <summary>Junta troços consecutivos com o mesmo nome de via numa só entrada, somando as
+    /// distâncias — ver <see cref="ComposeResumoPassos"/>. Descarta troços sem nome de via mapeado.</summary>
+    private static List<(string NomeVia, double DistanciaKm)> AgruparPorEstrada(List<PassoRota> passos)
+    {
+        var resultado = new List<(string NomeVia, double DistanciaKm)>();
+
+        foreach (var passo in passos)
+        {
+            if (string.IsNullOrWhiteSpace(passo.NomeVia)) continue;
+
+            if (resultado.Count > 0 && resultado[^1].NomeVia == passo.NomeVia)
+                resultado[^1] = (passo.NomeVia, resultado[^1].DistanciaKm + passo.DistanciaKm);
+            else
+                resultado.Add((passo.NomeVia, passo.DistanciaKm));
+        }
+
+        return resultado;
     }
 }

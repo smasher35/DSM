@@ -382,16 +382,33 @@
              janela independentemente do tamanho do conteúdo rolável (ver comentário no topo do
              ficheiro). Ocupa toda a largura da janela (incluindo a coluna do histórico), para
              ficar coerente com as restantes janelas de edição da aplicação. -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
-            <Button Content="Cancelar" Click="Cancelar_Click" Margin="0,0,8,0" Padding="16,8" />
-            <!-- Pensado para quando há muito equipamento igual/parecido a dar entrada de seguida
-                 para a mesma escola (ver PrepararParaNovoEquipamento em EquipamentoEditWindow.xaml.cs)
-                 — grava o equipamento atual e mantém a janela aberta já pronta para o próximo,
-                 em vez de ter de a reabrir sempre. -->
-            <Button x:Name="BtnGuardarNovo" Content="💾 Guardar e Novo" Click="GuardarNovo_Click" Padding="16,8" Margin="0,0,8,0"
-                    Background="#15803D" Foreground="White" BorderThickness="0"
-                    ToolTip="Grava este equipamento e mantém a janela aberta, pronta para inserir o seguinte" />
-            <Button Content="Guardar" Style="{StaticResource PrimaryButton}" Click="Guardar_Click" Padding="16,8" />
-        </StackPanel>
+        <Grid Grid.Row="1" Margin="0,20,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Confirmação depois de "💾 Guardar e Novo" (ver GuardarNovo_Click/MostrarConfirmacaoGuardado
+                 em EquipamentoEditWindow.xaml.cs) — como a janela não fecha (ao contrário do "Guardar"
+                 normal), sem isto não havia nenhuma confirmação visível de que o equipamento tinha
+                 mesmo ficado gravado. Desaparece sozinha ao fim de alguns segundos, ou assim que se
+                 começar a preencher o equipamento seguinte. -->
+            <Border x:Name="PainelConfirmacaoGuardado" Grid.Column="0" Background="#DCFCE7" CornerRadius="6"
+                    Padding="12,8" HorizontalAlignment="Left" VerticalAlignment="Center" Visibility="Collapsed">
+                <TextBlock x:Name="TxtConfirmacaoGuardado" FontWeight="SemiBold" Foreground="#15803D" TextWrapping="Wrap" />
+            </Border>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Cancelar" Click="Cancelar_Click" Margin="0,0,8,0" Padding="16,8" />
+                <!-- Pensado para quando há muito equipamento igual/parecido a dar entrada de seguida
+                     para a mesma escola (ver PrepararParaNovoEquipamento em EquipamentoEditWindow.xaml.cs)
+                     — grava o equipamento atual e mantém a janela aberta já pronta para o próximo,
+                     em vez de ter de a reabrir sempre. -->
+                <Button x:Name="BtnGuardarNovo" Content="💾 Guardar e Novo" Click="GuardarNovo_Click" Padding="16,8" Margin="0,0,8,0"
+                        Background="#15803D" Foreground="White" BorderThickness="0"
+                        ToolTip="Grava este equipamento e mantém a janela aberta, pronta para inserir o seguinte" />
+                <Button Content="Guardar" Style="{StaticResource PrimaryButton}" Click="Guardar_Click" Padding="16,8" />
+            </StackPanel>
+        </Grid>
     </Grid>
 </Window>
