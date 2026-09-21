@@ -154,6 +154,12 @@ public partial class PedidoEditWindow : Window
             pedido = App.Db.PedidosIntervencao.First(p => p.Id == _existente.Id);
         }
 
+        // Capturado antes de se mudar o Estado abaixo — para detetar a transição de/para "Em
+        // Espera" (ver bloco mais abaixo). Para um pedido novo, é o valor por omissão do próprio
+        // modelo (EstadoPedido.EmAndamento) — correto para este efeito, já que nunca esteve "Em
+        // Espera" antes de ser gravado pela primeira vez.
+        var estadoAnterior = pedido.Estado;
+
         pedido.DataPedido = DpData.SelectedDate ?? DateTime.Today;
         pedido.EscolaId = escola.Id;
         pedido.AgrupamentoId = escola.AgrupamentoId;
@@ -167,6 +173,20 @@ public partial class PedidoEditWindow : Window
         pedido.ObrigatorioNaRota = ChkObrigatorioNaRota.IsChecked == true;
         if (estado == EstadoPedido.Concluido && pedido.DataConclusao == null)
             pedido.DataConclusao = DateTime.Today;
+
+        // Rastreio do tempo passado "Em Espera" (ver Models/PedidoIntervencao.cs,
+        // DataInicioEsperaAtual/DiasEmEsperaAcumulados) — para a estatística de "tempo médio até à
+        // conclusão" em Views/PedidosWindow.xaml.cs conseguir excluir este tempo, que não é da
+        // responsabilidade da DISIA.
+        if (estado == EstadoPedido.EmEspera && estadoAnterior != EstadoPedido.EmEspera)
+        {
+            pedido.DataInicioEsperaAtual = DateTime.Today;
+        }
+        else if (estado != EstadoPedido.EmEspera && estadoAnterior == EstadoPedido.EmEspera && pedido.DataInicioEsperaAtual != null)
+        {
+            pedido.DiasEmEsperaAcumulados += (int)(DateTime.Today - pedido.DataInicioEsperaAtual.Value).TotalDays;
+            pedido.DataInicioEsperaAtual = null;
+        }
 
         App.Db.SaveChanges();
         Sucesso = true;

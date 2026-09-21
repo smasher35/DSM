@@ -56,14 +56,21 @@ public partial class IntervencaoEditWindow : Window
     private readonly ObservableCollection<LinhaEquipamento> _abatidos = new();
     private readonly ObservableCollection<LinhaEquipamento> _novosEntregues = new();
 
-    /// <summary>Ids de EquipamentoRecolhido devolvidos à escola (botão "Devolver à Escola" — ver
-    /// DevolverRecolhido_Click) durante esta sessão de edição — a mudança de Estado/DataEntrega já
-    /// é gravada de imediato ali, mas a ligação a ESTA intervenção em concreto
-    /// (EquipamentoRecolhido.IntervencaoEntregaId) só pode ser gravada depois de a própria
-    /// intervenção ter um Id válido, o que só acontece quando a intervenção é nova e ainda não foi
-    /// guardada nenhuma vez — ver Guardar(). Para uma intervenção já existente (_intervencaoIdGuardada
-    /// já tem valor), a ligação é gravada logo ali, sem precisar de esperar.</summary>
-    private readonly List<int> _devolvidosNestaSessao = new();
+    /// <summary>Equipamento devolvido à escola durante esta sessão de edição (botão "Devolver à
+    /// Escola" — ver DevolverRecolhido_Click), ainda por confirmar. A alteração ao Estado/
+    /// DataEntrega do registo (e ao Estado do respetivo Equipamento) fica só em memória, nas
+    /// entidades já rastreadas por App.Db — NÃO se chama SaveChanges nesse clique — até esta
+    /// intervenção ser gravada com sucesso (ver Guardar()), que é o único momento em que a
+    /// devolução é persistida, em conjunto com o resto da intervenção. Bug corrigido 18/09/2026:
+    /// antes disto, a devolução era gravada de imediato no clique, pelo que cancelar a intervenção
+    /// a seguir (Cancelar_Click, X da janela, etc.) não desfazia nada — o equipamento ficava
+    /// "Entregue"/"Em Serviço" na base de dados órfão de qualquer intervenção, sem sequer aparecer
+    /// depois em "Equipamento Recolhido". Se a janela fechar sem gravar, estas entidades são
+    /// recarregadas a partir da base de dados (ver ReverterDevolucoesPendentes, chamado no evento
+    /// Closed) para desfazer a alteração em memória — também evita que uma gravação não
+    /// relacionada, feita mais tarde noutra janela, arraste esta alteração pendente para a base de
+    /// dados (App.Db é um único DbContext, partilhado por toda a aplicação).</summary>
+    private readonly List<EquipamentoRecolhido> _devolucoesPendentes = new();
 
     public bool Sucesso { get; private set; }
 
@@ -97,6 +104,12 @@ public partial class IntervencaoEditWindow : Window
         // identidade da aplicacao - ver Services/TitleBarService.cs. A janela continua nativa;
         // mover, minimizar, maximizar, fechar e o comportamento modal nao sao afetados.
         SourceInitialized += (_, _) => TitleBarService.AplicarCorSobria(this);
+
+        // Garante que uma devolução feita com "Devolver à Escola" mas nunca confirmada com
+        // Guardar() é desfeita, seja qual for a forma como a janela fecha (botão "Cancelar", X da
+        // janela, Alt+F4, Esc) — ver o comentário completo em _devolucoesPendentes. Depois de um
+        // Guardar() bem-sucedido a lista já fica vazia, pelo que esta chamada não faz nada.
+        Closed += (_, _) => ReverterDevolucoesPendentes();
 
         _existente = intervencao;
         _pedidoOrigem = pedidoOrigem;
@@ -422,10 +435,18 @@ public partial class IntervencaoEditWindow : Window
             return;
         }
 
+        // Ids de registos já marcados como "Devolvido" nesta sessão (ver DevolverRecolhido_Click),
+        // mas ainda por gravar — a consulta abaixo vai à base de dados, que ainda não sabe da
+        // devolução (só é gravada em Guardar(), ver _devolucoesPendentes), por isso exclui-se aqui
+        // manualmente para a lista não continuar a mostrar equipamento que acabou de ser devolvido.
+        var idsPendentesDevolucao = _devolucoesPendentes.Select(r => r.Id).ToHashSet();
+
         var recolhidos = App.Db.EquipamentosRecolhidos
             .Include(r => r.Equipamento)
             .Where(r => r.DataEntrega == null && r.Equipamento != null && r.Equipamento.EscolaId == escola.Id)
             .OrderBy(r => r.DataRecolha)
+            .ToList()
+            .Where(r => !idsPendentesDevolucao.Contains(r.Id))
             .ToList();
 
         foreach (var r in recolhidos)
@@ -462,17 +483,30 @@ public partial class IntervencaoEditWindow : Window
         if (registo.Equipamento != null)
             registo.Equipamento.Estado = EstadosEquipamento.EmServico;
 
-        // Liga esta devolução à intervenção atual, para aparecer no respetivo relatório PDF (ver
-        // Services/IntervencaoPdfService.cs) — se a intervenção já tiver Id (já foi guardada pelo
-        // menos uma vez), grava-se já; senão, fica em memória até Guardar() atribuir um Id à
-        // intervenção nova (ver _devolvidosNestaSessao e o comentário completo lá).
-        if (_intervencaoIdGuardada is { } idJaGuardada)
-            registo.IntervencaoEntregaId = idJaGuardada;
-        else
-            _devolvidosNestaSessao.Add(registo.Id);
-
-        App.Db.SaveChanges();
+        // A devolução só é persistida quando esta intervenção for gravada com sucesso (ver
+        // Guardar(), que liga o registo à intervenção via IntervencaoEntregaId e só aí chama
+        // SaveChanges) — NÃO se chama SaveChanges aqui. Ver o comentário completo em
+        // _devolucoesPendentes sobre porquê (bug corrigido 18/09/2026: gravar de imediato aqui
+        // deixava a devolução por desfazer se a intervenção fosse depois cancelada).
+        _devolucoesPendentes.Add(registo);
         AtualizarRecolhidosDaEscola();
+    }
+
+    /// <summary>Desfaz, em memória, as devoluções feitas com "Devolver à Escola"
+    /// (DevolverRecolhido_Click) durante esta sessão de edição mas nunca confirmadas com Guardar()
+    /// — recarrega cada registo e respetivo equipamento a partir da base de dados, anulando a
+    /// alteração ainda não gravada. Chamado sempre que a janela fecha (evento Closed, ver
+    /// construtor); depois de um Guardar() bem-sucedido a lista já está vazia, pelo que não há nada
+    /// a reverter. Ver o comentário completo em _devolucoesPendentes.</summary>
+    private void ReverterDevolucoesPendentes()
+    {
+        foreach (var registo in _devolucoesPendentes)
+        {
+            App.Db.Entry(registo).Reload();
+            if (registo.Equipamento != null)
+                App.Db.Entry(registo.Equipamento).Reload();
+        }
+        _devolucoesPendentes.Clear();
     }
 
     /// <summary>Nenhum equipamento (reparado no local, a recolher ou a abater) pode ser adicionado
@@ -683,18 +717,16 @@ public partial class IntervencaoEditWindow : Window
         _intervencaoIdGuardada = intervencao.Id;
         BtnImprimirPdf.IsEnabled = true;
 
-        // Liga agora as devoluções feitas durante esta sessão de edição enquanto a intervenção
-        // ainda era nova e sem Id (ver DevolverRecolhido_Click) — para uma intervenção que já
-        // existia, isto já tinha sido gravado logo ali, e _devolvidosNestaSessao fica vazia.
-        if (_devolvidosNestaSessao.Count > 0)
+        // Confirma agora as devoluções feitas com "Devolver à Escola" durante esta sessão de
+        // edição (ver DevolverRecolhido_Click) — só chegam aqui, e só ficam realmente gravadas na
+        // base de dados, depois de a intervenção em si ter sido gravada com sucesso (ver o
+        // comentário completo em _devolucoesPendentes).
+        if (_devolucoesPendentes.Count > 0)
         {
-            var registosDevolvidos = App.Db.EquipamentosRecolhidos
-                .Where(r => _devolvidosNestaSessao.Contains(r.Id))
-                .ToList();
-            foreach (var registo in registosDevolvidos)
+            foreach (var registo in _devolucoesPendentes)
                 registo.IntervencaoEntregaId = intervencao.Id;
             App.Db.SaveChanges();
-            _devolvidosNestaSessao.Clear();
+            _devolucoesPendentes.Clear();
         }
 
         foreach (var linha in _intervencionados.Where(l => l.PersistedId == null))

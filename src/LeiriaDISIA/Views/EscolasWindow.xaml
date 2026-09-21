@@ -1,6 +1,7 @@
 <Window x:Class="LeiriaDISIA.Views.EscolasWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
         Title="Escolas e Jardins de Infância — Gestão DISIA" WindowState="Maximized"
         Background="{StaticResource BrushBackground}" FontFamily="Segoe UI">
     <DockPanel Margin="24">
@@ -18,15 +19,289 @@
             </StackPanel>
         </Border>
 
-        <!-- Grid com linhas "*" (DataGrid) + Auto (dica), em vez de StackPanel, para a lista de
-             escolas ocupar sempre todo o espaço livre até ao fundo da janela (mesmo padrão do
-             módulo Atividades DISIA — ver Views/DisiaWindow.xaml). -->
+        <!-- Grid com 3 linhas: cabeçalho (cartões-resumo + gauges, dentro de um ScrollViewer com
+             scroll próprio — ver ScrollCabecalho_Loaded em EscolasWindow.xaml.cs) + "*" (DataGrid,
+             com MinHeight garantido) + Auto (dica) — mesmo padrão já usado no módulo Equipamentos
+             (ver Views/EquipamentosWindow.xaml), para este módulo passar a dar a mesma informação
+             instantânea, com o mesmo aspeto visual, que os restantes. Ao contrário de Equipamentos
+             e Intervenções, não há aqui um "Modo Compacto" com barras finas alternativas aos
+             gauges — o ScrollViewer já garante que a lista de escolas por baixo nunca fica
+             esmagada, mesmo em ecrãs pequenos, sem duplicar todo o painel numa segunda versão. -->
         <Grid>
             <Grid.RowDefinitions>
-                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" MinHeight="180" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
-            <Border Grid.Row="0" Style="{StaticResource CardStyle}">
+
+            <ScrollViewer x:Name="ScrollCabecalho" Grid.Row="0" Background="Transparent"
+                          VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel>
+
+            <!-- Linha 1: cartões-resumo. Calculados em AtualizarResumo() a partir da MESMA lista já
+                 filtrada que alimenta a DataGrid (_visiveis), pelo que respeitam automaticamente o
+                 filtro de agrupamento/pesquisa ativo. -->
+            <UniformGrid Columns="5" Rows="1" Margin="0,0,0,12">
+                <Border Style="{StaticResource CardStyle}" Margin="0,0,10,0">
+                    <StackPanel>
+                        <TextBlock Text="🏫" FontSize="20" Margin="0,0,0,4" />
+                        <TextBlock x:Name="TxtTotalEscolas" Text="0" Style="{StaticResource KpiValueStyle}" />
+                        <TextBlock Text="Total de Escolas" Style="{StaticResource KpiLabelStyle}" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource CardStyle}" Margin="0,0,10,0">
+                    <StackPanel>
+                        <TextBlock Text="🎓" FontSize="20" Margin="0,0,0,4" />
+                        <TextBlock x:Name="TxtTotalAlunos" Text="0" Style="{StaticResource KpiValueStyle}" />
+                        <TextBlock Text="Total de Alunos" Style="{StaticResource KpiLabelStyle}" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource CardStyle}" Margin="0,0,10,0">
+                    <StackPanel>
+                        <TextBlock Text="🏛️" FontSize="20" Margin="0,0,0,4" />
+                        <TextBlock x:Name="TxtTotalAgrupamentos" Text="0" Style="{StaticResource KpiValueStyle}" />
+                        <TextBlock Text="Agrupamentos Representados" Style="{StaticResource KpiLabelStyle}" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource CardStyle}" Margin="0,0,10,0"
+                        ToolTip="Escolas atualmente no estado 'Em Obras' — entre as visíveis segundo o filtro/pesquisa ativos">
+                    <StackPanel>
+                        <TextBlock Text="🚧" FontSize="20" Margin="0,0,0,4" />
+                        <TextBlock x:Name="TxtTotalEmObras" Text="0" Style="{StaticResource KpiValueStyle}" />
+                        <TextBlock Text="Em Obras" Style="{StaticResource KpiLabelStyle}" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource CardStyle}"
+                        ToolTip="Escolas sem coordenadas (Latitude/Longitude) — não podem ser incluídas no Planeamento de Rota nem aparecer no mapa da própria ficha, até serem geocodificadas">
+                    <StackPanel>
+                        <TextBlock Text="📍" FontSize="20" Margin="0,0,0,4" />
+                        <TextBlock x:Name="TxtTotalPorGeocodificar" Text="0" Style="{StaticResource KpiValueStyle}" />
+                        <TextBlock Text="Por Geocodificar" Style="{StaticResource KpiLabelStyle}" />
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+
+            <!-- Linha 2: destaques cruzados com outros módulos — mesmo padrão/estilo dos painéis
+                 "Mais Intervencionado" do módulo Equipamentos (ver Views/EquipamentosWindow.xaml),
+                 cada um só visível quando há pelo menos um valor > 0 a apresentar (ver
+                 AtualizarDestaques em EscolasWindow.xaml.cs). -->
+            <UniformGrid Columns="3" Rows="1" Margin="0,0,0,12">
+                <Border x:Name="PainelEscolaMaisEquipamento" Background="#FDECEC" CornerRadius="8" Padding="10" Margin="0,0,10,0" Visibility="Collapsed">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🖥️" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center" />
+                            <TextBlock Text="Escola com mais equipamento instalado" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock Margin="0,4,0,0" TextWrapping="Wrap">
+                            <Run x:Name="TxtEscolaMaisEquipamento" Text="" />
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <Border x:Name="PainelEscolaMaisPedidos" Background="#FDECEC" CornerRadius="8" Padding="10" Margin="0,0,10,0" Visibility="Collapsed">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="📋" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center" />
+                            <TextBlock Text="Escola com mais pedidos em aberto" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock Margin="0,4,0,0" TextWrapping="Wrap">
+                            <Run x:Name="TxtEscolaMaisPedidos" Text="" />
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <Border x:Name="PainelEscolaMaisIntervencoes" Background="#FDECEC" CornerRadius="8" Padding="10" Visibility="Collapsed">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🔧" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center" />
+                            <TextBlock Text="Escola com mais intervenções registadas" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock Margin="0,4,0,0" TextWrapping="Wrap">
+                            <Run x:Name="TxtEscolaMaisIntervencoes" Text="" />
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+
+            <!-- Linha 3: gauges — "Infraestrutura e Segurança" (4 níveis fixos, tal como a
+                 Obsolescência em Equipamentos) ao lado de "Distribuição por Tipo de Escola" e
+                 "Distribuição por Estado" (nº de valores variável — construídos dinamicamente em
+                 código, mesmo mecanismo de "Sistemas Operativos"/"Armazenamento" em Equipamentos;
+                 ver AtualizarDistribuicaoPorCampo em EscolasWindow.xaml.cs). -->
+            <UniformGrid Columns="3" Rows="1">
+                <StackPanel Margin="0,0,10,0">
+                <Border x:Name="PainelInfraestruturaNormal" Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Infraestrutura e Segurança" Style="{StaticResource SectionTitleStyle}" FontSize="16" />
+                        <TextBlock x:Name="TxtTotalInfraestrutura" TextWrapping="Wrap" FontSize="11"
+                                   Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,10"
+                                   Text="% de escolas com cada característica" />
+                        <UniformGrid Columns="4" Rows="1">
+                            <Border Margin="0,0,8,0">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Text="Fibra" Style="{StaticResource KpiLabelStyle}" HorizontalAlignment="Center" FontWeight="SemiBold" />
+                                    <lvc:PieChart x:Name="GaugeFibra" Height="110" Width="110"
+                                                  InitialRotation="-225" MaxAngle="270" MinValue="0" MaxValue="100" />
+                                    <TextBlock x:Name="TxtGaugeFibra" Text="0 / 0" FontSize="10"
+                                               HorizontalAlignment="Center" Foreground="{StaticResource BrushTextSecondary}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Margin="0,0,8,0">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Text="CCTV" Style="{StaticResource KpiLabelStyle}" HorizontalAlignment="Center" FontWeight="SemiBold" />
+                                    <lvc:PieChart x:Name="GaugeCCTV" Height="110" Width="110"
+                                                  InitialRotation="-225" MaxAngle="270" MinValue="0" MaxValue="100" />
+                                    <TextBlock x:Name="TxtGaugeCCTV" Text="0 / 0" FontSize="10"
+                                               HorizontalAlignment="Center" Foreground="{StaticResource BrushTextSecondary}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Margin="0,0,8,0">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Text="VPN" Style="{StaticResource KpiLabelStyle}" HorizontalAlignment="Center" FontWeight="SemiBold" />
+                                    <lvc:PieChart x:Name="GaugeVPN" Height="110" Width="110"
+                                                  InitialRotation="-225" MaxAngle="270" MinValue="0" MaxValue="100" />
+                                    <TextBlock x:Name="TxtGaugeVPN" Text="0 / 0" FontSize="10"
+                                               HorizontalAlignment="Center" Foreground="{StaticResource BrushTextSecondary}" />
+                                </StackPanel>
+                            </Border>
+                            <Border>
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Text="Biblioteca" Style="{StaticResource KpiLabelStyle}" HorizontalAlignment="Center" FontWeight="SemiBold" />
+                                    <lvc:PieChart x:Name="GaugeBiblioteca" Height="110" Width="110"
+                                                  InitialRotation="-225" MaxAngle="270" MinValue="0" MaxValue="100" />
+                                    <TextBlock x:Name="TxtGaugeBiblioteca" Text="0 / 0" FontSize="10"
+                                               HorizontalAlignment="Center" Foreground="{StaticResource BrushTextSecondary}" />
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Versão compacta (Modo Compacto — Administração → Aparência): substitui os 4
+                     gauges (110x110 cada) por 4 barras finas, mesmo padrão visual já usado no
+                     painel compacto de "Distribuição por Obsolescência" do módulo Equipamentos (ver
+                     PainelObsolescenciaCompacto em Views/EquipamentosWindow.xaml). A escolha entre
+                     este painel e o normal (acima) é feita uma vez, no construtor (ver
+                     EscolasWindow.xaml.cs), consoante Services.JanelaCompactaService.Ativo — nunca
+                     os dois ao mesmo tempo. -->
+                <Border x:Name="PainelInfraestruturaCompacto" Style="{StaticResource CardStyle}" Visibility="Collapsed">
+                    <StackPanel>
+                        <TextBlock Text="Infraestrutura e Segurança" Style="{StaticResource SectionTitleStyle}" FontSize="14" Margin="0,0,0,8" />
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="110" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="70" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Fibra" VerticalAlignment="Center" FontSize="12" />
+                            <Grid Grid.Column="1" Height="6" Margin="8,0">
+                                <Border Background="#E5E7EB" CornerRadius="3" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition x:Name="ColBarraFibraCheia" Width="0*" />
+                                        <ColumnDefinition x:Name="ColBarraFibraVazia" Width="100*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Background="#2AB7CA" CornerRadius="3" />
+                                </Grid>
+                            </Grid>
+                            <TextBlock x:Name="TxtBarraFibra" Grid.Column="2" Text="0 / 0" FontSize="11"
+                                       VerticalAlignment="Center" Foreground="{StaticResource BrushTextSecondary}" />
+                        </Grid>
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="110" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="70" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="CCTV" VerticalAlignment="Center" FontSize="12" />
+                            <Grid Grid.Column="1" Height="6" Margin="8,0">
+                                <Border Background="#E5E7EB" CornerRadius="3" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition x:Name="ColBarraCCTVCheia" Width="0*" />
+                                        <ColumnDefinition x:Name="ColBarraCCTVVazia" Width="100*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Background="#8B5CF6" CornerRadius="3" />
+                                </Grid>
+                            </Grid>
+                            <TextBlock x:Name="TxtBarraCCTV" Grid.Column="2" Text="0 / 0" FontSize="11"
+                                       VerticalAlignment="Center" Foreground="{StaticResource BrushTextSecondary}" />
+                        </Grid>
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="110" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="70" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="VPN" VerticalAlignment="Center" FontSize="12" />
+                            <Grid Grid.Column="1" Height="6" Margin="8,0">
+                                <Border Background="#E5E7EB" CornerRadius="3" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition x:Name="ColBarraVPNCheia" Width="0*" />
+                                        <ColumnDefinition x:Name="ColBarraVPNVazia" Width="100*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Background="#F97316" CornerRadius="3" />
+                                </Grid>
+                            </Grid>
+                            <TextBlock x:Name="TxtBarraVPN" Grid.Column="2" Text="0 / 0" FontSize="11"
+                                       VerticalAlignment="Center" Foreground="{StaticResource BrushTextSecondary}" />
+                        </Grid>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="110" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="70" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Biblioteca" VerticalAlignment="Center" FontSize="12" />
+                            <Grid Grid.Column="1" Height="6" Margin="8,0">
+                                <Border Background="#E5E7EB" CornerRadius="3" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition x:Name="ColBarraBibliotecaCheia" Width="0*" />
+                                        <ColumnDefinition x:Name="ColBarraBibliotecaVazia" Width="100*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Background="#22C55E" CornerRadius="3" />
+                                </Grid>
+                            </Grid>
+                            <TextBlock x:Name="TxtBarraBiblioteca" Grid.Column="2" Text="0 / 0" FontSize="11"
+                                       VerticalAlignment="Center" Foreground="{StaticResource BrushTextSecondary}" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+                </StackPanel>
+
+                <Border Style="{StaticResource CardStyle}" Margin="0,0,10,0">
+                    <StackPanel>
+                        <TextBlock Text="Distribuição por Tipo de Escola" Style="{StaticResource SectionTitleStyle}" FontSize="16" />
+                        <TextBlock x:Name="TxtTotalTipo" TextWrapping="Wrap" FontSize="11"
+                                   Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,10"
+                                   Text="% de escolas de cada tipo" />
+                        <TextBlock x:Name="TxtSemTipo" TextWrapping="Wrap" FontSize="11" FontStyle="Italic"
+                                   Foreground="{StaticResource BrushTextSecondary}" Visibility="Collapsed"
+                                   Text="Nenhuma escola visível tem o Tipo preenchido." />
+                        <WrapPanel x:Name="PainelGaugesTipo" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Distribuição por Estado" Style="{StaticResource SectionTitleStyle}" FontSize="16" />
+                        <TextBlock x:Name="TxtTotalEstado" TextWrapping="Wrap" FontSize="11"
+                                   Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,10"
+                                   Text="% de escolas em cada estado" />
+                        <TextBlock x:Name="TxtSemEstado" TextWrapping="Wrap" FontSize="11" FontStyle="Italic"
+                                   Foreground="{StaticResource BrushTextSecondary}" Visibility="Collapsed"
+                                   Text="Nenhuma escola visível tem Estado preenchido." />
+                        <WrapPanel x:Name="PainelGaugesEstado" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+
+            </StackPanel>
+            </ScrollViewer>
+
+            <Border Grid.Row="1" Style="{StaticResource CardStyle}">
                 <DataGrid x:Name="Grid" CanUserSortColumns="True" MouseDoubleClick="Grid_MouseDoubleClick" CanUserResizeColumns="True" CanUserReorderColumns="True" RowStyle="{StaticResource DataGridRowClickableStyle}">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Cód." Binding="{Binding CodEscola}" Width="Auto" />
@@ -47,7 +322,7 @@
                     </DataGrid.Columns>
                 </DataGrid>
             </Border>
-            <TextBlock Grid.Row="1" Text="💡 Duplo-clique numa escola para ver/editar os seus detalhes."
+            <TextBlock Grid.Row="2" Text="💡 Duplo-clique numa escola para ver/editar os seus detalhes."
                        FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,8,0,0" />
         </Grid>
     </DockPanel>

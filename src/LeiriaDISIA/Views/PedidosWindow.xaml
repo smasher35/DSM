@@ -25,9 +25,16 @@
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
+
+            <!-- Legenda primeiro, cartões de resumo a seguir (a pedido) — mesmo estilo de cartão
+                 (CardStyle/KpiValueStyle/KpiLabelStyle) já usado no módulo Equipamentos, para este
+                 módulo ficar visualmente consistente com os restantes. Calculados sempre sobre
+                 TODOS os pedidos (_todos), não sobre a lista filtrada/pesquisada visível na grelha —
+                 são estatísticas do módulo como um todo, não "o que está a ser visto agora". -->
             <Grid Grid.Row="0" Margin="0,0,0,12">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -68,7 +75,56 @@
                 </Border>
             </Grid>
 
-            <Border Grid.Row="1" Style="{StaticResource CardStyle}">
+            <UniformGrid Grid.Row="1" Columns="6" Margin="0,0,0,12">
+                <Border Style="{StaticResource CardStyle}" Margin="0,0,10,0">
+                    <StackPanel>
+                        <TextBlock Text="📋" FontSize="20" Margin="0,0,0,4" />
+                        <TextBlock x:Name="TxtCardEmAberto" Text="0" Style="{StaticResource KpiValueStyle}" />
+                        <TextBlock Text="Pedidos em Aberto" Style="{StaticResource KpiLabelStyle}" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource CardStyle}" Margin="0,0,10,0"
+                        ToolTip="Pedidos Pendentes ou Em Andamento há mais de 21 dias — os que estão 'Em Espera' não contam aqui, já que essa demora não depende da DISIA">
+                    <StackPanel>
+                        <TextBlock Text="⏰" FontSize="20" Margin="0,0,0,4" />
+                        <TextBlock x:Name="TxtCardUrgentes" Text="0" Style="{StaticResource KpiValueStyle}" />
+                        <TextBlock Text="&gt; 21 dias em Aberto" Style="{StaticResource KpiLabelStyle}" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource CardStyle}" Margin="0,0,10,0"
+                        ToolTip="Pedidos CONCLUÍDOS este ano, venham de quando vierem — inclui pedidos feitos em anos/meses anteriores que só foram fechados agora. Exclui o tempo em que cada pedido esteve 'Em Espera' (não é da responsabilidade da DISIA, depende de terceiros — ex.: aquisição de equipamento/material).">
+                    <StackPanel>
+                        <TextBlock Text="📊" FontSize="20" Margin="0,0,0,4" />
+                        <TextBlock x:Name="TxtCardMediaAno" Text="—" Style="{StaticResource KpiValueStyle}" />
+                        <TextBlock Text="Tempo Médio Conclusão (Ano)" Style="{StaticResource KpiLabelStyle}" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource CardStyle}" Margin="0,0,10,0"
+                        ToolTip="Só pedidos FEITOS este mês (e já concluídos) — ao contrário do cartão do Ano, um pedido de um mês anterior que só agora fica concluído não entra aqui, para não misturar a sua duração toda com o desempenho deste mês. Exclui o tempo em que cada pedido esteve 'Em Espera' (não é da responsabilidade da DISIA, depende de terceiros — ex.: aquisição de equipamento/material).">
+                    <StackPanel>
+                        <TextBlock Text="📅" FontSize="20" Margin="0,0,0,4" />
+                        <TextBlock x:Name="TxtCardMediaMes" Text="—" Style="{StaticResource KpiValueStyle}" />
+                        <TextBlock Text="Tempo Médio Conclusão (Mês)" Style="{StaticResource KpiLabelStyle}" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource CardStyle}" Margin="0,0,10,0"
+                        ToolTip="O mesmo cálculo do cartão anterior (só pedidos FEITOS no mês, já concluídos, sem contar tempo 'Em Espera'), mas para o mês anterior a este — serve de termo de comparação para saber se o mês corrente está a correr melhor ou pior.">
+                    <StackPanel>
+                        <TextBlock Text="📆" FontSize="20" Margin="0,0,0,4" />
+                        <TextBlock x:Name="TxtCardMediaMesAnterior" Text="—" Style="{StaticResource KpiValueStyle}" />
+                        <TextBlock Text="Tempo Médio Conclusão (Mês Anterior)" Style="{StaticResource KpiLabelStyle}" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="✅" FontSize="20" Margin="0,0,0,4" />
+                        <TextBlock x:Name="TxtCardConcluidosAno" Text="0" Style="{StaticResource KpiValueStyle}" />
+                        <TextBlock Text="Concluídos este Ano" Style="{StaticResource KpiLabelStyle}" />
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+
+            <Border Grid.Row="2" Style="{StaticResource CardStyle}">
                 <DataGrid x:Name="Grid" CanUserSortColumns="True" MouseDoubleClick="Grid_MouseDoubleClick" RowStyle="{StaticResource DataGridRowClickableStyle}">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Data" Binding="{Binding DataPedido, StringFormat=dd-MM-yyyy}" Width="Auto" />
@@ -96,6 +152,14 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
+                        <!-- A pedido, para se conseguir verificar diretamente quais pedidos entram
+                             em cada mês/ano nos cartões "Tempo Médio Conclusão" acima — esses cartões
+                             agrupam por DATA DE CONCLUSÃO, não pela data do pedido (coluna "Data"),
+                             por isso um pedido feito há meses mas só concluído agora conta para o
+                             mês corrente, com a duração toda desde que foi pedido; sem esta coluna,
+                             isso não era visível na grelha (ordenada por "Data", não por esta). Em
+                             branco para pedidos ainda não concluídos. -->
+                        <DataGridTextColumn Header="Data Conclusão" Binding="{Binding DataConclusao, StringFormat=dd-MM-yyyy}" Width="Auto" />
                         <DataGridTemplateColumn Header="Tempo em Aberto" Width="Auto" SortMemberPath="DiasEmAberto">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
@@ -109,7 +173,7 @@
                     </DataGrid.Columns>
                 </DataGrid>
             </Border>
-            <TextBlock Grid.Row="2" Text="💡 Duplo-clique num pedido para ver/editar detalhes ou criar a intervenção correspondente."
+            <TextBlock Grid.Row="3" Text="💡 Duplo-clique num pedido para ver/editar detalhes ou criar a intervenção correspondente."
                        FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,8,0,0" />
         </Grid>
     </DockPanel>

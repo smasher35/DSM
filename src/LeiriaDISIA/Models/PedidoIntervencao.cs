@@ -42,6 +42,20 @@ public class PedidoIntervencao
     public EstadoPedido Estado { get; set; } = EstadoPedido.EmAndamento;
     public string? MotivoPendente { get; set; }
 
+    /// <summary>Início do período de "Em Espera" atualmente em curso — só tem valor enquanto
+    /// <see cref="Estado"/> for <see cref="EstadoPedido.EmEspera"/>; ao sair desse estado (ver
+    /// Views/PedidoEditWindow.xaml.cs), a duração desse período soma-se a
+    /// <see cref="DiasEmEsperaAcumulados"/> e este campo volta a null. Usado para excluir tempo em
+    /// "Em Espera" do cálculo de "tempo médio até à conclusão" (ver Views/PedidosWindow.xaml.cs) —
+    /// esse tempo não é da responsabilidade da DISIA (depende de aquisição de equipamento/material
+    /// por terceiros), por isso não deve penalizar essa estatística.</summary>
+    public DateTime? DataInicioEsperaAtual { get; set; }
+
+    /// <summary>Soma de todos os períodos já terminados em que este pedido esteve "Em Espera" (dias)
+    /// — um pedido pode entrar e sair de "Em Espera" mais do que uma vez; cada vez que sai, o
+    /// período que terminou soma-se aqui. Ver <see cref="DataInicioEsperaAtual"/>.</summary>
+    public int DiasEmEsperaAcumulados { get; set; }
+
     public DateTime? DataConclusao { get; set; }
 
     /// <summary>Quando o pedido é convertido numa intervenção, guarda a referência.</summary>
@@ -72,6 +86,28 @@ public class PedidoIntervencao
 
     /// <summary>Cor semafórica do tempo em aberto (só relevante enquanto não está concluído/cancelado).</summary>
     public string CorTempoEmAberto => EstadoCores.CorTempoEmAberto(DiasEmAberto);
+
+    /// <summary>Nº de dias entre o pedido e a conclusão, sem contar o tempo passado "Em Espera" (ver
+    /// <see cref="DiasEmEsperaAcumulados"/>/<see cref="DataInicioEsperaAtual"/>) — usado para a
+    /// estatística de "tempo médio até à conclusão" em Views/PedidosWindow.xaml.cs. Só faz sentido
+    /// para um pedido já concluído; devolve null nos restantes casos. Se o pedido estiver, por
+    /// algum motivo, concluído mas ainda com um período de espera em aberto (não devia acontecer,
+    /// já que sair de "Em Espera" fecha sempre esse período — ver Views/PedidoEditWindow.xaml.cs),
+    /// esse período em curso também é descontado, para nunca inflacionar a estatística.</summary>
+    public int? DiasParaConclusaoExcluindoEspera
+    {
+        get
+        {
+            if (Estado != EstadoPedido.Concluido || DataConclusao == null) return null;
+
+            var esperaEmCurso = DataInicioEsperaAtual is { } inicio
+                ? (int)(DataConclusao.Value - inicio).TotalDays
+                : 0;
+
+            var dias = (int)(DataConclusao.Value - DataPedido).TotalDays - DiasEmEsperaAcumulados - esperaEmCurso;
+            return Math.Max(0, dias);
+        }
+    }
 
     public bool EstaEmAberto => Estado is EstadoPedido.Pendente or EstadoPedido.EmAndamento or EstadoPedido.EmEspera;
 }

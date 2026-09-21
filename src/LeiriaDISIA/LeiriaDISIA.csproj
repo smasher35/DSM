@@ -47,6 +47,11 @@
     <!-- Geração de relatórios .pdf (recibo/relatório de intervenção individual) -->
     <PackageReference Include="QuestPDF" Version="2024.10.2" />
 
+    <!-- QR Code no relatório de Plano de Rota (ver Services/Rotas/PlanoRotaPdfService.cs) — usa-se
+         especificamente a classe PngByteQRCode desta biblioteca, que gera PNG em código totalmente
+         gerido, sem depender de System.Drawing.Common (que tem restrições fora do Windows). -->
+    <PackageReference Include="QRCoder" Version="1.6.0" />
+
     <!-- Leitura/extração de texto de PDFs gerados pela própria aplicação (importar intervenção a
          partir de um Relatório de Intervenção em PDF já emitido - ver
          Services/IntervencaoPdfImportService.cs). Extração direta de texto/posições, sem OCR:

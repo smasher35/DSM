@@ -389,11 +389,28 @@ public partial class PlanearRotaWindow : Window
         }
     }
 
-    /// <summary>Constrói o URL de direções do Google Maps (formato "clássico", sem chave de API —
-    /// suporta várias paragens encadeando "+to:" entre coordenadas, ao contrário do formato de
-    /// marcador único usado em EscolaEditWindow). Devolve null quando faltam coordenadas (sede não
-    /// geocodificada, ou nenhuma paragem com Latitude/Longitude preenchidas).</summary>
-    private static string? ConstruirUrlMapaRota(PreVisualizacaoRota preVisualizacao, bool regressarSede)
+    /// <summary>Constrói o URL de direções do Google Maps para o mapa embutido na pré-visualização
+    /// (com "output=embed", ver AtualizarMapaRotaAsync). Devolve null quando faltam coordenadas
+    /// (sede não geocodificada, ou nenhuma paragem com Latitude/Longitude preenchidas). Ver
+    /// <see cref="ConstruirUrlDirecoes"/>, partilhado com <see cref="ConstruirUrlRotaPartilhavel"/>.</summary>
+    private static string? ConstruirUrlMapaRota(PreVisualizacaoRota preVisualizacao, bool regressarSede) =>
+        ConstruirUrlDirecoes(preVisualizacao, regressarSede, paraEmbed: true);
+
+    /// <summary>Mesmo URL de direções do Google Maps do mapa embutido, mas sem o parâmetro
+    /// "output=embed" — pensado para ser codificado num QR Code no relatório PDF do plano de rota
+    /// (ver Services/Rotas/PlanoRotaPdfService.cs), para quem o ler com a câmara do telemóvel abrir
+    /// logo a aplicação/navegador Google Maps com a rota pronta a seguir passo a passo, em vez de
+    /// "output=embed", que serve só para ser carregado dentro de um &lt;iframe&gt; e mostraria antes
+    /// uma miniatura do mapa.</summary>
+    private static string? ConstruirUrlRotaPartilhavel(PreVisualizacaoRota preVisualizacao, bool regressarSede) =>
+        ConstruirUrlDirecoes(preVisualizacao, regressarSede, paraEmbed: false);
+
+    /// <summary>Formato "clássico" de direções do Google Maps, sem chave de API — suporta várias
+    /// paragens encadeando "+to:" entre coordenadas, ao contrário do formato de marcador único usado
+    /// em EscolaEditWindow. Base comum a <see cref="ConstruirUrlMapaRota"/> (mapa embutido) e
+    /// <see cref="ConstruirUrlRotaPartilhavel"/> (QR Code do PDF) — só muda o parâmetro
+    /// "output=embed" no fim.</summary>
+    private static string? ConstruirUrlDirecoes(PreVisualizacaoRota preVisualizacao, bool regressarSede, bool paraEmbed)
     {
         if (preVisualizacao.CoordenadaSede is not { } sede) return null;
 
@@ -416,7 +433,8 @@ public partial class PlanearRotaWindow : Window
             ? destino
             : string.Join("", intermedias.Select(p => $"{p}+to:")) + destino;
 
-        return $"https://maps.google.com/maps?saddr={origem}&daddr={daddr}&output=embed";
+        var url = $"https://maps.google.com/maps?saddr={origem}&daddr={daddr}";
+        return paraEmbed ? url + "&output=embed" : url;
     }
 
     private async void Confirmar_Click(object sender, RoutedEventArgs e)
@@ -478,14 +496,17 @@ public partial class PlanearRotaWindow : Window
 
         var paragensOrdenadas = plano.Paragens.OrderBy(pp => pp.Ordem).ToList();
 
-        // Lista única, contínua, com os passos de navegação de toda a viagem por ordem (sede → 1ª
-        // paragem → 2ª → … → última, e regresso à sede se aplicável) — ver PlanoRotaPdfService,
-        // secção "Resumo da Rota". Vem da pré-visualização ainda em memória (_preVisualizacaoAtual),
-        // não voltando a pedir nada ao serviço de rotas; se por algum motivo já não existir (não
-        // devia acontecer neste ponto do fluxo), o PDF simplesmente não mostra essa secção.
-        var passosRota = _preVisualizacaoAtual?.Paragens.SelectMany(p => p.Passos)
-            .Concat(_preVisualizacaoAtual.PassosRegresso ?? new())
-            .ToList();
+        // URL de direções do Google Maps para o QR Code do PDF (ver PlanoRotaPdfService, secção
+        // "Rota no Telemóvel") — vem da pré-visualização ainda em memória (_preVisualizacaoAtual),
+        // não voltando a geocodificar nada; se por algum motivo já não existir (não devia acontecer
+        // neste ponto do fluxo), o PDF simplesmente não mostra essa secção. Usa-se
+        // "plano.PontoRegresso" (o valor já confirmado e gravado), e não a caixa de confirmação
+        // "Regressar à Sede" da janela (que pode já não refletir com o que foi mesmo guardado), para
+        // a rota do QR Code corresponder exatamente ao plano gravado.
+        var regressarSede = plano.PontoRegresso == EnderecoSedeMunicipio.Morada;
+        var urlRota = _preVisualizacaoAtual != null
+            ? ConstruirUrlRotaPartilhavel(_preVisualizacaoAtual, regressarSede)
+            : null;
 
         // WebView2 só pode ser acedido a partir da thread de UI — por isso a captura acontece aqui,
         // antes do Task.Run abaixo, que corre em segundo plano; o PDF recebe só os bytes já
@@ -497,7 +518,7 @@ public partial class PlanearRotaWindow : Window
         System.IO.Directory.CreateDirectory(pastaDestino);
         var caminhoPdf = System.IO.Path.Combine(pastaDestino, $"PlanoRota_{plano.Data:yyyyMMdd}_{plano.Id}.pdf");
 
-        await Task.Run(() => new PlanoRotaPdfService().GerarPdf(caminhoPdf, plano, paragensOrdenadas, imagemMapa, passosRota));
+        await Task.Run(() => new PlanoRotaPdfService().GerarPdf(caminhoPdf, plano, paragensOrdenadas, imagemMapa, urlRota));
 
         plano.CaminhoPdf = caminhoPdf;
         await App.Db.SaveChangesAsync();

@@ -236,6 +236,8 @@ public static class SchemaUpgrade
         AdicionarColunaSeNaoExistir(conexao, "Intervencoes", "NumeroSuporteSiga", "TEXT");
         AdicionarColunaSeNaoExistir(conexao, "EquipamentosRecolhidos", "IntervencaoEntregaId", "INTEGER");
         AdicionarColunaSeNaoExistir(conexao, "EquipamentosRecolhidos", "MarcadoProntoEm", "TEXT");
+        AdicionarColunaSeNaoExistir(conexao, "PedidosIntervencao", "DataInicioEsperaAtual", "TEXT");
+        AdicionarColunaSeNaoExistir(conexao, "PedidosIntervencao", "DiasEmEsperaAcumulados", "INTEGER NOT NULL DEFAULT 0");
 
         CriarIntervencaoEquipamentosNovosSePreciso(conexao);
     }

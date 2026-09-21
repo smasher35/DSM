@@ -48,7 +48,60 @@ public partial class PedidosWindow : Window
             .Include(p => p.Agrupamento)
             .OrderByDescending(p => p.DataPedido)
             .ToList();
+        AtualizarCartoesResumo();
         AplicarFiltro();
+    }
+
+    /// <summary>Cartões de resumo do módulo (ver Views/PedidosWindow.xaml) — sempre calculados
+    /// sobre TODOS os pedidos (<see cref="_todos"/>), não sobre a lista filtrada/pesquisada visível
+    /// na grelha, já que são estatísticas do módulo como um todo. As médias de tempo usam
+    /// <see cref="PedidoIntervencao.DiasParaConclusaoExcluindoEspera"/> — que já exclui o tempo
+    /// passado "Em Espera" (ver Models/PedidoIntervencao.cs) — e só entram pedidos concluídos DEPOIS
+    /// de este rastreio ter sido adicionado; pedidos antigos, já concluídos antes disso, continuam a
+    /// contar para a média (não há forma de saber retroativamente quanto tempo estiveram "Em
+    /// Espera"), mas o próprio "vamos começar a contabilizar isto agora" já foi assumido ao pedir
+    /// esta funcionalidade.
+    ///
+    /// "Ano" e "Mês" agrupam por datas DIFERENTES, de propósito — "Ano" agrupa pela data de
+    /// CONCLUSÃO (todos os pedidos fechados este ano, venham de quando vierem), mas "Mês" agrupa
+    /// pela data do PEDIDO (só pedidos feitos este mês) — um pedido feito em julho e só concluído
+    /// agora em setembro conta para a média anual (correto, mostra o tempo real que levou), mas NÃO
+    /// para a média mensal, que ficaria "contaminada" pela sua duração toda mesmo só tendo sido
+    /// concluído por coincidência este mês.</summary>
+    private void AtualizarCartoesResumo()
+    {
+        TxtCardEmAberto.Text = _todos.Count(p => p.EstaEmAberto).ToString();
+        // "Em Espera" fica de fora aqui de propósito — um pedido "Em Espera" há muito tempo não é
+        // um pedido que a DISIA esteja a deixar por fazer, é um pedido parado à espera de algo
+        // (ex.: aquisição de material) que não depende da DISIA; contá-lo como "urgente" ao lado de
+        // pedidos genuinamente parados por fazer (Pendente/Em Andamento) distorcia o indicador.
+        TxtCardUrgentes.Text = _todos.Count(p =>
+            (p.Estado is EstadoPedido.Pendente or EstadoPedido.EmAndamento) && p.DiasEmAberto > 21).ToString();
+
+        var hoje = DateTime.Today;
+
+        var concluidosEsteAno = _todos.Where(p => p.Estado == EstadoPedido.Concluido && p.DataConclusao?.Year == hoje.Year).ToList();
+        TxtCardConcluidosAno.Text = concluidosEsteAno.Count.ToString();
+        TxtCardMediaAno.Text = FormatarMediaDias(concluidosEsteAno);
+
+        var pedidosDesteMes = _todos.Where(p =>
+            p.Estado == EstadoPedido.Concluido && p.DataPedido.Year == hoje.Year && p.DataPedido.Month == hoje.Month);
+        TxtCardMediaMes.Text = FormatarMediaDias(pedidosDesteMes);
+
+        // Cartão de comparação (a pedido) — mesmo cálculo do mês corrente (agrupa por DATA DO
+        // PEDIDO, não de conclusão — ver comentário acima), mas para o mês imediatamente anterior.
+        var mesAnterior = hoje.AddMonths(-1);
+        var pedidosMesAnterior = _todos.Where(p =>
+            p.Estado == EstadoPedido.Concluido && p.DataPedido.Year == mesAnterior.Year && p.DataPedido.Month == mesAnterior.Month);
+        TxtCardMediaMesAnterior.Text = FormatarMediaDias(pedidosMesAnterior);
+    }
+
+    /// <summary>"—" sem nenhum pedido concluído no período (nada para fazer média), senão a média
+    /// arredondada a uma casa decimal, em dias.</summary>
+    private static string FormatarMediaDias(IEnumerable<PedidoIntervencao> pedidos)
+    {
+        var dias = pedidos.Select(p => p.DiasParaConclusaoExcluindoEspera).Where(d => d != null).Select(d => d!.Value).ToList();
+        return dias.Count == 0 ? "—" : $"{dias.Average():0.#} dias";
     }
 
     private void AplicarFiltro()
