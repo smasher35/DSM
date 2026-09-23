@@ -979,6 +979,21 @@ public partial class EquipamentoEditWindow : Window
             return false;
         }
 
+        // (2.1) Sem escola selecionada, o equipamento fica sem localização associada — o que pode
+        // ser intencional (ex.: equipamento em armazém, ou num local não escolar, indicado à parte
+        // em "Local (não escolar)") mas também pode ser um esquecimento fácil de cometer numa lista
+        // longa de escolas. Em vez de gravar silenciosamente ou bloquear a gravação, avisa-se e
+        // deixa-se o utilizador decidir se quer mesmo avançar sem escola.
+        var escolaSelecionada = CmbEscola.SelectedItem as Escola;
+        if (escolaSelecionada == null)
+        {
+            var confirmarSemEscola = MessageBox.Show(
+                "Não selecionou nenhuma Escola para este equipamento. Pretende continuar a gravar mesmo assim?",
+                "Sem escola selecionada", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (confirmarSemEscola != MessageBoxResult.Yes)
+                return false;
+        }
+
         Equipamento equipamento;
         if (_existente == null)
         {
@@ -998,7 +1013,6 @@ public partial class EquipamentoEditWindow : Window
         equipamento.DataAquisicao = DpAquisicao.SelectedDate;
         equipamento.ValorAquisicao = decimal.TryParse(TxtValor.Text, out var v) ? v : null;
         equipamento.Fornecedor = TxtFornecedor.Text;
-        var escolaSelecionada = CmbEscola.SelectedItem as Escola;
         equipamento.EscolaId = escolaSelecionada?.Id;
         equipamento.LocalNaoEscolar = TxtLocalNaoEscolar.Text;
         equipamento.Estado = CmbEstado.SelectedItem as string ?? EstadosEquipamento.EmServico;

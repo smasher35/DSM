@@ -2037,38 +2037,158 @@ public partial class AdministracaoWindow : Window
 
     private void AtualizarTabelaEliminar_Click(object sender, RoutedEventArgs e) => CarregarGridEliminar();
 
+    /// <summary>Lista completa (não filtrada) carregada para a tabela atualmente selecionada em
+    /// "Eliminar Registos" — guardada à parte para que a pesquisa/filtros de Equipamentos (ver
+    /// <see cref="AplicarFiltroEliminarEquipamentos"/>) possam ser reaplicados sem repetir a
+    /// consulta à base de dados a cada tecla premida.</summary>
+    private IList _listaCompletaEliminar = new List<object>();
+
+    /// <summary>Salvaguarda contra reentrância: alterar a visibilidade do painel de filtros e
+    /// preencher os dois dropdowns (ver <see cref="PrepararFiltrosEliminarEquipamentos"/>) dispara
+    /// eventos (SelectionChanged) que, indiretamente, podiam voltar a chamar este método antes de
+    /// terminar a primeira chamada — este sinalizador garante que uma chamada em curso nunca é
+    /// reentrada, eliminando esse ciclo em vez de tentar prever todas as suas causas possíveis.</summary>
+    private bool _aCarregarGridEliminar;
+
     private void CarregarGridEliminar()
     {
-        if (CmbTabelaEliminar.SelectedItem is not TabelaEliminar tabela)
+        if (_aCarregarGridEliminar) return;
+        _aCarregarGridEliminar = true;
+        try
         {
-            GridEliminarRegistos.ItemsSource = null;
-            GridEliminarRegistos.Columns.Clear();
-            TxtEliminarRegistosCount.Text = "0 registos";
-            return;
+            if (CmbTabelaEliminar.SelectedItem is not TabelaEliminar tabela)
+            {
+                _listaCompletaEliminar = new List<object>();
+                GridEliminarRegistos.ItemsSource = null;
+                GridEliminarRegistos.Columns.Clear();
+                TxtEliminarRegistosCount.Text = "0 registos";
+                PainelFiltrosEliminarEquipamentos.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            // Cada ramo é convertido explicitamente para IList (não genérico) para que o switch
+            // tenha um único tipo de retorno comum, apesar de as entidades serem todas diferentes.
+            IList lista = tabela.Chave switch
+            {
+                "Agrupamentos" => (IList)App.Db.Agrupamentos.OrderBy(a => a.Nome).ToList(),
+                "Escolas" => (IList)App.Db.Escolas.Include(e => e.Agrupamento).OrderBy(e => e.Nome).ToList(),
+                "Contactos" => (IList)App.Db.Contactos.Include(c => c.Escola).OrderBy(c => c.Id).ToList(),
+                "PedidosIntervencao" => (IList)App.Db.PedidosIntervencao.Include(p => p.Escola).OrderByDescending(p => p.Id).ToList(),
+                "Intervencoes" => (IList)App.Db.Intervencoes.Include(i => i.Escola).OrderByDescending(i => i.Id).ToList(),
+                "CategoriasIntervencao" => (IList)App.Db.CategoriasIntervencao.OrderBy(c => c.Nome).ToList(),
+                "Equipamentos" => (IList)App.Db.Equipamentos.Include(eq => eq.Escola).OrderBy(eq => eq.NumeroInventario).ToList(),
+                "EquipamentosAbatidos" => (IList)App.Db.EquipamentosAbatidos.OrderByDescending(a => a.Id).ToList(),
+                "EquipamentosRecolhidos" => (IList)App.Db.EquipamentosRecolhidos.Include(r => r.Equipamento).OrderByDescending(r => r.Id).ToList(),
+                "Comunicacoes" => (IList)App.Db.Comunicacoes.Include(c => c.Escola).OrderBy(c => c.Id).ToList(),
+                "CategoriasDisia" => (IList)App.Db.CategoriasDisia.OrderBy(c => c.Nome).ToList(),
+                "AtividadesDisia" => (IList)App.Db.AtividadesDisia.OrderByDescending(a => a.Id).ToList(),
+                "ValoresFixos" => (IList)App.Db.ValoresFixos.OrderBy(v => v.Grupo).ThenBy(v => v.Valor).ToList(),
+                "EstadosCorPersonalizados" => (IList)App.Db.EstadosCorPersonalizados.OrderBy(v => v.Grupo).ToList(),
+                _ => new List<object>()
+            };
+
+            DefinirColunasEliminar(tabela.Chave);
+            _listaCompletaEliminar = lista;
+
+            // (1.1/1.2) A pesquisa e os dois filtros (Escola/Tipo) só fazem sentido para Equipamentos,
+            // que é tipicamente a lista mais extensa desta aba — para as restantes tabelas a grelha
+            // continua a mostrar todos os registos, tal como antes.
+            if (tabela.Chave == "Equipamentos")
+            {
+                PainelFiltrosEliminarEquipamentos.Visibility = Visibility.Visible;
+                PrepararFiltrosEliminarEquipamentos((List<Equipamento>)lista);
+                AplicarFiltroEliminarEquipamentos();
+            }
+            else
+            {
+                PainelFiltrosEliminarEquipamentos.Visibility = Visibility.Collapsed;
+                GridEliminarRegistos.ItemsSource = lista;
+                TxtEliminarRegistosCount.Text = $"{lista.Count} registo(s)";
+            }
+        }
+        finally
+        {
+            _aCarregarGridEliminar = false;
+        }
+    }
+
+    /// <summary>Enquanto os dois dropdowns de filtro estão a ser (re)preenchidos por código (ver
+    /// <see cref="PrepararFiltrosEliminarEquipamentos"/>), impede <see cref="FiltroEliminarEquipamentos_Changed"/>
+    /// de reagir aos SelectionChanged que essa própria alteração de ItemsSource/SelectedItem
+    /// dispara — evita tanto trabalho redundante (a filtragem já é reaplicada explicitamente a
+    /// seguir, com a lista toda pronta) como qualquer possibilidade de um desses eventos, direta ou
+    /// indiretamente, voltar a desencadear este mesmo carregamento.</summary>
+    private bool _aAtualizarFiltrosEliminarEquipamentos;
+
+    /// <summary>Preenche os dois dropdowns de filtro (Escola e Tipo de Equipamento) com os valores
+    /// realmente presentes na lista de equipamentos carregada, ambos ordenados alfabeticamente
+    /// (pedido explícito do utilizador, para tornar a busca mais rápida numa lista longa), sem
+    /// perder a seleção atual ao recarregar (ex.: depois de eliminar registos).</summary>
+    private void PrepararFiltrosEliminarEquipamentos(List<Equipamento> equipamentos)
+    {
+        _aAtualizarFiltrosEliminarEquipamentos = true;
+        try
+        {
+            var escolaSelecionada = CmbFiltroEscolaEliminarEquipamentos.SelectedItem as Escola;
+            var escolas = new List<Escola> { new() { Id = 0, Nome = "(Todas as escolas)" } };
+            escolas.AddRange(equipamentos
+                .Where(eq => eq.Escola != null)
+                .Select(eq => eq.Escola!)
+                .DistinctBy(e => e.Id)
+                .OrderBy(e => e.Nome));
+            CmbFiltroEscolaEliminarEquipamentos.ItemsSource = escolas;
+            CmbFiltroEscolaEliminarEquipamentos.SelectedItem =
+                escolaSelecionada != null ? escolas.FirstOrDefault(e => e.Id == escolaSelecionada.Id) : escolas[0];
+
+            var tipoSelecionado = CmbFiltroTipoEliminarEquipamentos.SelectedItem as string;
+            var tipos = new List<string> { "(Todos os tipos)" };
+            tipos.AddRange(equipamentos
+                .Select(eq => eq.Tipo)
+                .Where(t => !string.IsNullOrWhiteSpace(t))
+                .Distinct()
+                .OrderBy(t => t));
+            CmbFiltroTipoEliminarEquipamentos.ItemsSource = tipos;
+            CmbFiltroTipoEliminarEquipamentos.SelectedItem =
+                tipoSelecionado != null && tipos.Contains(tipoSelecionado) ? tipoSelecionado : tipos[0];
+        }
+        finally
+        {
+            _aAtualizarFiltrosEliminarEquipamentos = false;
+        }
+    }
+
+    private void FiltroEliminarEquipamentos_Changed(object sender, EventArgs e)
+    {
+        if (_aAtualizarFiltrosEliminarEquipamentos) return;
+        AplicarFiltroEliminarEquipamentos();
+    }
+
+    /// <summary>Aplica, em conjunto, a pesquisa de texto livre e os dois filtros (Escola/Tipo) sobre
+    /// a lista de equipamentos já carregada — os três critérios combinam-se entre si (AND), tal
+    /// como pedido. A pesquisa de texto cobre Tipo, Escola, Nº de Série, Nº de Inventário e Marca.</summary>
+    private void AplicarFiltroEliminarEquipamentos()
+    {
+        var equipamentos = _listaCompletaEliminar.Cast<Equipamento>().AsEnumerable();
+
+        var termo = TxtPesquisaEliminarEquipamentos.Text?.Trim();
+        if (!string.IsNullOrWhiteSpace(termo))
+        {
+            equipamentos = equipamentos.Where(eq =>
+                (eq.Tipo?.Contains(termo, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (eq.Escola?.Nome?.Contains(termo, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (eq.NumeroSerie?.Contains(termo, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (eq.NumeroInventario?.Contains(termo, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (eq.Marca?.Contains(termo, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (eq.Modelo?.Contains(termo, StringComparison.OrdinalIgnoreCase) ?? false));
         }
 
-        // Cada ramo é convertido explicitamente para IList (não genérico) para que o switch
-        // tenha um único tipo de retorno comum, apesar de as entidades serem todas diferentes.
-        IList lista = tabela.Chave switch
-        {
-            "Agrupamentos" => (IList)App.Db.Agrupamentos.OrderBy(a => a.Nome).ToList(),
-            "Escolas" => (IList)App.Db.Escolas.Include(e => e.Agrupamento).OrderBy(e => e.Nome).ToList(),
-            "Contactos" => (IList)App.Db.Contactos.Include(c => c.Escola).OrderBy(c => c.Id).ToList(),
-            "PedidosIntervencao" => (IList)App.Db.PedidosIntervencao.Include(p => p.Escola).OrderByDescending(p => p.Id).ToList(),
-            "Intervencoes" => (IList)App.Db.Intervencoes.Include(i => i.Escola).OrderByDescending(i => i.Id).ToList(),
-            "CategoriasIntervencao" => (IList)App.Db.CategoriasIntervencao.OrderBy(c => c.Nome).ToList(),
-            "Equipamentos" => (IList)App.Db.Equipamentos.Include(eq => eq.Escola).OrderBy(eq => eq.NumeroInventario).ToList(),
-            "EquipamentosAbatidos" => (IList)App.Db.EquipamentosAbatidos.OrderByDescending(a => a.Id).ToList(),
-            "EquipamentosRecolhidos" => (IList)App.Db.EquipamentosRecolhidos.Include(r => r.Equipamento).OrderByDescending(r => r.Id).ToList(),
-            "Comunicacoes" => (IList)App.Db.Comunicacoes.Include(c => c.Escola).OrderBy(c => c.Id).ToList(),
-            "CategoriasDisia" => (IList)App.Db.CategoriasDisia.OrderBy(c => c.Nome).ToList(),
-            "AtividadesDisia" => (IList)App.Db.AtividadesDisia.OrderByDescending(a => a.Id).ToList(),
-            "ValoresFixos" => (IList)App.Db.ValoresFixos.OrderBy(v => v.Grupo).ThenBy(v => v.Valor).ToList(),
-            "EstadosCorPersonalizados" => (IList)App.Db.EstadosCorPersonalizados.OrderBy(v => v.Grupo).ToList(),
-            _ => new List<object>()
-        };
+        if (CmbFiltroEscolaEliminarEquipamentos.SelectedItem is Escola escolaFiltro && escolaFiltro.Id != 0)
+            equipamentos = equipamentos.Where(eq => eq.EscolaId == escolaFiltro.Id);
 
-        DefinirColunasEliminar(tabela.Chave);
+        if (CmbFiltroTipoEliminarEquipamentos.SelectedItem is string tipoFiltro && tipoFiltro != "(Todos os tipos)")
+            equipamentos = equipamentos.Where(eq => eq.Tipo == tipoFiltro);
+
+        var lista = equipamentos.ToList();
         GridEliminarRegistos.ItemsSource = lista;
         TxtEliminarRegistosCount.Text = $"{lista.Count} registo(s)";
     }

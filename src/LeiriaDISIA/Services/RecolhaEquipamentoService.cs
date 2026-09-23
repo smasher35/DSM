@@ -201,6 +201,19 @@ public static class RecolhaEquipamentoService
         var local = escola?.Nome ?? equipamento.LocalNaoEscolar ?? "local não indicado";
         var hoje = DateTime.Today;
 
+        // (3.1) Quando o equipamento fica "Recolhido" (foi mesmo trazido para reparação/intervenção
+        // da DISIA, ao contrário de "Aguarda Entrega", que não implica nenhuma reparação), a
+        // Atividade DISIA de acompanhamento criada automaticamente já vem pré-categorizada como
+        // "Formatação e Instalação de Software" — o motivo mais comum para recolher equipamento —
+        // poupando esse passo manual em Atividades DISIA; continua a poder ser alterado lá se o
+        // motivo real for outro.
+        int? categoriaDisiaId = null;
+        if (estadoEquipamento == EstadosEquipamento.Recolhido)
+        {
+            categoriaDisiaId = App.Db.CategoriasDisia
+                .FirstOrDefault(c => c.Nome == "Formatação e Instalação de Software")?.Id;
+        }
+
         var atividadeDisia = new AtividadeDisia
         {
             Data = hoje,
@@ -208,7 +221,8 @@ public static class RecolhaEquipamentoService
             Ano = hoje.Year,
             Local = escola?.Nome,
             Descricao = $"Acompanhamento de equipamento {equipamento.NumeroSerie} (\"{estadoEquipamento}\") em {local}",
-            Estado = EstadoIntervencao.EmProgresso
+            Estado = EstadoIntervencao.EmProgresso,
+            CategoriaDisiaId = categoriaDisiaId
         };
 
         if (recolhaExistente != null)
