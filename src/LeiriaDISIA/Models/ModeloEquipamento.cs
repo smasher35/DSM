@@ -35,6 +35,13 @@ public class ModeloEquipamento
     public string? Marca { get; set; }
     public string? Modelo { get; set; }
 
+    /// <summary>Prefixo comum do Número de Série deste modelo (opcional) — útil quando um lote de
+    /// equipamento da mesma gama tem números de série quase iguais, a variar só nos últimos
+    /// dígitos. Ao escolher este modelo em Inserir/Editar Equipamento (ver
+    /// Views/EquipamentoEditWindow.UsarModelo_Click), o campo Nº de Série é pré-preenchido com este
+    /// prefixo e o cursor fica pronto logo a seguir, para o utilizador só escrever o resto.</summary>
+    public string? PrefixoNumeroSerie { get; set; }
+
     /// <summary>Só aparece nos seletores enquanto marcado — um modelo descontinuado pode ser
     /// desativado em vez de eliminado, mantendo o histórico de quem já o usou sem continuar a
     /// oferecê-lo para equipamento novo.</summary>

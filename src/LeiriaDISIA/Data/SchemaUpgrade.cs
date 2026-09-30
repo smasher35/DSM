@@ -232,6 +232,7 @@ public static class SchemaUpgrade
 
         CriarModelosEquipamentoSePreciso(conexao);
         CriarModeloEquipamentoCaracteristicaValoresSePreciso(conexao);
+        AdicionarColunaSeNaoExistir(conexao, "ModelosEquipamento", "PrefixoNumeroSerie", "TEXT");
 
         AdicionarColunaSeNaoExistir(conexao, "Intervencoes", "NumeroSuporteSiga", "TEXT");
         AdicionarColunaSeNaoExistir(conexao, "EquipamentosRecolhidos", "IntervencaoEntregaId", "INTEGER");
@@ -306,6 +307,7 @@ public static class SchemaUpgrade
                 "Nome" TEXT NULL,
                 "Marca" TEXT NULL,
                 "Modelo" TEXT NULL,
+                "PrefixoNumeroSerie" TEXT NULL,
                 "Ativo" INTEGER NOT NULL DEFAULT 1,
                 "Processador" TEXT NULL,
                 "FamiliaProcessador" TEXT NULL,

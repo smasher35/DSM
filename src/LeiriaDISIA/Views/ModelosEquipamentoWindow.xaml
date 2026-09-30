@@ -81,6 +81,10 @@
                             <TextBlock Text="Modelo" FontWeight="SemiBold" />
                             <TextBox x:Name="TxtModelo" Margin="0,4,0,10" CharacterCasing="Upper" />
 
+                            <TextBlock Text="Prefixo do Nº de Série (opcional)" FontWeight="SemiBold" />
+                            <TextBox x:Name="TxtPrefixoNumeroSerie" Margin="0,4,0,10" CharacterCasing="Upper"
+                                     ToolTip="Para lotes de equipamento com números de série quase iguais. Ex.: &quot;UK541734&quot; — ao escolher este modelo em Inserir Equipamento, o Nº de Série já começa com este prefixo, só falta escrever o resto." />
+
                             <CheckBox x:Name="ChkAtivo" Content="Ativo (aparece no seletor de Inserir Equipamento)" IsChecked="True" Margin="0,4,0,0" />
                         </StackPanel>
 

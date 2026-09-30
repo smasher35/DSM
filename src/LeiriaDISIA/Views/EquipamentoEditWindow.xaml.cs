@@ -570,6 +570,19 @@ public partial class EquipamentoEditWindow : Window
         TxtMarca.Text = modelo.Marca;
         TxtModelo.Text = modelo.Modelo;
 
+        // Pré-preenche o Nº de Série com o prefixo comum do modelo (ver Models/ModeloEquipamento.
+        // PrefixoNumeroSerie) — útil em lotes de equipamento da mesma gama, cujos números de série
+        // só variam nos últimos dígitos. Só quando o campo ainda está vazio: ao usar este botão
+        // para EDITAR um equipamento já existente (com Nº de Série próprio já preenchido), nunca o
+        // substitui. O foco e o cursor ficam logo a seguir ao prefixo, prontos para se escrever o
+        // resto.
+        if (!string.IsNullOrWhiteSpace(modelo.PrefixoNumeroSerie) && string.IsNullOrWhiteSpace(TxtNumeroSerie.Text))
+        {
+            TxtNumeroSerie.Text = modelo.PrefixoNumeroSerie;
+            TxtNumeroSerie.Focus();
+            TxtNumeroSerie.CaretIndex = TxtNumeroSerie.Text.Length;
+        }
+
         CmbProcessador.Text = modelo.Processador;
         TxtFamiliaProcessador.Text = modelo.FamiliaProcessador;
 
@@ -785,6 +798,16 @@ public partial class EquipamentoEditWindow : Window
             ? nomes
             : null;
 
+        // (1.5) "Disco Slave" / "Tamanho Disco Slave" (grupo Computador), quando o administrador
+        // tiver criado exatamente estas duas características, aparecem emparelhadas logo a seguir
+        // ao par Tipo de Disco/Tamanho do Disco, em vez de no painel genérico mais abaixo (ver
+        // Views/EquipamentoEditWindow.xaml, "LinhaDiscoSlave") — só quando as DUAS existirem, para
+        // nunca fazer desaparecer silenciosamente uma característica só porque a outra foi
+        // renomeada ou desativada (nesse caso volta ao comportamento genérico, normal).
+        LinhaDiscoSlave.Visibility = Visibility.Collapsed;
+        ColunaDiscoSlave.Children.Clear();
+        ColunaTamanhoDiscoSlave.Children.Clear();
+
         var caracteristicas = App.Db.CaracteristicasEquipamento
             .Where(c => c.GrupoCaracteristicas == grupoCaracteristicas && c.Ativo
                         // já têm campo fixo próprio neste grupo
@@ -799,12 +822,6 @@ public partial class EquipamentoEditWindow : Window
             .ThenBy(c => c.Nome)
             .ToList();
 
-        if (caracteristicas.Count == 0)
-        {
-            GrupoCaracteristicasAdicionais.Visibility = Visibility.Collapsed;
-            return;
-        }
-
         var valoresExistentes = _existente == null
             ? new Dictionary<int, string?>()
             : App.Db.EquipamentoCaracteristicaValores
@@ -813,6 +830,8 @@ public partial class EquipamentoEditWindow : Window
 
         // (1.4) Opções sugeridas de todas as características deste grupo, já agrupadas por
         // característica — evita uma consulta à base de dados por cada característica no ciclo.
+        // Calculado a partir da lista completa (antes de separar o par Disco Slave abaixo), para
+        // as suas opções, se as tiver, continuarem disponíveis mesmo depois de saírem desta lista.
         var idsCaracteristicas = caracteristicas.Select(c => c.Id).ToList();
         var opcoesPorCaracteristica = App.Db.CaracteristicaEquipamentoOpcoes
             .Where(o => idsCaracteristicas.Contains(o.CaracteristicaEquipamentoId) && o.Ativo)
@@ -822,15 +841,8 @@ public partial class EquipamentoEditWindow : Window
             .GroupBy(o => o.CaracteristicaEquipamentoId)
             .ToDictionary(g => g.Key, g => g.Select(o => o.Valor).ToList());
 
-        foreach (var caracteristica in caracteristicas)
+        Control ConstruirCampo(CaracteristicaEquipamento caracteristica)
         {
-            var rotulo = new TextBlock
-            {
-                Text = caracteristica.Nome,
-                FontWeight = System.Windows.FontWeights.SemiBold,
-                Margin = new Thickness(0, 8, 0, 2)
-            };
-
             valoresExistentes.TryGetValue(caracteristica.Id, out var valorGravado);
             var valorInicial = valorGravado
                 ?? (_existente == null ? caracteristica.ValorPorOmissao : null);
@@ -845,9 +857,45 @@ public partial class EquipamentoEditWindow : Window
                 campo = new TextBox { Margin = new Thickness(0, 4, 0, 0), Text = valorInicial ?? string.Empty };
             }
 
-            PainelCaracteristicasAdicionais.Children.Add(rotulo);
-            PainelCaracteristicasAdicionais.Children.Add(campo);
             _camposCaracteristicasAdicionais[caracteristica.Id] = campo;
+            return campo;
+        }
+
+        if (grupoCaracteristicas == GruposCaracteristicasEquipamento.Computador)
+        {
+            var discoSlave = caracteristicas.FirstOrDefault(c => string.Equals(c.Nome, "Disco Slave", StringComparison.OrdinalIgnoreCase));
+            var tamanhoDiscoSlave = caracteristicas.FirstOrDefault(c => string.Equals(c.Nome, "Tamanho Disco Slave", StringComparison.OrdinalIgnoreCase));
+
+            if (discoSlave != null && tamanhoDiscoSlave != null)
+            {
+                ColunaDiscoSlave.Children.Add(new TextBlock { Text = discoSlave.Nome, FontWeight = System.Windows.FontWeights.SemiBold });
+                ColunaDiscoSlave.Children.Add(ConstruirCampo(discoSlave));
+                ColunaTamanhoDiscoSlave.Children.Add(new TextBlock { Text = tamanhoDiscoSlave.Nome, FontWeight = System.Windows.FontWeights.SemiBold });
+                ColunaTamanhoDiscoSlave.Children.Add(ConstruirCampo(tamanhoDiscoSlave));
+                LinhaDiscoSlave.Visibility = Visibility.Visible;
+
+                caracteristicas.Remove(discoSlave);
+                caracteristicas.Remove(tamanhoDiscoSlave);
+            }
+        }
+
+        if (caracteristicas.Count == 0)
+        {
+            GrupoCaracteristicasAdicionais.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        foreach (var caracteristica in caracteristicas)
+        {
+            var rotulo = new TextBlock
+            {
+                Text = caracteristica.Nome,
+                FontWeight = System.Windows.FontWeights.SemiBold,
+                Margin = new Thickness(0, 8, 0, 2)
+            };
+
+            PainelCaracteristicasAdicionais.Children.Add(rotulo);
+            PainelCaracteristicasAdicionais.Children.Add(ConstruirCampo(caracteristica));
         }
 
         GrupoCaracteristicasAdicionais.Visibility = Visibility.Visible;

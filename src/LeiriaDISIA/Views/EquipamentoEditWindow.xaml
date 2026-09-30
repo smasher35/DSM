@@ -151,6 +151,20 @@
                                 </StackPanel>
                             </Grid>
 
+                            <!-- Características adicionais "Disco Slave" / "Tamanho Disco Slave" (definidas em
+                                 Administração → Dados Fixos, grupo "Computador"), quando existirem: mostradas aqui,
+                                 emparelhadas tal como o par Tipo de Disco/Tamanho do Disco acima, em vez de no painel
+                                 genérico "Características Adicionais" mais abaixo — ver
+                                 EquipamentoEditWindow.AtualizarCaracteristicasAdicionais. -->
+                            <Grid x:Name="LinhaDiscoSlave" Margin="0,0,0,10" Visibility="Collapsed">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel x:Name="ColunaDiscoSlave" Grid.Column="0" Margin="0,0,4,0" />
+                                <StackPanel x:Name="ColunaTamanhoDiscoSlave" Grid.Column="1" Margin="4,0,0,0" />
+                            </Grid>
+
                             <TextBlock Text="Sistema Operativo" FontWeight="SemiBold" />
                             <ComboBox x:Name="CmbSistemaOperativo" IsEditable="True" Margin="0,4,0,0" ToolTip="Ex: Windows 11 Pro" />
                         </StackPanel>

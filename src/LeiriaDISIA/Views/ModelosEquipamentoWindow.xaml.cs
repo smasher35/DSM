@@ -118,6 +118,7 @@ public partial class ModelosEquipamentoWindow : Window
         TxtNome.Text = "";
         TxtMarca.Text = "";
         TxtModelo.Text = "";
+        TxtPrefixoNumeroSerie.Text = "";
         ChkAtivo.IsChecked = true;
 
         LimparCaracteristicas();
@@ -146,6 +147,7 @@ public partial class ModelosEquipamentoWindow : Window
         TxtNome.Text = modelo.Nome;
         TxtMarca.Text = modelo.Marca;
         TxtModelo.Text = modelo.Modelo;
+        TxtPrefixoNumeroSerie.Text = modelo.PrefixoNumeroSerie;
         ChkAtivo.IsChecked = modelo.Ativo;
 
         CmbProcessador.Text = modelo.Processador;
@@ -197,6 +199,10 @@ public partial class ModelosEquipamentoWindow : Window
         TxtNome.Text = dados.Nome;
         TxtMarca.Text = dados.Marca;
         TxtModelo.Text = dados.Modelo;
+        // O prefixo nunca vem preenchido aqui: "dados" carrega o Nº de Série completo de UMA
+        // unidade em concreto (não um prefixo partilhado), pelo que fica sempre em branco para o
+        // utilizador decidir/escrever o prefixo comum ao lote, se fizer sentido para este modelo.
+        TxtPrefixoNumeroSerie.Text = "";
         ChkAtivo.IsChecked = true;
 
         CmbProcessador.Text = dados.Processador;
@@ -481,6 +487,7 @@ public partial class ModelosEquipamentoWindow : Window
         modelo.Nome = TextoOuNulo(TxtNome.Text);
         modelo.Marca = TextoOuNulo(TxtMarca.Text);
         modelo.Modelo = TextoOuNulo(TxtModelo.Text);
+        modelo.PrefixoNumeroSerie = TextoOuNulo(TxtPrefixoNumeroSerie.Text);
         modelo.Ativo = ChkAtivo.IsChecked == true;
 
         modelo.Processador = TextoOuNulo(CmbProcessador.Text);
