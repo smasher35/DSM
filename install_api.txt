@@ -1,1 +1,13 @@
-setx DISIA_ORS_API_KEY "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjAzY2ZiZWM5ODMxMjRlNmQ4ZDhmZWRlMDgzNzY3OWMxIiwiaCI6Im11cm11cjY0In0=" /M
+REM ============================================================================
+REM IMPORTANT: Replace YOUR_OPENROUTESERVICE_API_KEY_HERE with your actual key
+REM 
+REM To obtain a free API key:
+REM 1. Visit https://openrouteservice.org/dev/#/signup
+REM 2. Create an account and generate an API key
+REM 3. Replace the placeholder below with your actual key
+REM 4. Run this command in an Administrator command prompt
+REM 
+REM WARNING: Never commit your actual API key to version control!
+REM ============================================================================
+
+setx DISIA_ORS_API_KEY "YOUR_OPENROUTESERVICE_API_KEY_HERE" /M
